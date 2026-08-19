@@ -1,57 +1,100 @@
 # OpenShadow
 
-[Chinese](README.md) | **English**
+[中文版](README.md) | **English**
 
 > **Shadow owns the continuity.**  
 > Models and runtimes are replaceable; durable user state should not disappear with them.
 
 OpenShadow is a **local-first, runtime-neutral Personal AI Continuity & Control Layer**.
 
-It is not another all-in-one agent. Shadow separates identity, memory, tasks, capabilities, policies, history, and world state from any specific model or agent so that Hermes, DSH, Claude, Codex, and future runtimes can be used as replaceable reasoning and execution engines.
+It is not another all-in-one agent. OpenShadow separates identity, memory, tasks, capabilities, policies, history, and world state from any specific model or agent. Hermes, DSH, Claude, Codex, and future runtimes are replaceable reasoning and execution resources.
 
 ## Why OpenShadow
 
-Models change quickly; a person's life, projects, and experience do not. Most personal AI systems still bind durable state to a product, session, or framework. Replacing a model, agent, device, or service often means rebuilding context, reconnecting tools, and restoring configuration.
+Models change quickly, but a person's life, projects, and experience remain continuous. Most personal AI systems still bind durable state to a product, session, or framework, so replacing a model, agent, or device often means rebuilding context, reconnecting tools, and restoring configuration.
 
 OpenShadow focuses on a different question:
 
 > **If models, agent frameworks, and interfaces keep changing for the next decade, what should remain stable?**
 
-The answer is the durable state that truly belongs to the user:
+The answer is the durable state that truly belongs to the user and is difficult to recreate:
 
 - identity, preferences, constraints, and trust boundaries;
-- active tasks, project state, and semantic checkpoints;
-- traceable memory, raw history, and decision experience;
+- active tasks, project state, and decision history;
+- traceable memory, raw evidence, and task experience;
 - connected devices, services, tools, and automations;
-- the current state of the user's digital and physical environment.
+- the current state of the user's digital and physical world;
+- long-lived policies, procedures, and permission structures.
 
 These assets should remain usable by the next generation of models instead of disappearing with the previous one.
 
-## Design vision
+## Core design
 
-### 1. Continuity belongs to the user, not the runtime
+### Continuity belongs to the user; runtimes only execute
 
-Runtimes are responsible for reasoning and execution. Shadow remains the source of truth for tasks, memory, permissions, and history.
+Shadow is the long-term source of truth for tasks, memory, policies, history, and capabilities. Runtimes may own temporary sessions, planning state, and internal context, but they must never become the sole owner of durable user state.
 
 Switching from Hermes to DSH, or to a future runtime, should feel like replacing an execution engine rather than migrating an entire personal AI system.
 
-### 2. The easier something is to replace, the farther it should be from the core
+### Shadow is a stable thin waist
 
-Models, prompts, retrieval engines, interfaces, and agent frameworks will continue to change rapidly. Raw history, task state, long-term policies, and personal capabilities are much harder to recreate.
+The easier a component is to replace, the farther it should sit from the core; the more personal and difficult it is to recreate, the closer it should sit to the core.
 
-OpenShadow therefore aims for a stable thin waist: fast-moving technology stays at the edge while durable user-owned state remains close to the core.
+Models, prompts, retrieval engines, interfaces, and agent frameworks can change quickly, while core contracts, personal state, raw history, and governance remain stable. Ideally, adopting a new generation of technology should mean adding an adapter or replacing a peripheral implementation rather than migrating a person's digital life.
 
-### 3. Always present, but intelligent on demand
+### The system runs around events and world state, not around a chat window
 
-Persistent operation does not require a large model to run continuously.
+Shadow continuously receives events from email, calendars, files, servers, home devices, and other sources, then projects “what happened” into “what is true now.” Tasks may be initiated by the user, but they may also be triggered by events, schedules, or changing conditions.
 
-Shadow uses layered intelligence: deterministic rules handle obvious cases first; `Pulse` acts as a tiny always-on local attention layer; larger local models and specialist runtimes wake only when the situation is important, uncertain, or complex enough to justify them.
+Even with every chat interface removed, Shadow should still be able to maintain world state, resume waiting tasks, invoke runtimes, execute capabilities, and record results.
 
-### 4. Capabilities should become reusable infrastructure
+To keep continuous operation inexpensive, the system may use deterministic rules, a tiny local `Pulse`, and on-demand larger models as layered execution strategies. This is an optimization strategy, not the fundamental ownership boundary of Shadow.
 
-Once email, calendar, servers, files, or home devices are connected to Shadow, they should not belong to one particular agent.
+### Tasks belong to Shadow and can move across runtimes semantically
 
-New agents receive governed access through a common capability layer instead of rebuilding authentication, permissions, state, and tool integration from scratch.
+Shadow stores canonical tasks, artifacts, and semantic checkpoints. When a runtime fails, is upgraded, or is replaced, Shadow does not attempt to migrate hidden reasoning or private runtime internals. It transfers verifiable task semantics instead: goals, known facts, decisions and evidence, completed work, artifacts, remaining work, and side-effect state.
+
+This allows the same long-running task to continue across different runtimes over time.
+
+### Memory is not “vectorize everything”
+
+Shadow separates memory into three layers:
+
+```text
+Raw Evidence
+    ↓
+Canonical Memory
+    ↓
+Rebuildable Indexes and Derived Views
+```
+
+Raw evidence preserves what actually happened. Canonical memory represents the current traceable interpretation. Vector indexes, summaries, graphs, and other retrieval structures are derived and rebuildable.
+
+Recall is also not defined as naive vector top-k. Shadow derives an explicit memory need from the active task, prefers structured, temporal, and entity-aware retrieval paths, and can fall back to deep inspection of raw history when compressed memory is insufficient.
+
+### Capabilities belong to the user, and actions are governed centrally
+
+Once email, calendar, servers, home devices, and files are connected to Shadow, they become reusable capabilities rather than private tools owned by a particular agent.
+
+Every action with a real-world side effect passes through a common policy, approval, idempotency, and audit path:
+
+```text
+Model proposes an action
+        ↓
+Shadow evaluates permission and risk
+        ↓
+Approval / Idempotency / Execution Ledger
+        ↓
+Capability provider executes
+```
+
+A runtime crash and retry should therefore not resend the same email, recreate the same calendar event, or repeat another already-completed external action.
+
+### Replaceability also means upgradeability
+
+Runtimes, memory engines, and capability providers should have explicit replacement boundaries. A candidate runtime can be checked for compatibility, replayed against historical tasks, evaluated through canary traffic, promoted gradually, and rolled back without migrating the user's memory, tasks, capabilities, or policies.
+
+OpenShadow aims for low **upgrade absorption cost**: new technology should mostly affect adapters and peripheral implementations rather than forcing repeated rewrites of the core.
 
 > **Integrate once, reuse continuously. Build once, let future agents inherit it.**
 
@@ -93,43 +136,23 @@ Chat · Voice · Email · Calendar · Files · Devices · Servers
                │  Home · PC · Servers · Files · Email · Calendar · Web
                │
                ▼
-       PostgreSQL · Raw Evidence · Artifacts
+PostgreSQL · Raw Evidence · Artifacts · Execution Ledger
 ```
-
-### Layered intelligence
-
-```text
-L0  Deterministic Rules
-        │
-        ▼
-L1  Shadow Pulse
-    Tiny local model / classifier, always on
-        │
-        ▼
-L2  Local General Model
-    Wakes on demand
-        │
-        ▼
-L3  General or Specialist Runtime
-    Hermes · DSH · Claude · Codex
-```
-
-`Pulse` is event-driven first. Heartbeats are used for reconciliation, recovery, and conditions without natural event sources; they are not periodic prompts to a large model asking whether anything needs attention.
 
 ## Core boundary
 
 | Shadow owns | Reuse or outsource |
 | --- | --- |
 | Identity, policies, and trust boundaries | Agent loops and planning |
-| Canonical tasks and semantic checkpoints | Hermes, DSH, Claude, Codex |
+| Canonical tasks, semantic checkpoints, and artifacts | Hermes, DSH, Claude, Codex |
 | Raw evidence and canonical memory contracts | Mem0, LangMem, Graphiti |
 | Memory policy, broker, and context compilation | Vector, embedding, and graph implementations |
-| Events and world state | Home Assistant and device drivers |
+| Events, world state, and long-lived schedules | Home Assistant and device drivers |
 | Capability registry, gateway, and execution ledger | Email, calendar, browser, and server providers |
-| SRI, runtime routing, and upgrade lifecycle | Model serving and model implementations |
-| Long-lived schedules and Pulse policy | Chat platforms, speech stacks, and messaging gateways |
+| SRI, runtime routing, handoff, and upgrades | Model serving and model implementations |
+| Pulse policy | Chat platforms, speech stacks, and messaging gateways |
 
-A simple rule determines the boundary:
+The boundary rule is simple:
 
 > **State that must remain consistent across models, runtimes, devices, or years belongs to Shadow. Everything else should reuse mature external systems whenever possible.**
 
@@ -139,10 +162,11 @@ The first release is not intended to be a complete personal AI product. Its purp
 
 ### Core scope
 
-- **Durable continuity** — events, world state, tasks, semantic checkpoints, raw evidence, and canonical memory;
-- **Dynamic execution** — deterministic rules, pluggable `Pulse`, event-driven wakeups, scheduling, and waiting-task recovery;
-- **Runtime abstraction** — SRI, Hermes adapter, DSH adapter, and context compiler;
-- **Capability governance** — registry, gateway, policy, approval, idempotency, and execution ledger;
+- **Durable continuity** — events, world state, tasks, semantic checkpoints, artifacts, raw evidence, and canonical memory;
+- **Tasks and runtimes** — SRI, Hermes adapter, DSH adapter, context compilation, and cross-runtime semantic recovery;
+- **Memory** — write policy, task-aware recall, memory bundles, and deep recall of raw history;
+- **Capabilities and governance** — registry, gateway, policy, approval, idempotency, and execution ledger;
+- **Persistent operation** — event-driven execution, scheduling, waiting-task recovery, and a low-cost Pulse mechanism;
 - **Infrastructure** — PostgreSQL, pgvector, CLI, minimal admin interface, and local single-node deployment.
 
 ### Must-pass demonstrations
@@ -151,10 +175,9 @@ The first release is not intended to be a complete personal AI product. Its purp
 | --- | --- |
 | Runtime continuity | A task interrupted in Hermes can continue in DSH from a semantic checkpoint |
 | Cross-runtime memory | Durable memory created through one runtime can be correctly used by another |
-| Autonomous event handling | Events can trigger decisions, tasks, and execution without a user prompt |
-| Layered intelligence | Most low-value events terminate in rules or Pulse; only a small fraction escalate |
+| Autonomous event handling | Events can update state, create tasks, and trigger execution without a user prompt |
 | Runtime upgrade | Candidate runtimes can be replayed, canaried, promoted, and rolled back without migrating user state |
-| Task-aware memory | Retrieval is driven by decision relevance to the active task rather than naive vector top-k |
+| Task-aware memory | Recall is driven by decision relevance to the active task and can fall back to raw history |
 | Side-effect safety | Crashes and retries do not duplicate already-completed real-world actions |
 
 ## Documentation
@@ -168,12 +191,12 @@ The first release is not intended to be a complete personal AI product. Its purp
 
 ### Detailed architecture
 
-- [Layered Intelligence & Shadow Pulse](docs/architecture/intelligence.md)
 - [Events & World State](docs/architecture/event-state.md)
 - [Tasks & Semantic Checkpoints](docs/architecture/task.md)
 - [Memory Architecture](docs/architecture/memory.md)
 - [Runtime Architecture & Continuity](docs/architecture/runtime.md)
 - [Capabilities & Governance](docs/architecture/capability.md)
+- [Layered Intelligence & Shadow Pulse](docs/architecture/intelligence.md)
 - [Deployment Architecture](docs/architecture/deployment.md)
 
 ## Status
