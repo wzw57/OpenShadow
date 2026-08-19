@@ -1,7 +1,5 @@
 # OpenShadow
 
-> **Personal AI Continuity & Control Layer**
-
 OpenShadow 是一个 **Local-first、Runtime-neutral** 的个人 AI 连续性与控制层。
 
 它不试图成为另一个“全能 Agent”。Shadow 负责长期持有用户的 **Memory、Task、Capability、Policy 与 History / World State**，而 Hermes、DeepSeek Harness、Claude / Codex 以及未来 Agent Runtime 只负责推理和执行。
