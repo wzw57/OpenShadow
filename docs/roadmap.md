@@ -1,349 +1,339 @@
-# OpenShadow Roadmap
+# OpenShadow 开发路线
 
-This roadmap follows the current v0.3 requirements baseline. The goal is to ship a usable continuity layer quickly and avoid turning OpenShadow into another all-in-one Agent platform.
+**状态：前期设计对齐 / MVP 实现前**
 
-## Phase 0 — Freeze contracts
+当前优先级不是继续增加模块，而是先把核心对象、所有权边界和对象关系冻结。详细设计在这些概念稳定后再展开。
 
-Before building UI or integrations, freeze the first version of the durable contracts.
+## 阶段 0：前期文档对齐
 
-### Deliverables
+目标：确保 README、需求基线、概要设计和路线图使用同一套概念。
 
-- Event Contract
-- Task / TaskEnvelope Contract
-- Semantic Checkpoint Contract
-- Memory Contract
-- Capability Contract
-- Policy / Approval Contract
-- SRI (Shadow Runtime Interface)
-- Canonical Context Contract
-- Artifact reference format
-- Execution Ledger / idempotency model
+需要确认：
 
-### Exit criteria
+- Shadow 的稳定核心层边界；
+- Task / Memory / Skill / Capability / Policy 的定义；
+- Skill 与 Capability 的关系；
+- Capability / Provider / Tool / MCP 的关系；
+- Runtime 与 Shadow 的所有权边界；
+- Event / World State / Scheduler / Pulse 的位置。
 
-- Each contract has a version field.
-- No contract depends on Hermes / DSH private types.
-- Durable fields and replaceable / derived fields are clearly separated.
+退出条件：
+
+- 前期文档不存在互相冲突的对象定义；
+- 不再使用 Runtime 私有概念作为核心对象事实源；
+- 详细模块文档暂不提前展开。
 
 ---
 
-## Phase 1 — Persistence & task spine
+## 阶段 1：冻结核心契约
 
-Build the smallest durable core.
+先定义语义，再设计数据库。
 
-### Build
-
-- Python + FastAPI modular monolith
-- PostgreSQL migrations
-- Event Store
-- Minimal World State projection
-- Task Store
-- Semantic Checkpoint Store
-- Artifact metadata store
-- Execution Ledger
-- Structured logging
-
-### First tables
+第一批 Contract：
 
 ```text
-identities
-events
-world_state
-tasks
-task_checkpoints
-artifacts
-execution_ledger
+Event / World State
+Task / Semantic Checkpoint
+Memory
+Skill
+Capability
+Policy / Approval
+SRI
+Artifact
 ```
 
-### Exit criteria
+其中 Skill Contract 至少需要明确：
 
-- Shadow Core restart does not lose Task / Event / Ledger state.
-- Task can be created, paused, checkpointed and resumed without any Agent Runtime.
+- canonical skill identity；
+- level；
+- version；
+- activation / when-to-use；
+- dependencies；
+- required capabilities；
+- memory needs；
+- verification criteria；
+- provenance；
+- runtime compatibility；
+- lifecycle / maturity。
+
+退出条件：
+
+- 每个 Contract 有清晰版本边界；
+- 所有 durable 字段与 replaceable / derived 字段分离；
+- Contract 不依赖 Hermes / DSH / Claude 私有类型；
+- Skill 与 Capability 不再混淆。
 
 ---
 
-## Phase 2 — First Runtime integration
+## 阶段 2：持久化与 Task 主干
 
-Use Hermes as the first stable general Runtime.
+目标：建立最小可恢复核心。
 
-### Build
+实现：
 
-- SRI v0.1
-- Runtime Registry
-- Hermes Adapter
-- Runtime binding on Task
-- Minimal Context Compiler
-- Runtime health / status
+- Python + FastAPI 模块化单体；
+- PostgreSQL migration；
+- Event Store；
+- 最小 World State projection；
+- Task Store；
+- Semantic Checkpoint；
+- Artifact metadata；
+- Execution Ledger；
+- Structured Logging。
 
-### Demo
+退出条件：
+
+- Shadow Core 重启不丢 Event / Task / Checkpoint / Ledger；
+- 没有任何 Runtime 时，Task 仍然可以创建、暂停、检查点化和恢复。
+
+---
+
+## 阶段 3：第一个 Runtime 与 Context Compiler
+
+先接入一个通用 Runtime，例如 Hermes。
+
+实现：
+
+- SRI v0.1；
+- Runtime Registry；
+- Hermes Adapter；
+- Task Runtime Binding；
+- 最小 Context Compiler；
+- Runtime health / status。
+
+退出条件：
+
+- Runtime Session 删除后 Shadow Task 仍然存在；
+- Runtime 不能成为 Task / Memory / Skill 的唯一事实源。
+
+---
+
+## 阶段 4：Memory 最小闭环
+
+目标：验证 Memory 是决策基础，而不是长期 RAG。
+
+实现：
+
+- Raw Evidence；
+- Canonical Memory；
+- Memory Candidate；
+- 简单 Memory Policy；
+- MemoryNeed；
+- Memory Broker；
+- MemoryBundle；
+- Task Working Memory；
+- Deep Recall 基础路径。
+
+退出条件：
+
+- Memory 注入由 Task / Step 需要驱动；
+- Canonical Memory 有 provenance；
+- 派生索引可以删除并重建。
+
+---
+
+## 阶段 5：Skill 最小闭环
+
+目标：证明用户长期方法可以独立于 Runtime 保存和迁移。
+
+实现：
+
+- Skill Registry；
+- canonical Skill representation；
+- Strategy / Domain / Procedure 基础层级；
+- SkillNeed；
+- Skill Resolver；
+- SkillBundle；
+- required_capabilities / memory_needs；
+- Skill version / provenance；
+- 一个 Runtime Projection；
+- 一个 Skill Import / Export 基础路径。
+
+核心 Demo：
 
 ```text
-Task created in Shadow
+Canonical Skill
       ↓
-Context compiled
+Runtime A Projection
       ↓
-Hermes executes
+执行
       ↓
-results / artifacts written back to Shadow
+切换 Runtime
+      ↓
+Runtime B Projection
+      ↓
+保持核心方法语义继续执行
 ```
 
-### Exit criteria
+退出条件：
 
-- Hermes cannot become the source of truth for Task state.
-- Hermes Session may disappear while the Shadow Task still exists.
-
----
-
-## Phase 3 — Memory minimum loop
-
-Implement useful memory without building a full Memory OS.
-
-### Build
-
-- Raw Evidence storage
-- Canonical Memory table
-- Memory Candidate extraction
-- Simple Memory Policy
-- MemoryNeed
-- Memory Broker
-- MemoryBundle
-- Task Working Memory
-- memory_feedback
-
-### Retrieval baseline
-
-1. structured lookup
-2. temporal validity
-3. entity matching
-4. lexical / BM25
-5. vector candidate search
-
-### Experiment baseline
-
-Compare:
-
-- no memory
-- full recent history
-- vector top-k
-- Shadow task-aware recall
-
-Metrics:
-
-- task success
-- irrelevant context
-- token usage
-- user correction rate
-- decision quality
-
-### Exit criteria
-
-- Memory injection is driven by Task / Step need, not every prompt.
-- Every Canonical Memory item has provenance.
-- Derived indexes can be deleted and rebuilt.
+- 一个 Skill 可以跨两个 Runtime 投影；
+- Skill 不依赖某个 Runtime 私有 Prompt 作为唯一事实源；
+- Skill 需要的 Capability 由声明依赖获得，而不是 Skill 自己拥有权限。
 
 ---
 
-## Phase 4 — Capability governance
+## 阶段 6：Capability 与治理
 
-Add one real capability provider and prove safe side-effect handling.
+先接一个只读 Capability，再接一个有副作用的 Capability。
 
-### Start with
+实现：
 
-- `server.status.read`
-- `server.logs.read`
+- Capability Registry；
+- Provider Binding；
+- Capability Gateway；
+- Policy / Risk；
+- Approval；
+- action_id / idempotency_key；
+- Execution Ledger；
+- result sanitization；
+- secret proxy / credential boundary。
 
-Then add a reversible or approval-gated action such as:
+同时预留 MCP 边界：
 
-- `server.service.restart`
+- MCP Tool → Capability Candidate / Provider Binding；
+- MCP Resource → Context / Evidence Source；
+- MCP Prompt → Skill Candidate / Runtime Template；
+- Runtime 通过 Shadow 暴露的 Gateway 使用能力，而不是绕过治理直连 Provider。
 
-### Build
+退出条件：
 
-- Capability Registry
-- Capability Gateway
-- risk levels
-- Policy evaluation
-- Approval gate
-- action_id / idempotency_key
-- result sanitization
-- Execution Ledger integration
-
-### Exit criteria
-
-- Runtime cannot call Provider directly.
-- Retrying a successful action does not execute it twice.
-- Audit trail explains who proposed, why it was allowed and what happened.
+- Runtime 不能绕过 Gateway；
+- 重试已成功动作不会重复执行；
+- Skill 声明 Capability 依赖不会自动获得权限。
 
 ---
 
-## Phase 5 — Runtime handoff
+## 阶段 7：第二 Runtime 与语义接力
 
-Integrate DSH as a second Runtime and prove Runtime-neutral continuity.
+接入第二个 Runtime，例如 DSH。
 
-### Build
+实现：
 
-- DSH Adapter
-- Canonical Task hydration
-- Runtime switch / rebind
-- last durable checkpoint recovery
-- failure handling
+- DSH Adapter；
+- Canonical Task hydration；
+- Runtime switch / rebind；
+- last durable checkpoint recovery；
+- side-effect reconciliation。
 
-### Killer demo
+核心 Demo：
 
 ```text
-Hermes executes Task to 50%
+Runtime A 执行 Task
         ↓
-checkpoint
+Semantic Checkpoint
         ↓
-kill Hermes
+Runtime A 中断
         ↓
-DSH receives canonical Task state
+Shadow 重新编译 Task + Memory + Skill
         ↓
-DSH continues and finishes
+Runtime B 继续执行
 ```
 
-Must preserve:
+退出条件：
 
-- Task goal and stage
-- facts / decisions
-- artifacts
-- provider results
-- side-effect ledger
-- remaining work
-
-### Exit criteria
-
-**AC-01 Runtime Continuity** passes.
+- Task 目标、事实、产物、Skill 语义和副作用状态不丢失。
 
 ---
 
-## Phase 6 — Pulse & autonomous flow
+## 阶段 8：Event-driven 持续运行
 
-Prove that Shadow is not a chat aggregator.
+目标：证明 Shadow 不是 Chat 聚合器。
 
-### Build
+实现：
 
-- Scheduler
-- Pulse L0 deterministic rules
-- optional L1 tiny local model
-- Event → World State → Pulse → Task flow
-- notification output
+- Scheduler；
+- Event → World State → Task；
+- waiting Task resume；
+- notification；
+- deterministic rules；
+- 可选 tiny Pulse。
 
-### Demo
+Pulse 只作为低成本注意力优化，不作为核心架构依赖。
 
-```text
-Server warning event
-      ↓
-World State changes
-      ↓
-Pulse evaluates
-      ↓
-Task created automatically
-      ↓
-Runtime investigates
-      ↓
-Shadow records result
-```
+退出条件：
 
-### Exit criteria
-
-The entire flow works without a user chat prompt.
+- 没有用户 Chat Prompt 时，Event 也可以更新状态并触发 Task。
 
 ---
 
-## Phase 7 — Runtime evaluation & upgrade
+## 阶段 9：升级、回放与真实部署
 
-Turn Runtime replaceability into an operational feature.
+把“可替换”变成真实能力。
 
-### Build
+实现：
 
-- Runtime candidate status
-- historical task replay
-- dry-run / sandbox mode
-- runtime evaluation metrics
-- traffic weight / canary routing
-- promotion / rollback
-- drain behavior
+- Runtime candidate；
+- Skill candidate；
+- historical replay；
+- dry-run / sandbox；
+- canary；
+- promote / rollback；
+- drain；
+- local-first continuous deployment。
 
-### Evaluation metrics
+需要积累的数据：
 
-- task success
-- cost / tokens
-- latency
-- tool error rate
-- manual intervention rate
-- safety violations
-- checkpoint / resume quality
-
-### Exit criteria
-
-A candidate Runtime can be evaluated and promoted without migrating Shadow durable assets.
+- Runtime handoff outcome；
+- Skill projection / portability outcome；
+- Memory recall outcome；
+- Capability retry / idempotency event；
+- user correction；
+- task success / failure；
+- Skill version success history。
 
 ---
 
-## Phase 8 — Personal deployment
+## v0.1 验收矩阵
 
-Run OpenShadow continuously for real use.
-
-### Goals
-
-- accumulate real Events
-- accumulate real Task trajectories
-- observe Memory usefulness
-- observe handoff failures
-- refine Policy boundaries
-- measure operational reliability
-
-### Research data worth keeping
-
-- memory candidate decisions
-- memory recall decisions
-- injected vs actually used memories
-- task outcomes
-- runtime handoff outcomes
-- provider retries / idempotency events
-- user corrections
-
-This real-world dataset becomes the basis for later research rather than blocking product development up front.
-
----
-
-# v0.1 acceptance matrix
-
-| ID | Acceptance scenario | Target |
+| ID | 场景 | 目标 |
 | --- | --- | --- |
-| AC-01 | Runtime Continuity | Hermes interrupted → DSH resumes and completes |
-| AC-02 | Cross-Runtime Memory | Runtime B can use Memory created through Runtime A |
-| AC-03 | Autonomous Event Handling | Event can trigger Task without chat prompt |
-| AC-04 | Exactly-once Side Effect | Runtime retry does not duplicate external action |
-| AC-05 | Runtime Upgrade | Replay + canary + promote without migrating durable assets |
-| AC-06 | Memory Utility | Task-aware recall reduces irrelevant context vs top-k baseline |
+| AC-01 | Runtime Continuity | Runtime A 中断后 Runtime B 继续同一 Task |
+| AC-02 | Skill Portability | 同一 Canonical Skill 可投影到两个 Runtime |
+| AC-03 | Cross-Runtime Memory | Runtime B 可使用 Runtime A 形成的长期 Memory |
+| AC-04 | Autonomous Event Handling | 无 Chat Prompt 时 Event 可触发 Task |
+| AC-05 | Capability Governance | Runtime 不能绕过 Policy / Gateway 执行高风险动作 |
+| AC-06 | Exactly-once Side Effect | Crash / Retry 不重复执行已完成动作 |
+| AC-07 | Runtime Upgrade | Replay + Canary + Promote / Rollback 不迁移核心资产 |
 
-# Explicit non-goals for v0.1
+## v0.1 明确不做
 
-Do **not** spend MVP time on:
+- 自研完整 Agent Loop；
+- 自研 Browser Agent；
+- 自研 Coding Agent；
+- 完整 Workflow Engine；
+- 完整 RAG Framework；
+- 自研 Vector DB / Graph DB；
+- 完整 Chat / Voice 平台；
+- Home Assistant 替代品；
+- Plugin Marketplace；
+- Multi-user SaaS；
+- Kubernetes / 复杂微服务。
 
-- a custom Agent Loop
-- a custom browser Agent
-- a custom Coding Agent
-- a full RAG framework
-- a custom vector database
-- a graph database unless experiments prove it necessary
-- a full chat platform
-- a full voice assistant
-- a Home Assistant replacement
-- a plugin marketplace
-- multi-user SaaS
-- Kubernetes / production microservice decomposition
+## 当前执行顺序
 
-# Recommended implementation order
+```text
+文档对齐
+  ↓
+核心 Contract
+  ↓
+PostgreSQL 逻辑模型
+  ↓
+Event / Task / Checkpoint / Ledger
+  ↓
+第一个 Runtime
+  ↓
+Memory
+  ↓
+Skill
+  ↓
+Capability / MCP Boundary
+  ↓
+第二 Runtime / Handoff
+  ↓
+Event-driven Runtime
+  ↓
+Replay / Canary / Real Deployment
+```
 
-1. Freeze contracts.
-2. Design PostgreSQL schema and migrations.
-3. Implement Event / Task / Checkpoint / Ledger core.
-4. Implement SRI + Hermes Adapter + minimal Context Compiler.
-5. Implement the minimal Memory write / recall loop.
-6. Implement Capability Gateway + one provider.
-7. Implement DSH Adapter + handoff demo.
-8. Implement Scheduler / Pulse autonomous event flow.
-9. Add replay / canary runtime evaluation.
-10. Run OpenShadow continuously and collect real data.
+在 Contract 冻结之前，不继续扩展详细模块设计。
