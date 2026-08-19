@@ -37,8 +37,6 @@ External formats may be used for import, export, adapters, or derived projection
 
 Memory is only one subsystem of Shadow.
 
-The core objects answer different questions:
-
 | Object | Question | Shadow responsibility |
 | --- | --- | --- |
 | **Task** | What am I doing now? | Preserve goals, progress, checkpoints, artifacts, and side-effect state |
@@ -48,16 +46,7 @@ The core objects answer different questions:
 | **Policy** | What is allowed? | Govern permission, risk, privacy, budget, and approval |
 | **Event / World State** | What happened, and what is true now? | Let the system persist beyond a chat window |
 
-Even with Memory temporarily removed, Shadow should still be able to:
-
-- persist and resume Tasks / Semantic Checkpoints;
-- hand work across different Runtimes;
-- own and synchronize Skills;
-- govern Capabilities, Policies, Approvals, and the Execution Ledger;
-- ingest Events, maintain World State, and run the Scheduler;
-- preserve Artifacts, history, and external side-effect state.
-
-Without those responsibilities, Shadow really would collapse into a memory engine.
+Even with Memory temporarily removed, Shadow should still persist and resume Tasks, hand work across Runtimes, synchronize Skills, govern Capabilities and Policies, maintain Events / World State / Scheduler, and preserve Artifacts and side-effect state.
 
 ### 3. Tasks belong to Shadow; runtimes only reason and execute
 
@@ -81,34 +70,11 @@ Capability    "what can be done"
 Provider       "who implements it"
 ```
 
-Shadow does not need to rebuild the Skill execution engine already provided by Hermes and other capable Runtimes.
-
-**Shadow owns:**
-
-- Canonical Skill identity and raw Skill source;
-- Version / Provenance / Trust;
-- user-level enablement, disablement, and visibility scope;
-- Runtime compatibility;
-- Runtime Projection / sync state;
-- import, export, migration, and rollback;
-- candidate ingestion for Skills created or modified by a Runtime.
-
-**Runtime owns:**
-
-- Skill discovery;
-- per-task Skill activation;
-- progressive disclosure;
-- Skill composition and orchestration;
-- runtime-native bundles, prompts, and references;
-- runtime-internal tool-use strategy.
-
-In short:
+Shadow owns Canonical Skill, raw source, Version / Provenance / Trust, Scope, Runtime compatibility, Projection / Sync, import/export, and migration. The Runtime owns discovery, activation, progressive disclosure, composition, and execution.
 
 > **Shadow controls availability; Runtime controls activation.**
 
-Runtime-specific Skill representations are disposable projections. A Skill learned or modified by a Runtime first becomes a Candidate; it cannot directly mutate the Canonical Skill asset.
-
-If real-world evidence later shows that Runtime-level Skill selection is insufficient, Shadow may add a **pluggable Skill Manager** for advanced retrieval, relationship management, or routing. That manager remains replaceable and does not become part of the stable core.
+Runtime-specific Skill representations are disposable projections. Skills learned or modified by a Runtime first become Candidates; they cannot directly mutate Canonical Skill assets.
 
 ### 5. Capability is a durable action contract; MCP is only a protocol
 
@@ -127,9 +93,9 @@ The Provider and transport may change between MCP, REST, CLI, IPC, or a local AP
 
 > **A Tool is an interface. Capability is a durable asset. Skill is reusable experience. MCP is a protocol.**
 
-All real-world side effects still pass through the Capability Gateway, Policy, Approval, Idempotency, and Execution Ledger. Native MCP or tool-calling support must not allow a Runtime to bypass Shadow governance.
+All real-world side effects still pass through Capability Gateway, Policy, Approval, Idempotency, and Execution Ledger.
 
-### 6. Memory is a decision substrate, not long-term RAG
+### 6. Memory is available by default, not injected by default
 
 OpenShadow separates:
 
@@ -141,15 +107,29 @@ Canonical Memory
 Rebuildable Indexes / Summaries / Graphs
 ```
 
-Raw Evidence preserves what happened. Canonical Memory represents current, revisable, traceable interpretation. Vector indexes, summaries, and graphs are derived and rebuildable.
+Owning a large amount of Memory does not mean every Task performs recall. A Runtime raises a semantic Recall Intent only when historical information may matter. Shadow then controls Scope, Privacy, Validity, and Context Budget before querying replaceable Memory Engines.
 
-A Memory Engine may be replaced, but it must not own the only authoritative copy of Canonical Memory.
+> **Shadow owns memory truth and access boundaries; external Memory Engines provide extraction, retrieval, consolidation, and association intelligence.**
+
+Current default implementation direction:
+
+- **Shadow + PostgreSQL** — source of truth for Raw Evidence, Canonical Memory, and Task Working Memory;
+- **Mem0 OSS** — first online recall / candidate retrieval backend;
+- **LangMem** — background extraction / consolidation candidate generation;
+- **Graphiti** — second-stage experiment for a derived temporal Memory Graph and multi-hop association;
+- **MemOS** — later evaluation as an alternative Memory Engine.
+
+All of these sit behind adapters and remain replaceable. Derived indexes, summaries, and graphs are rebuildable.
+
+The long-term Memory goal is not to maximize recall volume, but to:
+
+> **Automatically provide the smallest amount of relevant Memory sufficient to improve the current decision while consuming as little Runtime attention as possible.**
 
 ### 7. Shadow runs around Events, World State, and Tasks—not around a chat window
 
 Tasks may come from a user, an Event, a Schedule, or a changing Condition. Even if every Chat UI is removed, Shadow should still maintain World State, resume waiting Tasks, select a Runtime, execute governed Capabilities, and record results.
 
-Rules, `Pulse`, and local small models may reduce the cost of continuous operation, but they are implementation strategies rather than core ownership principles.
+Rules, `Pulse`, and local small models may reduce continuous-operation cost, but they are implementation strategies rather than core ownership principles.
 
 ## Architecture overview
 
@@ -176,37 +156,12 @@ Interaction / Event Sources
                │  Hermes · DSH · Claude · Codex · Future
                │
                ├─ Replaceable Engines / Managers
-               │  Memory Engine · optional Skill Manager
+               │  Mem0 · LangMem · Graphiti · Future
+               │  optional Memory / Skill Manager
                │
                └─ Replaceable Providers / Protocols
                   Home · PC · Server · Email · Files · Web
                   MCP · REST · CLI · IPC · Local API
-```
-
-Skill path:
-
-```text
-Canonical Skill Store
-        │
-        ├─ version / provenance / trust / scope
-        │
-        ▼
-Runtime Skill Adapter
-        │
-        ▼
-Disposable Runtime Projection
-        │
-        ▼
-Runtime
-  discovery / activation
-  disclosure / composition
-  execution
-        │
-        ▼
-usage / change events
-        │
-        ▼
-Shadow
 ```
 
 ## What Shadow owns vs. what external systems implement
@@ -214,7 +169,7 @@ Shadow
 | Shadow owns / governs | Replaceable implementation |
 | --- | --- |
 | Task / Semantic Checkpoint | Agent Loop / Planning |
-| Raw Evidence / Canonical Memory | Memory Engine / Search Engine |
+| Raw Evidence / Canonical Memory / Task Working Memory | Mem0 / LangMem / Graphiti / Search Engine |
 | Canonical Skill / Version / Provenance | Runtime-native Skill Engine / optional Skill Manager |
 | Capability Contract / Policy / Ledger | Provider / MCP Server / Tool implementation |
 | Event / World State / Scheduler | Event adapters / notification channels |
@@ -230,15 +185,17 @@ The first release exists to validate continuity and ownership boundaries, not to
 
 - Event / World State;
 - Task / Semantic Checkpoint / Artifact;
-- Raw Evidence / Canonical Memory minimum loop;
-- **Skill Store, Version / Provenance / Trust, Runtime Projection / Sync**;
+- Raw Evidence / Canonical Memory / Task Working Memory;
+- Memory Access API + Mem0 Adapter;
+- basic LangMem background Memory Candidate / Consolidation experiment;
+- Skill Store, Version / Provenance / Trust, Runtime Projection / Sync;
 - SRI, at least two Runtime adapters, and Context Compiler;
 - Capability Registry / Gateway / Provider Binding;
 - Policy / Approval / Idempotency / Execution Ledger;
 - Scheduler / Event-driven execution;
 - PostgreSQL + local-first single-node deployment.
 
-V0.1 does **not** require a custom Skill Resolver, Skill Graph Executor, Progressive Disclosure Engine, or full Workflow Engine. The first step is to validate whether Runtime-native Skill discovery, selection, and orchestration are already sufficient.
+V0.1 does **not** require a custom Skill Resolver, Skill Graph Executor, Progressive Disclosure Engine, Learned Memory Router, or full Workflow Engine. Graphiti remains a later association-graph experiment rather than part of the default critical path.
 
 ### Must-pass demonstrations
 
@@ -248,6 +205,8 @@ V0.1 does **not** require a custom Skill Resolver, Skill Graph Executor, Progres
 | Skill portability | One Canonical Skill can be synchronized/projected to two Runtimes |
 | Skill ownership | Runtime edits to a Projection cannot directly mutate the Canonical Skill |
 | Cross-runtime Memory | Runtime B can use durable Memory created through Runtime A |
+| Memory selectivity | Simple Tasks can perform no recall; history-dependent Tasks receive only a small relevant set |
+| Memory Engine replaceability | Replacing the online retrieval Engine does not migrate Canonical Memory |
 | Autonomous event handling | Events can update state, create Tasks, and trigger execution without chat prompts |
 | Capability governance | A Runtime cannot bypass Policy / Gateway for high-risk actions |
 | Side-effect safety | Crash / retry does not repeat already-completed actions |
