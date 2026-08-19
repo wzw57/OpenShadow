@@ -12,16 +12,16 @@
 
 - Shadow 的稳定核心层边界；
 - Task / Memory / Skill / Capability / Policy 的定义；
-- Skill 与 Capability 的关系；
+- Skill Authority 与 Runtime Skill Execution 的边界；
+- Memory Authority 与 Memory Intelligence 的边界；
 - Capability / Provider / Tool / MCP 的关系；
 - Runtime 与 Shadow 的所有权边界；
-- Skill Authority 与 Runtime Skill Execution 的边界；
 - Event / World State / Scheduler 的位置。
 
 退出条件：
 
 - 前期文档不存在互相冲突的对象定义；
-- 不再使用 Runtime 私有概念作为核心对象事实源；
+- 不再使用 Runtime / Memory Engine 私有概念作为核心对象事实源；
 - 明确哪些能力属于稳定核心，哪些属于可替换 Manager / Adapter / Runtime；
 - 详细模块文档暂不提前展开。
 
@@ -36,12 +36,23 @@
 ```text
 Event / World State
 Task / Semantic Checkpoint
-Memory Authority
+Memory Authority / Access
 Skill Authority
 Capability
 Policy / Approval
 SRI
 Artifact
+```
+
+Memory Contract 先冻结：
+
+```text
+Raw Evidence / Canonical Memory ownership
+scope / privacy / provenance / validity
+Recall Intent / Memory Access boundary
+Task Working Memory semantics
+candidate vs canonical distinction
+engine adapter boundary
 ```
 
 Skill Contract 只冻结长期所有权需要的信息：
@@ -57,21 +68,14 @@ runtime compatibility
 projection / sync state
 ```
 
-暂不冻结 Runtime 内部的：
-
-```text
-Skill Resolver
-Skill Graph Executor
-Progressive Disclosure
-Runtime-native Bundle / Prompt orchestration
-```
+暂不冻结 Runtime 内部的 Skill Resolver / Skill Graph Executor / Progressive Disclosure，也不冻结复杂 Learned Memory Router。
 
 退出条件：
 
 - 每个 Contract 有清晰版本边界；
 - durable 字段与 derived / replaceable 字段分离；
-- Contract 不依赖 Hermes / DSH / Claude 私有类型；
-- Skill Authority 与 Runtime Skill Execution 不再混淆。
+- Contract 不依赖 Hermes / DSH / Claude / Mem0 / Graphiti 私有类型；
+- Memory Authority、Skill Authority 与外部执行智能不再混淆。
 
 ---
 
@@ -145,8 +149,6 @@ Disposable Projection
 Hermes 自己完成 discovery / activation / disclosure / execution
 ```
 
-然后修改 Projection，验证 Canonical Skill 不受影响。
-
 退出条件：
 
 - Runtime Projection 可以删除并重新生成；
@@ -154,38 +156,93 @@ Hermes 自己完成 discovery / activation / disclosure / execution
 - Runtime-created Skill 只能先进入 Candidate；
 - Shadow 只控制 Skill availability，Runtime 控制 activation。
 
-本阶段不做：
-
-- Skill Resolver；
-- Skill Graph Executor；
-- Progressive Disclosure Engine；
-- 自动 Skill Evolution。
+本阶段不做 Skill Resolver、Skill Graph Executor、Progressive Disclosure Engine、自动 Skill Evolution。
 
 ---
 
-## 阶段 5：Memory 最小闭环
+## 阶段 5：Memory Authority 与在线 Recall
 
-目标：验证 Memory 是决策基础，而不是长期 RAG。
+目标：验证 Memory 默认不注入、Runtime 可以按需 Recall，并且底层检索 Engine 可替换。
 
-实现：
+### Shadow 实现
 
 - Raw Evidence；
 - Canonical Memory；
-- Memory Candidate；
-- 简单 Memory Policy；
-- 基础任务相关 recall；
-- 可替换检索适配层；
+- Scope / Privacy / Provenance / Temporal Validity；
+- Memory Access API；
+- Task Working Memory；
+- Candidate → Create / Merge / Supersede / Ignore 基础规则；
+- candidate result governance；
 - Deep Recall 基础路径。
+
+### 外部组件
+
+首个在线检索后端使用 **Mem0 OSS**，通过 `MemoryEngineAdapter` 接入，负责候选检索 / reranking，不成为事实源。
+
+基础执行链：
+
+```text
+Runtime
+  ↓ Recall Intent
+Shadow Memory Access API
+  ↓
+Mem0 Adapter
+  ↓
+Candidate Memories
+  ↓
+Shadow Governance
+  ↓
+Task Working Memory / Runtime
+```
 
 退出条件：
 
-- Canonical Memory 有 provenance；
-- 派生索引可以删除并重建；
-- Memory Engine 替换不迁移 Canonical Memory。
+- 简单 Task 可以完全不触发 Recall；
+- 需要历史信息时 Runtime 能主动调用 Memory Access；
+- Canonical Memory 有 provenance / validity；
+- Task Working Memory 可跨 Runtime 保留；
+- 删除或替换 Mem0 不迁移 Canonical Memory。
 
 ---
 
-## 阶段 6：Capability 与治理
+## 阶段 6：后台 Memory Consolidation
+
+目标：把交互关键路径和记忆整理分开。
+
+实现：
+
+- Shadow Scheduler / Background Memory Job；
+- **LangMem Adapter**；
+- conversation / task / event → Memory Candidate；
+- consolidation / update suggestion；
+- duplicate / conflict candidate；
+- Candidate Review / Policy。
+
+链路：
+
+```text
+Event / Task / Conversation
+        ↓
+Background Job
+        ↓
+LangMem
+        ↓
+Memory Candidate / Consolidation Suggestion
+        ↓
+Shadow
+        ↓
+Create / Merge / Supersede / Ignore
+```
+
+退出条件：
+
+- LangMem 不能直接成为 Canonical Memory 事实源；
+- Background Worker 失败不影响在线 Task 主链；
+- 重跑后台整理不会破坏 provenance / version history。
+
+---
+
+## 阶段 7：Capability 与治理
 
 先接一个只读 Capability，再接一个有副作用的 Capability。
 
@@ -201,7 +258,7 @@ Hermes 自己完成 discovery / activation / disclosure / execution
 - result sanitization；
 - secret / credential boundary。
 
-同时预留协议边界：
+协议边界：
 
 ```text
 Capability
@@ -219,7 +276,7 @@ MCP / REST / CLI / IPC / Local API
 
 ---
 
-## 阶段 7：第二 Runtime 与语义接力
+## 阶段 8：第二 Runtime 与语义接力
 
 接入第二个 Runtime，例如 DSH。
 
@@ -241,19 +298,19 @@ Semantic Checkpoint
         ↓
 Runtime A 中断
         ↓
-Shadow 重新提供 Task / Memory / Available Skills / Policy
+Shadow 重新提供 Task / Working Memory / Available Skills / Policy
         ↓
 Runtime B 继续执行
 ```
 
 退出条件：
 
-- Task 语义、Artifact、Skill 可用性和副作用状态不丢失；
+- Task 语义、Artifact、Task Working Memory、Skill 可用性和副作用状态不丢失；
 - 同一 Canonical Skill 可投影给两个不同 Runtime。
 
 ---
 
-## 阶段 8：Event-driven 持续运行
+## 阶段 9：Event-driven 持续运行
 
 目标：证明 Shadow 不是 Chat 聚合器，也不是 Memory Engine 外壳。
 
@@ -273,25 +330,58 @@ Runtime B 继续执行
 
 ---
 
-## 阶段 9：可插拔 Manager 与升级验证
+## 阶段 10：Memory Association Graph 实验
+
+目标：验证自动联想和多跳关系是否真正提高长期个人 AI 的 Recall 质量。
+
+增加 **Graphiti Adapter**，把 Entity / Relation / Temporal Graph 作为 Derived Intelligence：
+
+```text
+Canonical Memory / Event
+        ↓
+Graphiti Adapter
+        ↓
+Derived Memory Graph
+        ↓
+Graph-assisted / multi-hop Recall
+```
+
+实验比较：
+
+```text
+Mem0-only
+   VS
+Mem0 + Graph Association
+```
+
+关注：
+
+- multi-hop question / recall quality；
+- irrelevant memory rate；
+- task success；
+- token overhead；
+- stale / wrong relation rate；
+- user correction；
+- association gain。
+
+退出条件：
+
+- Graph 删除后可从 Canonical Memory / Raw Evidence 重建；
+- 低置信度 relation 不覆盖 Canonical Memory；
+- 能证明关联图带来可测收益，否则不提升为默认主链。
+
+---
+
+## 阶段 11：可插拔 Manager 与升级验证
 
 只有真实使用出现明确缺口后，才增加高级 Manager。
 
 候选扩展：
 
+- Learned Memory Attention / Personal Memory Router；
 - Advanced Skill Manager；
-- Advanced Memory Manager / Router；
+- MemOS Adapter / alternative Memory Engine；
 - Runtime evaluation manager。
-
-高级 Skill Manager 可以尝试：
-
-- Skill 搜索；
-- Skill Graph；
-- 冲突处理；
-- 智能路由；
-- 使用效果评估。
-
-但它必须通过 Canonical Skill API 工作，不得拥有唯一事实源。
 
 同时实现：
 
@@ -303,6 +393,7 @@ Runtime B 继续执行
 
 退出条件：
 
+- 更换 Memory Router 不迁移 Canonical Memory；
 - 更换 Skill Manager 不迁移 Canonical Skill；
 - 更换 Runtime / Memory Engine / Provider 不迁移核心资产。
 
@@ -316,10 +407,12 @@ Runtime B 继续执行
 | AC-02 | Skill Portability | 同一 Canonical Skill 可投影到两个 Runtime |
 | AC-03 | Skill Ownership | Runtime 修改 Projection 不直接修改 Canonical Skill |
 | AC-04 | Cross-Runtime Memory | Runtime B 可使用 Runtime A 形成的长期 Memory |
-| AC-05 | Autonomous Event Handling | 无 Chat Prompt 时 Event 可触发 Task |
-| AC-06 | Capability Governance | Runtime 不能绕过 Policy / Gateway 执行高风险动作 |
-| AC-07 | Exactly-once Side Effect | Crash / Retry 不重复执行已完成动作 |
-| AC-08 | Non-Memory Core | 暂时禁用 Memory 后 Task / Skill / Capability / Event 主干仍工作 |
+| AC-05 | Memory Selectivity | 简单 Task 无 Recall；需要历史时只注入少量相关 Memory |
+| AC-06 | Memory Engine Replaceability | 替换在线检索 Engine 不迁移 Canonical Memory |
+| AC-07 | Autonomous Event Handling | 无 Chat Prompt 时 Event 可触发 Task |
+| AC-08 | Capability Governance | Runtime 不能绕过 Policy / Gateway 执行高风险动作 |
+| AC-09 | Exactly-once Side Effect | Crash / Retry 不重复执行已完成动作 |
+| AC-10 | Non-Memory Core | 禁用 Memory 后 Task / Skill / Capability / Event 主干仍工作 |
 
 ## v0.1 明确不做
 
@@ -328,6 +421,8 @@ Runtime B 继续执行
 - Skill Graph Executor；
 - Progressive Disclosure Engine；
 - 自动 Skill Evolution；
+- Learned Memory Router；
+- 把 Graphiti / Knowledge Graph 放进默认主链；
 - 自研 Browser Agent；
 - 自研 Coding Agent；
 - 完整 Workflow Engine；
@@ -354,13 +449,17 @@ Event / Task / Checkpoint / Ledger
   ↓
 Skill Authority / Projection
   ↓
-Memory
+Memory Authority + Mem0
+  ↓
+LangMem Background Consolidation
   ↓
 Capability / Provider / Protocol
   ↓
 第二 Runtime / Handoff
   ↓
 Event-driven Runtime
+  ↓
+Graphiti Association Experiment
   ↓
 按真实缺口增加可插拔 Manager
 ```
