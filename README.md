@@ -286,36 +286,191 @@ OpenShadow 希望把 AI 使用从一种持续消费的服务，逐渐变成一�
 
 ## Long-term direction
 
-OpenShadow 的长期目标不是成为“唯一的 Agent”。
+OpenShadow 的长期目标不是成为“唯一的 Agent”，也不是在现有 Agent 之上再套一层聊天入口。
 
-更理想的形态是成为个人 AI 生态中一个安静、稳定、长期存在的底层：
+它希望成为一个**寿命长于任何单一模型、Runtime 和 AI 产品的个人 AI 基础设施层**：持续感知用户的数字与物理世界，维护属于用户的长期状态，把合适的问题交给当时最合适的智能系统，并通过统一的能力与治理层把决策安全地作用回现实世界。
 
-```text
-                   THE SHADOW
+### Target end-state
 
-             Personal continuity
-                     │
-        ┌────────────┼────────────┐
-        │            │            │
-     Work AI      Home AI      Research AI
-        │            │            │
-     Coding AI    Voice AI      Future AI
-        └────────────┼────────────┘
-                     │
-              Shared personal state
-                     │
-           Real-world capabilities
+```mermaid
+flowchart TB
+    U["Person / Physical & Digital World"]
+
+    subgraph OBS["Interaction & Observation Plane"]
+        CHAT["Chat / UI"]
+        VOICE["Voice / Ambient Interface"]
+        MAIL["Email / Calendar"]
+        DEV["Home / PC / Server / Devices"]
+        EXT["Files / Web / External Events"]
+    end
+
+    subgraph SHADOW["THE SHADOW — Personal AI Continuity & Control Plane"]
+        direction LR
+        ID["Identity & Policy"]
+        EVT["Event & World State"]
+        TASK["Task & Semantic Checkpoint"]
+        MEM["Memory Policy & Memory Broker"]
+        CTX["Context Compiler"]
+        CTRL["Runtime Registry / SRI"]
+        CAP["Capability Gateway / Ledger"]
+        ATT["Scheduler / Pulse"]
+    end
+
+    subgraph INTEL["Elastic Intelligence Plane"]
+        direction LR
+        L0["L0 Rules\nDeterministic"]
+        L1["L1 Shadow Pulse\n0.5B–3B always-on"]
+        L2["L2 Local General Brain\nOn demand"]
+        L3["L3 Agent / Specialist\nComplex work"]
+        L0 --> L1 --> L2 --> L3
+    end
+
+    subgraph RT["Replaceable Runtime Ecosystem"]
+        H["Hermes"]
+        D["DSH"]
+        C["Claude / Codex"]
+        F["Future Runtime"]
+    end
+
+    subgraph FABRIC["Capability Fabric"]
+        HA["Home Assistant"]
+        PC["PC Agent"]
+        SRV["Server Agent"]
+        NAS["NAS / Files"]
+        API["Email / Calendar APIs"]
+        WEB["Browser / Web Tools"]
+    end
+
+    subgraph ASSET["User-owned Durable Assets"]
+        RAW["Raw Evidence"]
+        CM["Canonical Memory"]
+        TH["Task / Decision History"]
+        ART["Artifacts"]
+        POL["Policies / Trust Profile"]
+        WF["Capabilities / Procedures / Workflows"]
+    end
+
+    U --> OBS
+    OBS --> EVT
+    EVT --> ATT
+    ATT --> INTEL
+    TASK <--> INTEL
+    MEM <--> INTEL
+    CTX --> INTEL
+    CTRL <--> RT
+    INTEL --> CTRL
+    RT -. "reason / plan / execute" .-> CTRL
+    CTRL --> CAP
+    CAP --> FABRIC
+    FABRIC --> U
+
+    ASSET <--> SHADOW
+    EVT --> RAW
+    MEM --> CM
+    TASK --> TH
+    CAP --> ART
+    ID --> POL
+    CAP --> WF
 ```
 
-它不需要永远站在用户面前，也不需要自己完成所有推理。
+这张图表达的是 OpenShadow 希望长期保持的几个基本关系：
 
-它更像一个人的：
+- **人和现实世界是中心，不是某个 Agent。** Shadow 围绕一个真实的人维护连续性，而不是围绕一个 Session 维护聊天上下文。
+- **Shadow 是稳定的 Thin Waist。** 上层交互方式、下层 Runtime、模型、Memory Engine 和 Provider 都可以变化；核心 Contract 与个人资产尽量保持稳定。
+- **智能是弹性的。** 从 L0 规则、L1 极小 Pulse、L2 本地通用模型到 L3 专业 Runtime，只有在问题值得时才逐级投入更多算力。
+- **Runtime 是执行资源，而不是系统主人。** Hermes、DSH、Claude / Codex 或未来 Runtime 可以失败、升级、替换，但 Task、Memory、Policy 和历史仍由 Shadow 持有。
+- **能力形成统一的 Capability Fabric。** 新 Agent 不需要重新接管邮箱、服务器、家庭设备和文件系统，只获得经过 Policy 授权的标准能力。
+- **所有使用都会留下可复用资产。** 事件、记忆、任务轨迹、Artifact、Procedure 和 Policy 不只是日志，而是未来智能继续工作的基础。
 
-- AI control plane；
-- continuity kernel；
-- personal state substrate；
-- capability fabric；
-- long-lived digital infrastructure。
+### A personal AI system that can survive technology turnover
+
+OpenShadow 希望刻意制造一种“不对称”：**越容易被技术浪潮替代的东西，越应该放在外围；越属于用户本人、越难重新获得的东西，越应该靠近核心。**
+
+```text
+Fast-changing / Replaceable
+
+Prompts & UI
+Models
+Agent Runtimes
+Memory / Search Engines
+Capability Providers
+────────────────────────────
+Shadow Contracts & Governance
+Canonical Personal State
+Raw Evidence & Personal History
+────────────────────────────
+Slow-changing / User-owned
+```
+
+因此未来即使发生：
+
+- 主模型从一个家族切换到另一个家族；
+- Hermes 被更强 Runtime 替代；
+- 当前 Memory Engine 被新的记忆技术取代；
+- MCP 或工具协议发生变化；
+- Home / PC / Server 的设备生态更换；
+- 交互从 Chat 变成语音、眼镜或新的 ambient interface；
+
+理想情况下都只需要替换**外围实现或 Adapter**，而不是重建一个人的 AI 生活。
+
+### Persistent, but not monolithic
+
+“长期存在”不意味着一个巨大模型永远运行。
+
+Shadow 希望自己更像一个常驻的系统内核：
+
+```text
+Always-on low-power layer
+├─ Event ingestion
+├─ World State
+├─ Scheduler
+├─ Policy
+├─ Task persistence
+├─ L0 Rules
+└─ L1 Shadow Pulse
+
+On-demand intelligence
+├─ Local General Brain
+├─ Hermes / DSH
+├─ Claude / Codex
+└─ Future specialists
+
+Long-lived storage
+├─ Raw Evidence
+├─ Canonical Memory
+├─ Task / Decision History
+├─ Artifacts
+└─ Policies / Capabilities
+```
+
+系统可以一直存在，但昂贵智能只按需出现。即使 GPU Server、Cloud Runtime 或某个 Agent 暂时不可用，Shadow 仍然能够观察世界、保存事实、维护任务，并等待合适的执行资源恢复。
+
+### From an assistant to personal digital infrastructure
+
+最终 OpenShadow 希望形成的不是“一个越来越长的聊天记录”，而是逐年积累的一套个人数字基础设施：
+
+```text
+Raw history           →  what actually happened
+Canonical memory      →  what is currently believed
+World state           →  what is true now
+Tasks & checkpoints   →  what is being pursued
+Capabilities          →  what can be done
+Policies              →  what is allowed
+Procedures            →  how things are usually done
+Task trajectories     →  what experience has been learned
+Attention policy      →  what deserves attention
+```
+
+这些资产可以被今天的 Agent 使用，也可以被未来尚未出现的 Agent 使用。
+
+OpenShadow 不需要永远站在用户面前，也不需要自己完成所有推理。它更像一个人的：
+
+- **AI control plane** — 管理谁可以做什么；
+- **continuity kernel** — 让任务、状态和历史跨 Runtime 延续；
+- **personal state substrate** — 保存真正属于用户的长期上下文；
+- **capability fabric** — 将数字世界和物理世界的能力统一提供给不同智能；
+- **attention layer** — 在世界持续变化时判断什么值得唤醒更昂贵的智能；
+- **long-lived digital infrastructure** — 吸收每一代 AI 的进步，而不被任何一代 AI 绑死。
 
 最终希望做到的是：
 
