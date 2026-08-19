@@ -1,375 +1,336 @@
-# OpenShadow Requirements & System Design Specification
+# OpenShadow 需求基线
 
-**Version:** v0.3  
-**Target:** Shadow v0.1 MVP  
-**Status:** Implementation Baseline  
-**Positioning:** Personal AI Continuity & Control Layer
+**状态：前期需求对齐 / 待核心契约冻结**  
+**目标：OpenShadow v0.1 MVP**
 
-> **Shadow owns the continuity.**  
-> Runtime owns reasoning and execution — never durable user state.
+> **Shadow 持有连续性。Runtime 负责推理与执行，但不拥有用户的长期状态。**
 
-## 1. Product definition
+## 1. 产品定义
 
-OpenShadow 是一个 **Local-first、Runtime-neutral** 的个人 AI 连续性与控制层，使用户拥有的 **Memory、Task、Capability、Policy 与 History / World State** 能跨模型、跨 Agent、跨设备、跨时间持续存在。
+OpenShadow 是一个**本地优先、运行时无关的个人 AI 连续性与控制层**。
 
-Shadow 不以“成为最聪明的 Agent”为目标，而是解决个人 AI 资产被具体 Agent / Session / Framework 锁定的问题。
+它负责持有必须跨模型、跨 Runtime、跨设备、跨 Session 和跨时间持续存在的个人资产，并让不同 Runtime、Memory Engine、Skill 实现和 Capability Provider 可以被替换、升级和迁移。
 
-### 1.1 Problems to solve
+OpenShadow 不以“成为最聪明的 Agent”为目标，也不重造已有成熟 Runtime、浏览器 Agent、Coding Agent、Memory Engine 或设备平台。
 
-- **Personal State 被具体 Agent 锁定**：Memory、Task、Skill、Session、Policy 被不同产品分散持有。
-- **Runtime 难以替换**：更换 Agent 通常意味着重新迁移上下文、任务、工具与配置。
-- **多 Agent 面对的不是同一个人**：不同 Agent 维护不同版本的用户事实、偏好与项目状态。
-- **长期记忆容易退化为 RAG**：大量语义相似但决策无关的历史被塞入 Context。
-- **权限与副作用缺乏统一治理**：不同 Agent 分别持有 API Key、工具和动作权限。
+## 2. 核心问题
 
-## 2. Product boundary
+OpenShadow 需要解决：
 
-判断一个功能是否属于 Shadow 的唯一标准：
+- 用户状态被某个 Agent / Session / 产品锁定；
+- 长期 Task 随 Runtime Session 消失；
+- Memory 被简化成不可治理的长期 RAG；
+- 用户长期积累的 Skill 被锁在某个 Runtime 私有格式；
+- Tool、Capability、Provider、MCP 等概念混杂，导致能力难以迁移和统一治理；
+- 不同 Runtime 分别持有权限和外部副作用状态；
+- 更换 Runtime、Memory Engine、Skill 版本或 Provider 时缺少稳定迁移边界；
+- 系统过度依赖 Chat UI，缺少 Event / World State 驱动的持续运行机制。
 
-> **如果一个功能必须跨 Runtime、跨模型、跨 Session、跨设备或跨年份保持一致，它应属于 Shadow；否则优先交给现有 Runtime / Provider / Engine。**
+## 3. 产品边界
 
-| Shadow 必须持有 | 优先复用 / 外包 |
+判断一个功能是否属于 Shadow 的原则：
+
+> **必须跨模型、跨 Runtime、跨设备、跨 Session 或跨年份保持一致的状态和契约，由 Shadow 持有；其余能力优先复用外部成熟系统。**
+
+### Shadow 必须持有或治理
+
+- Identity / Policy；
+- Event / World State；
+- Task / Semantic Checkpoint；
+- Raw Evidence / Canonical Memory；
+- Skill Registry / Skill Version / Skill Relation；
+- Capability Contract / Registry；
+- Runtime Registry / SRI；
+- Context Compiler；
+- Capability Gateway / Execution Ledger；
+- Artifact 引用；
+- authoritative Scheduler；
+- 核心对象的升级、迁移与 provenance 元数据。
+
+### 优先复用
+
+- Agent Loop / Planning；
+- Hermes、DSH、Claude、Codex 等 Runtime；
+- Mem0、LangMem、Graphiti 等 Memory Engine；
+- Browser Agent / Coding Agent / Research Agent；
+- Home Assistant / PC Agent / Server Agent；
+- Email / Calendar / Browser Provider；
+- MCP / REST / CLI / IPC 等集成协议；
+- STT / TTS / Messaging；
+- Embedding / Vector DB / Graph DB / LLM Serving。
+
+## 4. 核心一等对象
+
+| 对象 | 定义 |
 | --- | --- |
-| Identity / Policy | Agent Loop / Planning |
-| Canonical Task / Semantic Checkpoint | Browser Agent |
-| Raw Evidence / Canonical Memory Contract | Embedding / Vector DB / Graph Engine |
-| Memory Policy / Memory Broker | Mem0 / LangMem / Graphiti |
-| Event / World State | Home Assistant 设备驱动 |
-| Capability Registry / Gateway / Ledger | Email / Calendar / Browser / Server Provider |
-| Runtime SRI / Router / Upgrade | Hermes / DSH / Claude / Codex |
-| Context Compiler | AstrBot / Hermes Gateway / IM |
-| Scheduler / Pulse | STT / TTS / LLM Serving |
+| **Identity** | 用户身份、长期偏好、信任与隐私基线 |
+| **Event** | 已发生事实的持久记录 |
+| **World State** | 当前世界状态的紧凑投影 |
+| **Task** | 需要持续完成的工作及其状态 |
+| **Memory** | 对历史证据形成的可追溯、可修正认知 |
+| **Skill** | 可复用的方法、经验、策略和程序性知识 |
+| **Capability** | 稳定、可治理、可版本化的动作或查询契约 |
+| **Policy** | 权限、风险、隐私、预算与审批规则 |
+| **Artifact** | 文件、报告、日志、工具结果等任务产物 |
+| **Runtime Binding** | 当前执行 Runtime 与临时 Session 引用 |
 
-## 3. Core durable objects
-
-| Object | Definition | Ownership reason |
-| --- | --- | --- |
-| Identity | 用户及长期身份 / 隐私基线 | 所有 Runtime 的根身份 |
-| Event | 已发生事实，append-only | 支撑审计、重建、长期证据 |
-| World State | 当前世界状态投影 | 让 Agent 面对“现在” |
-| Task | 长期目标、进度、结果 | 不随 Runtime Session 消失 |
-| Memory | 对历史形成的可追溯认知 | 属于用户，而非某个 Agent |
-| Capability | 用户拥有的标准化可执行能力 | Runtime 可换，但“身体”不能丢 |
-| Policy | 权限、风险、隐私、预算规则 | 跨 Runtime 统一治理 |
-| Artifact | 文件、日志、报告、工具结果 | 支撑跨 Runtime 接力 |
-| Runtime Binding | 当前执行引擎与临时 Session 引用 | 只绑定执行，不拥有持久状态 |
-
-## 4. Event & World State requirements
-
-### 4.1 Event Store
-
-- 使用 append-only Event 表达系统事实。
-- 事件至少支持：`user.message`、`email.received`、`calendar.updated`、`server.alert`、`device.state_changed`、`task.*`、`capability.*`、`runtime.*`、`memory.*`。
-- 最小字段：`event_id`、`timestamp`、`source`、`actor`、`type`、`payload`、`artifact_refs`、`privacy_level`、`schema_version`。
-- 修正通过新事件或显式 `supersede / correction` 表达，不允许无痕覆盖。
-
-### 4.2 World State
-
-World State 是 Event 的当前投影，例如当前模式、活跃任务、今日日历、Home Presence、Server Health、Active Projects。
-
-> Event = what happened.  
-> World State = what is true now.
-
-Runtime 默认读取紧凑 World State，而不是重新扫描全部历史。
-
-## 5. Task & Semantic Checkpoint
-
-Task 是 Shadow 的一等公民。Runtime 只执行 Task，不能拥有 Task。
-
-### 5.1 TaskEnvelope minimum fields
-
-- Identity: `task_id`, `user_id`
-- Goal: `goal`, `intent`, `priority`, `deadline`
-- State: `status`, `current_stage`, `completed_steps`, `remaining_work`
-- Knowledge: `known_facts`, `decisions`, `memory_refs`
-- Artifacts: `artifact_refs`, `tool_results`
-- Control: `allowed_capabilities`, `permission_profile`, `budget`
-- Runtime: `runtime_binding`, `runtime_session_ref`
-- Recovery: `checkpoint_ref`, `last_durable_event`
-
-### 5.2 Semantic Checkpoint
-
-Shadow 不迁移模型隐式思维链或 Runtime 私有内部状态，只迁移可验证的任务语义状态：
-
-- Goal / Current Stage
-- Completed Work / Known Facts
-- Decisions / Evidence
-- Tool Results / Artifacts
-- Open Questions / Remaining Work
-- Next Objective
-
-“无损切换”定义为：**Task 语义状态、证据、Artifact 与副作用状态不丢**；不承诺 token-level / hidden reasoning state 无损。
-
-## 6. Memory Substrate
-
-Shadow Memory 不是“长期 RAG”。Memory 的目标是改善当前任务决策，而不是最大化召回历史。
-
-### 6.1 Three layers
-
-| Layer | Content | Property |
-| --- | --- | --- |
-| Raw Evidence | 对话、邮件、事件、任务轨迹、文件、传感历史 | 事实证据；尽量长期保存 |
-| Canonical Memory | Fact / Preference / Relationship / Episode / Decision / Procedure / Project State | 可修正、可追溯、带时间有效性 |
-| Derived Intelligence | Embedding / Vector Index / BM25 / Graph / Summary / Reranker features | 可重建、可替换 |
-
-### 6.2 Write path
-
-`Event → Raw Evidence → Memory Candidate → Memory Policy → Ignore / Buffer / Create / Merge / Supersede → Canonical Memory`
-
-V0.1 使用：规则 + LLM 分类 + heuristic score。主要因素：
-
-- future usefulness
-- decision impact
-- explicitness
-- novelty
-- stability
-- entity importance
-- confidence
-- redundancy
-
-### 6.3 Recall path
-
-> **Retrieval is a decision, not a database query.**
-
-先根据当前 Task / Step 生成 `MemoryNeed`，再由 Memory Broker 多路检索。优先级：
-
-1. Direct structured lookup
-2. Temporal / validity query
-3. Entity / relationship lookup
-4. Lexical / BM25
-5. Vector semantic search
-
-候选结果按 Task relevance、Entity match、Temporal validity、Confidence、Importance、Past usefulness、Redundancy、Provenance quality 重排，输出紧凑 `MemoryBundle`。
-
-### 6.4 Task Working Memory
-
-长任务启动时构造 Task Working Memory；Runtime 主要在 Working Set 内工作，仅在出现新的 MemoryNeed 时访问长期 Memory，避免每一步重复 RAG。
-
-### 6.5 Memory feedback
-
-记录：`retrieved / injected / referenced / decision_changed / user_corrected / task_outcome`，用于未来 Personal Memory Router 与科研实验。
-
-## 7. Runtime SRI
-
-SRI（Shadow Runtime Interface）是 Shadow 面向 Agent Runtime 的稳定 Contract。
-
-### 7.1 Minimum interface
+对象关系的基本语义：
 
 ```text
-execute(task_context)
-resume(semantic_checkpoint)
-pause(task_id)
-cancel(task_id)
-checkpoint(task_id)
-status(task_id)
-capabilities()
-health()
+Memory      = 我知道什么
+Skill       = 这类事情应该怎么做
+Capability  = 系统实际上能做什么
+Task        = 我现在要完成什么
+Policy      = 哪些行为被允许
 ```
 
-### 7.2 Runtime roles
+## 5. Task 与 Semantic Checkpoint 需求
 
-| Type | Candidate | Role |
-| --- | --- | --- |
-| General Runtime | Hermes | 稳定主执行器 |
-| Candidate Runtime | DeepSeek Harness / DSH | 验证模块化与切换机制 |
-| Specialist | Claude / Codex | Coding / Research 等专业任务 |
-| Future Runtime | Any | 通过 Adapter 接入 |
+- Task 必须由 Shadow 持有，不能以 Runtime Session 作为唯一事实源。
+- Task 必须保留目标、阶段、已完成工作、已知事实、决策、Artifact、剩余工作、权限与副作用状态。
+- Runtime 中断或替换后，Task 必须能够从最近持久化 Semantic Checkpoint 恢复。
+- Shadow 不要求迁移隐藏思维链、KV Cache 或 Runtime 私有 Planner 状态。
+- 跨 Runtime 接力的最低保证是：Task 语义、证据、产物、剩余工作和副作用状态不丢失。
 
-### 7.3 Upgrade lifecycle
+## 6. Memory 需求
 
-`Install Candidate → Compatibility Test → Historical Dry-run Replay → Canary → Promote → Drain Old Runtime → Retire / Rollback`
+### 6.1 三层数据模型
 
-运行中任务优先 Drain；长任务可通过 Semantic Checkpoint 迁移；Runtime crash 使用 last durable checkpoint 在 fallback runtime 上恢复。
+```text
+Raw Evidence
+    ↓
+Canonical Memory
+    ↓
+Derived Index / Summary / Graph
+```
 
-## 8. Capability & Governance
+- Raw Evidence 作为长期证据源；
+- Canonical Memory 必须可修正、可追溯、支持时间有效性；
+- embedding、向量索引、摘要和图等派生结果必须可重建；
+- Memory Engine 不能成为 Canonical Memory 的唯一事实源。
 
-Capability 表示用户拥有的标准化“身体能力”，例如：
+### 6.2 召回
 
-- `home.light.set`
-- `calendar.create`
-- `server.logs`
-- `server.restart`
-- `nas.search`
+- Recall 必须以当前 Task / Step 的决策需要为中心；
+- 支持显式 `MemoryNeed`；
+- 支持结构化、时间、实体、全文和语义检索组合；
+- 输出紧凑 `MemoryBundle`；
+- Canonical Memory 不足时允许 Deep Recall Raw Evidence、历史 Task 与 Artifact。
 
-Shadow 只定义 Contract、Registry、Gateway、Policy，不重写每个动作实现。
+## 7. Skill 需求
 
-### 8.1 Capability Registry
+Skill 是 Shadow 的一等长期资产。
 
-至少记录：`capability_id`、`version`、`schema`、`provider`、`risk_level`、`permission_requirement`、`status`。
+### 7.1 基本原则
 
-Runtime 不直接持有长期 secrets。
+- Shadow 必须持有跨 Runtime 的规范化 Skill 表示；
+- Runtime-native Skill 可以存在，但不能成为需要长期迁移 Skill 的唯一事实源；
+- Skill 必须支持版本、来源、依赖、验证状态和 Runtime compatibility；
+- Skill 描述“怎么做”，但不授予 Capability 权限；
+- Skill 可以依赖其他 Skill 和 Capability。
 
-### 8.2 Capability Gateway
+### 7.2 分层 Skill
 
-统一执行链：
+当前需求基线支持以下概念层级：
 
-`Identity → Schema Validation → Policy → Approval → Idempotency → Provider → Result Sanitization → Audit`
+1. **策略级 Skill**：高层方法论与长期工作方式；
+2. **领域级 Skill**：某领域解决一类问题的方法；
+3. **程序级 Skill**：较具体的执行步骤、依赖与验证标准；
+4. **Runtime 投影**：面向某一 Runtime 的具体 Skill 表达。
 
-### 8.3 Execution Ledger / Idempotency
+前三层由 Shadow 规范化管理。第四层允许按 Runtime 重新生成或适配。
 
-每个副作用 Action 必须包含 `action_id / idempotency_key`。Runtime 在动作成功后崩溃时，新 Runtime 重复请求相同动作应返回已执行结果，而不是再次执行。
+### 7.3 Skill 选择与注入
 
-> **LLM proposes; Shadow decides; Capability executes.**
+- Task 可以产生 `SkillNeed`；
+- Skill Resolver 根据 Task intent、当前阶段、Skill 层级、Runtime compatibility、Policy、所需 Capability 和历史验证结果选择 Skill；
+- 输出 `SkillBundle`；
+- Context Compiler 将 SkillBundle 与 MemoryBundle、Task、World State 等共同编译给 Runtime；
+- 不允许把全部 Skill 默认注入所有 Runtime Context。
 
-## 9. Context Compiler
+### 7.4 Skill 迁移
 
-Context Compiler 将 Shadow 的 Canonical Context 编译成不同 Runtime 的输入格式。
+Skill 迁移目标是语义可移植，而不是 Runtime 私有格式逐字一致。
 
-Canonical inputs:
+至少应保留：
 
-- Task / Checkpoint
-- Task Working Memory
-- Relevant Personal Memory / MemoryBundle
-- World State
-- Policy / Capability Set
-- Provenance
+- purpose；
+- activation / when-to-use；
+- method / procedure；
+- dependencies；
+- required capabilities；
+- memory needs；
+- verification criteria；
+- provenance；
+- maturity / validation status。
 
-替换 Runtime 时，不迁移其内部 Session，而是从同一 Canonical Context 重新 hydrate。
+## 8. Capability、Provider 与 MCP 需求
 
-## 10. Scheduler & Pulse
+### 8.1 Capability
 
-### 10.1 Scheduler
+Capability 表示稳定、可治理的动作或查询契约，例如：
 
-Shadow 持有长期 authoritative schedule，支持：
+```text
+calendar.create
+email.send
+server.logs.read
+server.restart
+home.light.set
+file.read
+```
 
-- one-shot
-- recurring
-- conditional
+Capability 必须独立于具体 Provider 和 Transport。
 
-Runtime 自带 cron 可以存在，但不能成为长期唯一真相。
+### 8.2 Provider
 
-### 10.2 Pulse
+Provider 是 Capability 的实际实现者。Provider 可以被替换，但 Capability 语义应尽量稳定。
 
-Pulse 是低成本 Personal Attention Layer。
+### 8.3 Tool 与 MCP
 
-Priority path:
+以下概念必须明确区分：
 
-`L0 deterministic rules → L1 tiny local model → L2 General Runtime`
+> **Tool 是接口；Capability 是长期能力资产；Skill 是可复用经验；MCP 是协议。**
 
-Outputs:
+- MCP Tool 可以映射为 Capability Candidate 或 Provider Binding；
+- MCP Resource 可以作为 Context Source / Evidence Source；
+- MCP Prompt 可以作为 Skill Candidate 或 Runtime Template；
+- 使用 MCP 不得绕过 Capability Gateway / Policy / Execution Ledger。
 
-`Ignore / Update State / Remember Candidate / Notify / Create Task / Escalate`
+## 9. Runtime 与 SRI 需求
 
-目标是把大量低价值事件压缩成少量真正需要 Agent 的事件，而不是高频 heartbeat 大模型。
+- Runtime 被视为可替换执行器；
+- Shadow 通过 SRI 统一执行、恢复、暂停、取消、检查点、状态、能力发现和健康检查；
+- 至少支持两个不同 Runtime Adapter 以验证 Runtime-neutral；
+- Runtime Router 可考虑 Task 类型、Runtime 能力、隐私、成本、延迟、健康状态和 Policy；
+- Runtime-native Session 只作为 Binding，不作为 Task 事实源；
+- Runtime 切换通过 Context Compiler 从 Shadow 规范化状态重新 hydrate。
 
-## 11. Interaction
+## 10. Event、World State 与持续运行需求
 
-V0.1 只要求：
+- Event 采用 append-oriented 方式持久记录；
+- World State 由 Event 投影生成；
+- Runtime 默认读取 Task 相关的紧凑 World State，而不是全量事件历史；
+- Task 可以由 User、Event、Schedule 或 Condition 触发；
+- 删除 Chat UI 后系统仍应能接收事件、维护状态、恢复任务并执行允许的动作；
+- Pulse 可以作为低成本注意力层，但属于实现优化，不属于核心所有权原则。
 
-- CLI
-- Webhook
-- Minimal Web Console
+## 11. Capability Gateway 与治理需求
 
-未来可接 AstrBot、Hermes Gateway、Telegram、Voice Satellite、Mobile App。
+所有现实副作用统一经过：
 
-**验收原则：删除 Chat UI 后，Shadow 仍应能监听事件、更新状态、创建任务、调用 Runtime、执行 Capability、记录结果并通知用户。**
+```text
+Identity
+→ Schema Validation
+→ Policy / Risk
+→ Approval when required
+→ Idempotency
+→ Provider
+→ Execution Ledger / Audit
+```
 
-## 12. Data persistence baseline
+必须保证：
 
-V0.1 使用 PostgreSQL 作为统一 Source of Truth，pgvector 只作为派生索引。
+- Runtime 不直接持有长期 raw secrets；
+- 高风险 Capability 支持审批；
+- 每个副作用动作具有稳定 action_id / idempotency_key；
+- Runtime crash / retry 不重复执行已完成动作；
+- 结果可以被 Artifact 化并按 Runtime trust profile 脱敏。
 
-| Logical store | Content |
+## 12. Context Compiler 需求
+
+Context Compiler 至少需要组合：
+
+```text
+Task / Checkpoint
+MemoryBundle
+SkillBundle
+World State
+Policy / Trust Profile
+Allowed Capabilities
+Artifact / Evidence references
+```
+
+并转换为具体 Runtime 能理解的输入格式。
+
+## 13. 可替换组件升级需求
+
+Runtime、Skill、Memory Engine 和 Provider 的长期升级机制应支持：
+
+```text
+Candidate
+→ Compatibility Check
+→ Historical Replay / Test
+→ Canary
+→ Promote
+→ Rollback / Deprecate
+```
+
+核心资产不得因为更换外围组件而整体迁移。
+
+## 14. 非功能需求
+
+| 维度 | 要求 |
 | --- | --- |
-| `users / identities` | 身份与基础设置 |
-| `events` | append-only event log |
-| `world_state` | 当前投影 |
-| `tasks / task_checkpoints` | Task 与 Semantic Checkpoint |
-| `artifacts` | 文件、日志、报告、工具结果引用 |
-| `memories / memory_links` | Canonical Memory、时间有效性、provenance |
-| `memory_feedback` | 召回、使用、修正反馈 |
-| `capabilities / providers` | Capability Contract 与 Provider 注册 |
-| `execution_ledger` | 副作用调用、idempotency、result、audit |
-| `runtimes / runtime_bindings` | Runtime / Adapter / health / task binding |
-| `policies / approvals` | 统一规则与审批记录 |
+| 本地优先 | Raw Evidence、核心 Memory、Policy 默认本地持有 |
+| 可移植性 | 核心数据不依赖单一 Runtime / Provider 私有格式 |
+| 可审计性 | 重要状态和现实动作可追溯 |
+| 可恢复性 | Core 重启不丢 Task / Event / Ledger；Runtime crash 可恢复 |
+| 可升级性 | Runtime / Skill / Provider 等具有清晰替换边界 |
+| 最小权限 | Cloud Runtime 和外部 Provider 只获得所需数据与权限 |
+| 可重建性 | 派生索引和 Runtime 投影可重新生成 |
 
-大型 Artifact / Raw Evidence 可存本地文件系统或 NAS，并在数据库保存 ref / hash / metadata。
+## 15. v0.1 范围
 
-## 13. Non-functional requirements
+### 必做
 
-| Dimension | Requirement |
+- Event / World State；
+- Task / Semantic Checkpoint；
+- Raw Evidence / Canonical Memory / MemoryNeed / MemoryBundle；
+- Skill Registry / SkillNeed / SkillBundle / 基础 Runtime Projection；
+- Capability Registry / Gateway / Provider Binding；
+- Policy / Approval / Idempotency / Execution Ledger；
+- SRI + 至少两个 Runtime Adapter；
+- Context Compiler；
+- 基础 Scheduler / Event-driven execution；
+- PostgreSQL 单机持久化；
+- CLI / 最小管理入口。
+
+### 暂不做
+
+- 自研 Agent Loop；
+- 自研 Browser Agent / Coding Agent；
+- 完整 Workflow Engine；
+- 自研 Vector DB / Graph DB；
+- Plugin Marketplace；
+- 完整 IM / Voice 平台；
+- Multi-user SaaS；
+- Kubernetes / 复杂微服务。
+
+## 16. v0.1 验收场景
+
+| 场景 | 通过条件 |
 | --- | --- |
-| Reliability | Shadow Core 重启不丢 durable Task / Event / Ledger；Runtime crash 可从 checkpoint 恢复 |
-| Portability | 核心个人数据不得依赖单一 Runtime 私有结构 |
-| Local-first | Personal Data 默认本地；Cloud Runtime 受 Policy 控制 |
-| Auditability | 重要动作可追溯：谁提出、基于什么 Context、谁批准、执行结果 |
-| Upgradeability | Runtime / Memory Engine / Provider 支持 Install→Validate→Canary→Promote→Rollback |
-| Explainability | Memory 能解释“为什么记住”和“为什么这次被调取” |
-| Performance | Fast deterministic path 不强制经过 Agent |
-| Extensibility | 新 Runtime / Provider 原则上只新增 Adapter，不修改 Core Contract |
+| Runtime Continuity | Runtime A 中断后 Runtime B 能继续同一 Task |
+| Skill Portability | 同一规范化 Skill 能投影到两个 Runtime 并保持核心方法语义 |
+| Cross-Runtime Memory | Runtime A 形成的长期 Memory 可被 Runtime B 正确使用 |
+| Autonomous Event Handling | 无 Chat Prompt 时 Event 也能更新状态、创建 Task 并触发执行 |
+| Capability Governance | Runtime 无法绕过 Policy 执行高风险外部动作 |
+| Exactly-once Side Effect | Crash / Retry 不重复执行已完成现实动作 |
+| Runtime Upgrade | Candidate Runtime 可回放、灰度、晋升与回滚且核心资产不迁移 |
 
-## 14. Security & privacy
+## 17. 当前文档原则
 
-- Cloud Runtime 默认最小权限，不直接接触长期 secrets。
-- Secret 通过 Gateway / Proxy 使用。
-- Capability 按风险分级：read-only / reversible / external commitment / destructive / physical safety。
-- 高风险动作必须支持 approval gate。
-- Raw Evidence、Memory、Artifact 按 `privacy_level` 标记。
-- Context Compiler 根据 Runtime trust profile 裁剪数据。
-- 支持敏感数据禁出网、Local Model 优先、Mode / Policy Bundle。
+当前阶段不继续展开过细模块设计。下一步先冻结：
 
-## 15. Shadow v0.1 MVP scope
+```text
+Event / World State
+Task
+Memory
+Skill
+Capability
+Policy
+SRI
+Artifact
+```
 
-### 15.1 Must build
-
-- Event Store + Minimal World State Projection
-- Canonical Task + Semantic Checkpoint
-- SRI + Hermes Adapter + DSH Adapter
-- Raw Evidence + Canonical Memory Contract
-- Simple Memory Policy + Memory Broker + MemoryBundle
-- Context Compiler
-- Capability Registry + Gateway + Execution Ledger + Idempotency
-- Basic Policy / Approval
-- Minimal Scheduler + Pulse
-- PostgreSQL + pgvector
-- CLI / Webhook / Minimal Admin Console
-- Docker Compose single-node deployment
-
-### 15.2 Explicitly out of scope
-
-- 自研 Agent Loop / Browser Agent / Coding Agent
-- 完整 RAG Framework / Vector DB / Graph Database
-- 自研 Home Automation / IM Platform / Voice Stack
-- 复杂 Multi-Agent Framework / Plugin Marketplace
-- Multi-user SaaS / Enterprise tenancy
-- Kubernetes 生产集群 / 分布式微服务
-
-## 16. Acceptance criteria
-
-| ID | Scenario | Pass condition |
-| --- | --- | --- |
-| AC-01 | Runtime Continuity | Hermes 中断后 DSH 从 Semantic Checkpoint 恢复；Task / Artifact / Fact 不丢 |
-| AC-02 | Cross-Runtime Memory | Runtime A 形成的 Canonical Memory 能被 Runtime B 正确调用 |
-| AC-03 | Autonomous Event Handling | 无 Prompt 情况下事件可触发 Pulse → Task → Runtime → Result |
-| AC-04 | Exactly-once Side Effect | Runtime crash / retry 不导致重复外部动作 |
-| AC-05 | Runtime Upgrade | Candidate 经 replay/canary 切换，Memory / Task / Policy / Capability 无迁移 |
-| AC-06 | Memory Utility | Task-aware Memory 相对 top-k baseline 降低无关 Context，并改善或保持成功率 |
-
-## 17. Recommended v0.1 stack
-
-| Layer | Choice |
-| --- | --- |
-| Core Backend | Python + FastAPI |
-| Database | PostgreSQL |
-| Vector | pgvector |
-| Event Bus | In-process + PostgreSQL durable event table |
-| General Runtime | Hermes + DSH |
-| Memory Engine | Contract/Broker first; optional Mem0 / LangMem; Graphiti later |
-| Capability | Home Assistant / PC Agent / Server Agent / Google APIs |
-| LLM Serving | OpenAI-compatible API / Ollama / vLLM |
-| Deployment | Docker Compose |
-| Observability | Structured logs first; Prometheus/Grafana later |
-
-## 18. Implementation guardrails
-
-- **P1** Shadow owns the continuity.
-- **P2** No runtime owns durable user state.
-- **P3** Raw evidence is truth; canonical memory is interpretation; indexes are disposable.
-- **P4** Retrieval is a decision, not a database query.
-- **P5** Task belongs to Shadow; Runtime only executes it.
-- **P6** LLM proposes; Shadow decides; Capability executes.
-- **P7** Fast deterministic actions do not require an Agent.
-- **P8** Logical modularity ≠ microservices.
-- **P9** Every replaceable component should minimize Upgrade Absorption Cost.
-- **P10** If an existing Agent / Engine can do it well and continuity does not require ownership, do not rebuild it in Shadow.
-
-> **Success criterion:** 如果多年后 Runtime、LLM、Memory Engine 与设备生态都换了一轮，而用户的 Task、Memory、Capabilities、Policy 与 History 仍然连续存在，并能被新一代 AI 立即继承，Shadow 就成功了。
+这些核心契约严格对齐后，再进入数据库 Schema、API、详细设计和实现。
