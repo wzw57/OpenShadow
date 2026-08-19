@@ -253,7 +253,7 @@ Task Working Memory
 Runtime Context
 ```
 
-Task Working Memory 是任务级派生状态，不替代 Canonical Memory。
+Task Working Memory 是任务级派生状态，不替代 Canonical Memory，并随 Shadow Task 跨 Runtime 保留。
 
 ### 6.10 Asset Promotion
 
@@ -301,10 +301,6 @@ Future Recall
 
 后台联想的结果默认属于 **Derived Intelligence**，而不是新的事实源。任何关系应尽量保留 provenance、confidence 和时间信息；低置信度自动关联不得静默覆盖 Canonical Memory。
 
-该机制可以由 Graphiti、MemOS、LangMem 或未来 Memory Engine 提供，也可以由 Shadow Scheduler 触发独立 Memory Worker；Shadow 只要求通过稳定 Memory API / Adapter 接入，不绑定具体实现。
-
-V0.1 不要求实现完整的全量 Knowledge Graph 或持续全库重算，但需要为增量后台 Consolidation / Association 保留边界。
-
 ### 6.12 Memory Governance
 
 外部 Memory Engine 返回候选结果后，Shadow 仍需控制：
@@ -335,7 +331,49 @@ Memory Intelligence 必须通过稳定 API / Adapter 接入。
 
 替换这些组件时，不得要求迁移 Raw Evidence、Canonical Memory、Task 或其他规范化个人资产；派生索引和图可以重建。
 
-### 6.14 Memory 设计目标
+### 6.14 当前默认组件分工
+
+当前设计默认采用以下实现组合，但这些都是**可替换默认值**，不是核心 Contract：
+
+| 职责 | 当前默认实现 | 所有权边界 |
+| --- | --- | --- |
+| Canonical Memory / Raw Evidence / Scope / Validity / Provenance | **Shadow + PostgreSQL** | Shadow 长期事实源 |
+| Online Recall / candidate retrieval / reranking | **Mem0 OSS** | 可替换 Memory Retrieval Engine |
+| Background extraction / consolidation / update suggestion | **LangMem** | 只产生 Candidate / Suggestion，不直接成为事实 |
+| Entity / temporal / relation graph、multi-hop association | **Graphiti（第二阶段实验）** | Derived Graph，可删除重建 |
+| Memory Attention / Recall Planning | **Runtime + 简单 Shadow 规则起步** | 接口稳定，策略可替换 |
+| Task Working Memory | **Shadow** | Task 级连续状态，跨 Runtime 保留 |
+| Advanced Memory scheduling / hybrid backend | **MemOS（后续评估）** | 仅作为可插拔 Engine，不成为底座 |
+
+默认执行链：
+
+```text
+Runtime / Task
+    ↓ Recall Intent
+Shadow Memory Access API
+    ↓ scope / privacy / budget
+Mem0 Adapter
+    ↓ candidates
+Shadow Governance
+    ↓
+Task Working Memory / Runtime Context
+```
+
+后台链路：
+
+```text
+Event / Task / Conversation
+        ↓
+Shadow Scheduler / Background Job
+        ├─ LangMem → Memory Candidate / Consolidation Suggestion
+        └─ Graphiti → Derived Entity / Relation / Temporal Graph
+        ↓
+Shadow 决定 Canonical Memory 是否 Create / Merge / Supersede / Ignore
+```
+
+任何外部 Engine 都不得直接修改 Canonical Memory 唯一事实源。
+
+### 6.15 Memory 设计目标
 
 Memory 的长期目标不是最大化 Recall 数量，而是：
 
@@ -351,7 +389,8 @@ Memory 的长期目标不是最大化 Recall 数量，而是：
 - user correction rate；
 - task outcome；
 - deep recall recovery rate；
-- memory utility density。
+- memory utility density；
+- association / multi-hop recall 的增益。
 
 V0.1 不要求冻结复杂 Memory Router 或图算法，但必须保留上述概念边界。
 
@@ -517,7 +556,7 @@ Context Compiler 负责把 Shadow 规范化资产转换为当前 Runtime 可以�
 
 ```text
 Task / Checkpoint
-Relevant Memory
+Relevant Memory / Task Working Memory
 Available Skill refs / projections
 World State
 Policy / Trust Profile
@@ -533,7 +572,8 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 
 - Runtime；
 - Memory Engine；
-- Memory Attention / Association Engine；
+- Memory Attention / Recall Router；
+- Background Memory Worker；
 - Skill Manager；
 - Runtime Skill Adapter；
 - Provider；
@@ -549,12 +589,12 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 | 维度 | 要求 |
 | --- | --- |
 | 本地优先 | Raw Evidence、Canonical Memory、Policy、Canonical Skill 默认本地持有 |
-| 可移植性 | 核心数据不依赖单一 Runtime / Provider / Skill / Memory Engine 格式 |
+| 可移植性 | 核心数据不依赖单一 Runtime / Provider / Skill / Memory Engine 私有格式 |
 | 可审计性 | 重要状态、Memory provenance、Skill 来源和现实动作可追溯 |
 | 可恢复性 | Core 重启不丢 Task / Event / Ledger；Runtime crash 可恢复 |
 | 可升级性 | Runtime / Memory Engine / Skill Adapter / Manager / Provider 具有清晰替换边界 |
 | 最小权限 | Runtime 与外部 Provider 只获得所需数据与权限 |
-| 可重建性 | 派生索引、Memory Graph、Summary、Runtime Projection 可以重新生成 |
+| 可重建性 | 派生索引、Memory Graph、Runtime Projection 可以重新生成 |
 
 ## 15. v0.1 范围
 
@@ -562,9 +602,10 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 
 - Event / World State；
 - Task / Semantic Checkpoint / Artifact；
-- Raw Evidence / Canonical Memory 基础闭环；
-- Memory Access API / Adapter 边界；
-- 基础 Scope / Validity / Provenance / Governance；
+- Raw Evidence / Canonical Memory / Task Working Memory 基础闭环；
+- Memory Access API + 可替换 Memory Adapter；
+- Mem0 OSS 作为首个在线检索后端；
+- LangMem 作为后台 Memory Candidate / Consolidation 实验实现；
 - Skill Store / Version / Provenance / Trust / Runtime Projection / Sync；
 - Capability Registry / Gateway / Provider Binding；
 - Policy / Approval / Idempotency / Execution Ledger；
@@ -574,13 +615,12 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 - PostgreSQL 单机持久化；
 - CLI / 最小管理入口。
 
-### 预留但不要求完整实现
+### 后续实验
 
-- 自动 Memory Attention / Learned Recall Router；
-- 全量 Memory Graph；
-- 大规模后台联想 / Community Detection；
-- 高级 Memory Consolidation；
-- 多 Memory Engine 联邦检索。
+- Graphiti Derived Memory Graph / multi-hop recall；
+- Learned Memory Attention / Personal Memory Router；
+- MemOS 作为替代 Memory Engine；
+- association / consolidation quality evaluation。
 
 ### 暂不做
 
@@ -604,10 +644,10 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 | Skill Portability | 同一 Canonical Skill 可投影到两个 Runtime |
 | Skill Ownership | Runtime 修改 Projection 不直接修改 Canonical Skill |
 | Cross-Runtime Memory | Runtime A 形成的长期 Memory 可被 Runtime B 使用 |
-| Memory Isolation | 不相关长期 Memory 不默认注入当前 Task Context |
-| Memory Recoverability | 派生索引或图删除后可从 Canonical Memory / Raw Evidence 重建 |
+| Memory Selectivity | 简单 Task 可不 Recall；需要历史时能只提供少量相关 Memory |
+| Memory Engine Replaceability | 替换检索 Engine 不迁移 Raw Evidence / Canonical Memory |
 | Autonomous Event Handling | 无 Chat Prompt 时 Event 仍可更新状态、创建 Task 并触发执行 |
-| Capability Governance | Runtime 无法绕过 Policy / Gateway 执行高风险动作 |
+| Capability Governance | Runtime 无法绕过 Policy / Gateway 执行高风险外部动作 |
 | Exactly-once Side Effect | Crash / Retry 不重复执行已完成现实动作 |
 
 ## 17. 当前文档原则
