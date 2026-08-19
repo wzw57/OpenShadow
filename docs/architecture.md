@@ -1,74 +1,164 @@
 # OpenShadow Architecture
 
-This document describes the current v0.3 architecture baseline for OpenShadow.
+This document is the architecture entry point for the current OpenShadow v0.3 design baseline.
 
-## 1. Architectural intent
+OpenShadow is deliberately designed as a **thin but deep Personal AI Continuity & Control Layer**. It does not try to become another all-in-one Agent framework. It owns the state that must survive models, runtimes, devices, sessions and years; replaceable systems provide intelligence and capabilities around that stable center.
 
-OpenShadow is deliberately designed as a **thin waist** between long-lived personal state and replaceable AI execution / memory / capability systems.
+> **Shadow owns the continuity.**  
+> Runtime owns reasoning and execution — never durable user state.
 
-```text
-Interaction / Event Sources
-Chat · Voice · Email · Calendar · Home · Server · Devices
-                         ↓
-┌────────────────────────────────────────────────────────────┐
-│                SHADOW CORE                                │
-│        Personal AI Continuity & Control Layer             │
-│                                                            │
-│ Identity / Policy                                          │
-│ Event → World State                                        │
-│ Task → Semantic Checkpoint                                 │
-│ Memory Policy → Memory Broker                              │
-│ Context Compiler                                           │
-│ SRI / Runtime Registry                                     │
-│ Capability Registry → Gateway → Execution Ledger           │
-│ Scheduler / Pulse                                          │
-│                                                            │
-│ Durable Assets:                                            │
-│ Memory · Task · Capability · Policy · History / State      │
-└────────────────────────────────────────────────────────────┘
-           ↓                    ↓                    ↓
-      Runtime Layer        Memory Engines      Capability Providers
- Hermes / DSH / Claude   Mem0 / LangMem /      HA / PC / Server /
-       / Codex           Graphiti / Future      NAS / Email / Web
-           ↓                    ↓                    ↓
-      PostgreSQL · Event Store · Artifact Store · Raw Evidence
+---
+
+## 1. Architecture at a glance
+
+### 1.1 Continuity / ownership architecture
+
+```mermaid
+flowchart TB
+    IN[Interaction & Event Sources\nChat · Voice · Email · Calendar · Home · Server · Devices]
+
+    subgraph CORE[SHADOW CORE — Continuity & Control Layer]
+        ID[Identity / Policy]
+        EV[Event / World State]
+        TK[Task / Semantic Checkpoint]
+        MM[Memory Policy / Memory Broker]
+        CC[Context Compiler]
+        RT[SRI / Runtime Registry]
+        CAP[Capability Registry / Gateway / Ledger]
+        PS[Scheduler / Pulse]
+    end
+
+    subgraph ASSETS[Shadow-owned durable assets]
+        A1[Memory]
+        A2[Task]
+        A3[Capability]
+        A4[Policy]
+        A5[History / State]
+    end
+
+    subgraph RUNTIME[Replaceable Runtime]
+        H[Hermes]
+        D[DeepSeek Harness]
+        S[Claude / Codex]
+        F[Future Runtime]
+    end
+
+    subgraph MEMORY[Replaceable Memory Engines]
+        M0[Mem0]
+        LM[LangMem]
+        GR[Graphiti]
+        FM[Future Engine]
+    end
+
+    subgraph PROVIDER[Capability Providers]
+        HA[Home Assistant]
+        PC[PC Agent]
+        SV[Server Agent]
+        NF[NAS / Files]
+        EC[Email / Calendar]
+        BW[Browser / Web]
+    end
+
+    IN --> CORE
+    CORE --> ASSETS
+    RT <--> RUNTIME
+    MM <--> MEMORY
+    CAP <--> PROVIDER
 ```
 
-## 2. Ownership model
+The key architectural distinction is ownership:
 
-Shadow owns durable continuity. External systems own implementation details.
+- **Shadow owns durable continuity.**
+- **Runtime owns temporary reasoning / execution.**
+- **Memory engines own algorithms / indexes, not canonical personal truth.**
+- **Capability providers own implementation, not user-level capability contracts.**
+
+### 1.2 Intelligence / execution architecture
+
+OpenShadow is not designed to send every event or command to a large Agent.
+
+```mermaid
+flowchart TD
+    A[User Intent / Event] --> R{Ingress / Router}
+    R --> L0[L0 Deterministic Rules]
+    L0 -->|handled| FP[Fast Path]
+    L0 -->|needs attention| L1[L1 Shadow Pulse\nTiny local model\nTarget: 0.5B–3B class]
+    L1 -->|ignore / state / notify| O[Cheap local outcome]
+    L1 -->|needs reasoning| L2[L2 Local General Brain\nQwen-class local model]
+    L2 -->|multi-step task| T[Shadow Task Manager]
+    T --> RR[Runtime Router / SRI]
+    RR --> G[Hermes / DSH]
+    RR --> SP[Claude / Codex / Specialist]
+```
+
+This layered design is central to 7×24 operation:
+
+- L0 is ordinary code and rules;
+- L1 Pulse is the low-cost always-on attention layer;
+- L2 richer local intelligence is awakened on demand;
+- L3 Agent Runtime / specialists handle complex work.
+
+**Heartbeat is a reconciliation mechanism, not “ask a large Agent every N minutes whether something is happening.”**
+
+See [Intelligence Plane & Shadow Pulse](architecture/intelligence.md).
+
+---
+
+## 2. Architecture document map
+
+The overview intentionally stays compact. Detailed dynamic architecture is split into focused documents:
+
+| Document | Answers |
+| --- | --- |
+| [Intelligence Plane & Pulse](architecture/intelligence.md) | How L0–L3 routing works; why a 0.5B–3B-class tiny model can remain always-on; Fast / Smart / Agent / Specialist paths |
+| [Event & World State](architecture/event-state.md) | How events are normalized, persisted and projected into compact current state |
+| [Task & Semantic Checkpoint](architecture/task.md) | How long-running work survives Runtime restarts, waiting and handoff |
+| [Memory Architecture](architecture/memory.md) | How memory is written, consolidated, recalled, deep-recalled and evaluated |
+| [Runtime Architecture](architecture/runtime.md) | SRI, Runtime Registry, semantic handoff, crash recovery, replay / canary upgrades |
+| [Capability & Governance](architecture/capability.md) | Capability Registry, Gateway, Policy, Approval, Idempotency, Execution Ledger |
+| [Deployment Architecture](architecture/deployment.md) | Always-on node, GPU server, NAS, edge agents, network zones, backup / degraded modes |
+
+---
+
+## 3. Ownership model
 
 ### Shadow owns
 
-- Identity
-- Event history
-- World State
-- Canonical Task
-- Semantic Checkpoint
-- Raw Evidence
-- Canonical Memory Contract
-- Memory Policy / Memory Broker
-- Capability Contract / Registry
-- Capability execution ledger
-- Policy / Approval
-- Runtime registry and binding
-- Context compilation
-- Long-lived schedules
+- Identity and long-lived Policy;
+- append-oriented Event history;
+- World State projections;
+- Canonical Task and Task lifecycle;
+- Semantic Checkpoint;
+- Raw Evidence;
+- Canonical Memory Contract and provenance;
+- Memory Policy / Memory Broker;
+- Task Working Memory;
+- Capability Contract / Registry;
+- Capability Execution Ledger;
+- approvals and side-effect status;
+- Runtime Registry and Task binding;
+- Context Compiler;
+- authoritative long-lived schedules;
+- attention / escalation policy.
 
-### Runtime owns only temporary execution state
+### Runtime owns temporary execution state
 
 Runtime may own:
 
-- Agent Loop
-- planning
-- hidden/internal reasoning
-- temporary model context
-- runtime-local Session
-- runtime-specific subagents
+- Agent Loop;
+- planning;
+- hidden/internal reasoning;
+- temporary model context;
+- runtime-local Session;
+- runtime-specific subagents;
+- runtime-native tool orchestration;
+- runtime-local compaction.
 
 Runtime must not be the source of truth for durable user state.
 
-## 3. Module map
+---
+
+## 4. Core logical modules
 
 ```text
 shadow-core/
@@ -96,225 +186,200 @@ shadow-core/
 └── pulse/
 ```
 
-V0.1 should be a **modular monolith**, not a microservice system.
+V0.1 is a **modular monolith**, not a microservice platform.
 
-## 4. Core flow A — Event-driven task creation
+Logical modularity exists to preserve contracts and replacement boundaries; it does not require distributed deployment.
 
-```text
-Server / Home / Calendar Event
-            ↓
-        Event Store
-            ↓
-      World State projection
-            ↓
-           Pulse
-       ┌────┴────┐
-       │         │
-     Ignore   Create Task
-                 ↓
-            Task Manager
-                 ↓
-          Runtime Router / SRI
-                 ↓
-           Hermes / DSH
+---
+
+## 5. Event → World State → Attention
+
+A long-lived system sees far more events than should reach an Agent.
+
+```mermaid
+flowchart LR
+    E[Sources] --> G[Event Gateway]
+    G --> ES[Durable Event Store]
+    ES --> P[Projectors]
+    P --> W[Compact World State]
+    W --> L0[L0 Rules]
+    L0 --> PU[Pulse]
+    PU -->|UPDATE_STATE| W
+    PU -->|MEMORY_CANDIDATE| M[Memory Pipeline]
+    PU -->|NOTIFY| N[Notify]
+    PU -->|CREATE_TASK| T[Task Manager]
 ```
 
-Purpose: prove Shadow is not a chat aggregator. It can react without a user prompt.
+The default Runtime input is a compact task-relevant state view, not a replay of all historical events.
 
-## 5. Core flow B — Task-aware memory recall
+See [Event & World State](architecture/event-state.md).
 
-```text
-Task + Current Step
-        ↓
-     MemoryNeed
-        ↓
-   Memory Broker
-   ├─ structured lookup
-   ├─ temporal query
-   ├─ entity/relationship
-   ├─ lexical / BM25
-   └─ vector candidates
-        ↓
-      Rerank
-        ↓
-    MemoryBundle
-        ↓
- Context Compiler
-        ↓
-      Runtime
+---
+
+## 6. Scheduler, Pulse and Task
+
+These are not interchangeable concepts.
+
+| Component | Responsibility |
+| --- | --- |
+| Scheduler | **When** should something be checked / resumed? |
+| Pulse | **Does this situation deserve attention now?** |
+| Task Manager | **What durable work must continue until completion?** |
+
+```mermaid
+flowchart LR
+    S[Scheduler] -->|time / condition event| P[Pulse]
+    E[External Events] --> P
+    P -->|CREATE_TASK| T[Task Manager]
+    T --> R[Runtime Router]
 ```
 
-Vector similarity is not the source of truth. Retrieval is an explicit decision about what memory could change the current next action.
+Pulse is event-driven first; heartbeat is mainly for reconciliation and conditions with no natural event source.
 
-## 6. Core flow C — Runtime handoff
+See [Intelligence Plane & Shadow Pulse](architecture/intelligence.md).
 
-```text
-Shadow Task #N
-     ↓ bind
-  Hermes Session
-     ↓
-progress / artifacts / tool results
-     ↓
-Semantic Checkpoint
-     ↓
-Hermes fails / upgrade requested
-     ↓
-Shadow rebinds Task
-     ↓
-Context Compiler hydrates canonical state
-     ↓
-DSH Session
-     ↓
-continue Task
+---
+
+## 7. Task-aware Memory
+
+OpenShadow Memory is not defined as `embedding → Top-K → prompt`.
+
+### Write path
+
+```mermaid
+flowchart LR
+    E[Event] --> R[Raw Evidence]
+    R --> C[Memory Candidate]
+    C --> P[Memory Policy]
+    P --> D{Decision}
+    D -->|raw only| X[Keep evidence]
+    D -->|buffer| B[Consolidation]
+    D -->|create / merge / supersede| M[Canonical Memory]
+    M --> I[Derived Indexes]
 ```
 
-What must survive:
+### Read path
 
-- goal
-- current stage
-- known facts
-- decisions and evidence
-- completed work
-- artifacts
-- tool results
-- remaining work
-- side-effect status
+```mermaid
+flowchart LR
+    T[Task + Step] --> N[MemoryNeed]
+    N --> B[Memory Broker]
+    B --> C[Structured / Temporal / Entity / Lexical / Vector]
+    C --> R[Rerank]
+    R --> MB[MemoryBundle]
+    MB --> CC[Context Compiler]
+    CC --> RT[Runtime]
+```
 
-What does **not** need to survive:
+If Canonical Memory is insufficient, **Deep Recall** can inspect Raw Evidence, historical Tasks and Artifacts rather than forcing every useful historical detail into permanent RAG memory.
 
-- hidden reasoning chain
-- runtime-private object graph
-- token-by-token state
-- runtime-local planner internals
+See [Memory Architecture](architecture/memory.md).
 
-## 7. Core flow D — Safe capability execution
+---
 
-```text
-Runtime proposes action
-        ↓
-Capability Gateway
-        ↓
-Identity / schema validation
-        ↓
-Policy evaluation
-        ↓
-Approval gate (if required)
-        ↓
-Idempotency check
-        ↓
-Provider executes
-        ↓
-Result + Artifact
-        ↓
-Execution Ledger / Audit
-        ↓
-Runtime receives sanitized result
+## 8. Task continuity and Runtime handoff
+
+```mermaid
+sequenceDiagram
+    participant S as Shadow Task
+    participant H as Hermes
+    participant C as Checkpoint / Ledger
+    participant D as DSH
+
+    S->>H: execute canonical Task context
+    H-->>S: facts / artifacts / progress
+    S->>C: persist Semantic Checkpoint
+    Note over H: crash / upgrade / handoff
+    S->>C: reconcile side effects
+    S->>D: resume checkpoint + compiled context
+    D-->>S: continue Task
+```
+
+The continuity boundary is semantic:
+
+- goal;
+- progress;
+- known facts;
+- decisions / evidence;
+- artifacts / tool results;
+- remaining work;
+- side-effect state.
+
+Hidden chain-of-thought, token-level state and Runtime-private planner objects are not migration targets.
+
+See [Task & Semantic Checkpoint](architecture/task.md) and [Runtime Architecture](architecture/runtime.md).
+
+---
+
+## 9. Context Compiler
+
+Shadow maintains canonical task/context state and compiles it for the selected Runtime.
+
+```mermaid
+flowchart TD
+    T[Task] --> C[Canonical Context]
+    K[Checkpoint] --> C
+    M[MemoryBundle] --> C
+    W[World State] --> C
+    P[Policy] --> C
+    A[Allowed Capabilities] --> C
+    C --> CC[Context Compiler]
+    CC --> H[Hermes Context]
+    CC --> D[DSH Context]
+    CC --> CL[Claude / Specialist Context]
+```
+
+This is conceptually similar to a compiler IR: the semantic state stays stable while backend-specific input formats can change.
+
+---
+
+## 10. Safe Capability execution
+
+```mermaid
+flowchart TD
+    R[Runtime proposes action] --> G[Capability Gateway]
+    G --> I[Identity / Schema]
+    I --> P[Policy]
+    P --> A[Approval if required]
+    A --> K[Idempotency]
+    K --> X[Provider]
+    X --> L[Execution Ledger / Audit]
+    L --> S[Sanitized result / Artifact ref]
+    S --> R
 ```
 
 Key invariant:
 
 > **LLM proposes; Shadow decides; Capability executes.**
 
-### Exactly-once behavior
+Every important side effect is represented by an `action_id / idempotency_key`. Runtime crash recovery must not duplicate an already completed external action.
 
-Every side-effect action receives an `action_id` / `idempotency_key`. If a Runtime crashes after execution, retrying the same action must return the previous result instead of executing it again.
+See [Capability & Governance](architecture/capability.md).
 
-## 8. Core flow E — Runtime upgrade
+---
 
-```text
-Install Candidate Runtime
-        ↓
-SRI compatibility check
-        ↓
-Historical task dry-run replay
-        ↓
-Compare success / latency / cost / tool errors / safety
-        ↓
-Canary traffic
-5% → 10% → 30% → 50% → 100%
-        ↓
-Promote
-        ↓
-Drain old Runtime
-        ↓
-Retire or rollback
+## 11. Runtime upgrade lifecycle
+
+```mermaid
+flowchart LR
+    I[Install Candidate] --> V[SRI Compatibility]
+    V --> R[Historical Dry-run Replay]
+    R --> C[Canary]
+    C --> P[Promote]
+    P --> D[Drain Old]
+    D --> X[Retire]
+    C -->|regression| B[Rollback]
 ```
 
-The upgrade must not require moving Shadow Memory, Task, Capability, Policy or History.
+The upgrade must not require migrating Shadow-owned Memory, Task, Capability, Policy or History.
 
-## 9. Memory architecture
+See [Runtime Architecture](architecture/runtime.md).
 
-### 9.1 Raw Evidence
+---
 
-Raw Evidence stores what actually happened. Examples:
+## 12. Persistence model
 
-- conversations
-- email
-- calendar
-- task trajectories
-- provider results
-- device / server events
-- files and reports
-
-Raw Evidence is retained independently of any current interpretation.
-
-### 9.2 Canonical Memory
-
-Canonical Memory is a structured interpretation of evidence and should include:
-
-```text
-memory_id
-memory_type
-entity / scope
-content
-valid_from / valid_to
-confidence
-importance
-source_event_ids
-supersedes
-created_at
-```
-
-Typical types:
-
-- semantic fact
-- preference
-- relationship
-- episodic memory
-- decision
-- procedure
-- project state
-
-### 9.3 Derived intelligence
-
-Embeddings, vector indexes, summaries, profiles, graph projections and reranker features are disposable and rebuildable.
-
-## 10. Context Compiler
-
-Shadow maintains a canonical context representation and compiles it for each Runtime.
-
-```text
-Task
-+ Checkpoint
-+ Task Working Memory
-+ MemoryBundle
-+ World State
-+ Policy
-+ Allowed Capabilities
-+ Provenance
-        ↓
- Context Compiler
-        ├─ Hermes context
-        ├─ DSH context
-        ├─ Claude context
-        └─ Future Runtime context
-```
-
-This is conceptually similar to an intermediate representation (IR): Shadow state remains stable while Runtime-specific formats can change.
-
-## 11. Storage baseline
-
-PostgreSQL is the V0.1 source of truth.
+PostgreSQL is the V0.1 source of truth for structured durable state.
 
 Suggested logical tables:
 
@@ -340,40 +405,105 @@ schedules
 
 `pgvector` is a derived retrieval index only.
 
-Large artifacts and raw files may live on local filesystem / NAS while PostgreSQL stores references, hashes and metadata.
+Large Raw Evidence and Artifacts may live on local filesystem / NAS while PostgreSQL stores refs, hashes, provenance and lifecycle metadata.
 
-## 12. Trust boundaries
+---
 
-- Runtime never receives raw long-lived secrets.
-- Cloud Runtime receives only Context allowed by its trust profile.
-- Sensitive Raw Evidence / Memory can be local-only.
-- Provider actions are always mediated by Capability Gateway.
-- High-risk actions require approval.
-- Every important state-changing action is auditable.
+## 13. Physical deployment
 
-## 13. Replaceable components
+The recommended topology separates always-on continuity from expensive intelligence.
 
-| Component | Replace strategy |
+```mermaid
+flowchart LR
+    subgraph ALWAYS[Always-on low-power node]
+        SC[Shadow Core]
+        DB[PostgreSQL]
+        PU[Pulse]
+        SCH[Scheduler]
+    end
+
+    subgraph GPU[GPU server]
+        LM[Local General Brain]
+        H[Hermes]
+        D[DSH]
+        SP[Specialists]
+    end
+
+    subgraph STORE[NAS / Storage]
+        RAW[Raw Evidence]
+        ART[Artifacts]
+        BK[Backups]
+    end
+
+    ALWAYS <--> GPU
+    ALWAYS <--> STORE
+```
+
+Shadow should remain capable of accepting events, updating state, maintaining Tasks and performing low-cost attention decisions even when the GPU server is off.
+
+See [Deployment Architecture](architecture/deployment.md).
+
+---
+
+## 14. Trust boundaries
+
+- Runtime never receives raw long-lived secrets by default.
+- Cloud Runtime receives only context allowed by its trust profile.
+- Sensitive Raw Evidence / Memory can remain local-only.
+- Provider actions are mediated by Capability Gateway.
+- High-risk actions require explicit approval policy.
+- Important state-changing actions are auditable.
+- PostgreSQL unavailability should fail closed for operations that require durable task / ledger writes.
+
+---
+
+## 15. Replaceable components
+
+| Component | Replacement seam |
 | --- | --- |
 | General Runtime | SRI Adapter |
-| Specialist Agent | SRI / specialist adapter |
-| Memory Engine | Memory Provider adapter |
+| Specialist Agent | Specialist / SRI Adapter |
+| Memory Engine | Memory Provider Adapter |
 | Vector / Search Engine | rebuild derived index |
 | Home / PC / Server integration | Capability Provider |
 | Messaging client | interaction adapter / webhook |
 | LLM | Runtime / model configuration |
+| Pulse model | Pulse model adapter / decision contract |
 
-The architecture target is low **Upgrade Absorption Cost**: new technology should usually require a new adapter, not changes to durable core state.
+Architecture target: minimize **Upgrade Absorption Cost**. New technology should usually require a new adapter or rebuilt derived layer, not mutations to durable personal state.
 
-## 14. Architectural guardrails
+---
 
-1. Shadow owns the continuity.
-2. No runtime owns durable user state.
-3. Raw evidence is truth; canonical memory is interpretation; indexes are disposable.
-4. Retrieval is a decision, not a database query.
-5. Task belongs to Shadow; Runtime only executes it.
-6. LLM proposes; Shadow decides; Capability executes.
-7. Fast deterministic actions do not require an Agent.
-8. Logical modularity does not imply microservices.
-9. Replaceable components must minimize upgrade absorption cost.
-10. Do not rebuild functionality that existing Agent / Engine / Provider already does well unless continuity requires Shadow ownership.
+## 16. Architectural guardrails
+
+1. **Shadow owns the continuity.**
+2. **No Runtime owns durable user state.**
+3. **Raw Evidence is truth; Canonical Memory is interpretation; indexes are disposable.**
+4. **Retrieval is a decision, not a database query.**
+5. **Task belongs to Shadow; Runtime only executes it.**
+6. **LLM proposes; Shadow decides; Capability executes.**
+7. **Fast deterministic actions do not require an Agent.**
+8. **The always-on attention layer should be the smallest sufficient intelligence.**
+9. **Heartbeat is not permission to continuously burn a large model.**
+10. **Logical modularity does not imply microservices.**
+11. **Replaceable components must minimize upgrade absorption cost.**
+12. **Do not rebuild functionality existing Agent / Engine / Provider systems already do well unless continuity requires Shadow ownership.**
+
+---
+
+## 17. V0.1 architecture proof points
+
+The first implementation should prove the architecture rather than maximize features:
+
+1. durable Event → World State projection;
+2. L0 rules + pluggable tiny Pulse + event-driven wakeup;
+3. Fast Path that bypasses General Runtime;
+4. Shadow-owned Task + Semantic Checkpoint;
+5. Hermes → DSH semantic handoff;
+6. Task-aware MemoryNeed → MemoryBundle;
+7. Deep Recall against Raw Evidence / Task history;
+8. Capability Gateway + idempotent side-effect ledger;
+9. Runtime historical replay + basic canary routing;
+10. local-first always-on node + optional GPU Runtime host.
+
+These proof points are more important than building a large UI, plugin marketplace or custom Agent loop.
