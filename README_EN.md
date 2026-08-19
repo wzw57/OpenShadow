@@ -1,6 +1,6 @@
 # OpenShadow
 
-[中文版](README.md) | **English**
+[Chinese](README.md) | **English**
 
 > **Shadow owns the continuity.**  
 > Models and runtimes are replaceable; durable user state should not disappear with them.
@@ -82,18 +82,18 @@ Chat · Voice · Email · Calendar · Files · Devices · Servers
 │ Memory · Tasks · Capabilities · Policies     │
 │ History · World State                        │
 └──────────────────────────────────────────────┘
-       │               │               │
-       ▼               ▼               ▼
-Replaceable        Replaceable      Capability
-Runtimes           Memory Engines   Providers
-Hermes / DSH       Mem0 / LangMem   Home / PC
-Claude / Codex     Graphiti / FutureServer / Files
-Future Runtime                      Email / Calendar / Web
-       │               │               │
-       └───────────────┴───────────────┘
-                       │
-                       ▼
-         PostgreSQL · Raw Evidence · Artifacts
+               │
+               ├─ Replaceable runtimes
+               │  Hermes · DSH · Claude · Codex · Future runtimes
+               │
+               ├─ Replaceable memory engines
+               │  Mem0 · LangMem · Graphiti · Future engines
+               │
+               ├─ Capability providers
+               │  Home · PC · Servers · Files · Email · Calendar · Web
+               │
+               ▼
+       PostgreSQL · Raw Evidence · Artifacts
 ```
 
 ### Layered intelligence
