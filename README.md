@@ -37,8 +37,6 @@ Shadow 将系统分为**稳定核心层**与**可替换实现层**。
 
 Memory 只是 Shadow 的一个子系统。
 
-几个核心对象回答的是不同问题：
-
 | 对象 | 回答的问题 | Shadow 的职责 |
 | --- | --- | --- |
 | **Task** | 我现在要完成什么？ | 保存目标、进度、检查点、产物和副作用状态 |
@@ -48,24 +46,13 @@ Memory 只是 Shadow 的一个子系统。
 | **Policy** | 什么可以做？ | 统一权限、风险、隐私、预算和审批 |
 | **Event / World State** | 发生了什么、现在是什么状态？ | 让系统脱离聊天窗口持续存在 |
 
-即使暂时移除 Memory，Shadow 仍然必须能够：
-
-- 保存和恢复 Task / Semantic Checkpoint；
-- 在不同 Runtime 之间进行语义接力；
-- 持有并同步 Skill；
-- 管理 Capability、Policy、Approval 和 Execution Ledger；
-- 接收 Event、维护 World State、执行 Scheduler；
-- 保持 Artifact、历史和副作用状态可追溯。
-
-如果这些能力不存在，Shadow 才真的会退化成记忆引擎。
+即使暂时移除 Memory，Shadow 仍然必须能够保存和恢复 Task、跨 Runtime 接力、同步 Skill、治理 Capability / Policy / Ledger、维护 Event / World State / Scheduler，并保持 Artifact 和副作用状态可追溯。
 
 ### 3. Task 属于 Shadow，Runtime 只负责推理与执行
 
 Runtime 可以持有临时 Session、规划状态和内部上下文，但不能成为 Task 的长期事实源。
 
 Runtime 中断、升级或被替换时，Shadow 迁移的是可验证语义状态：目标、已知事实、决策依据、完成进度、Artifact、剩余工作和副作用状态，而不是隐藏思维链或 Runtime 私有对象。
-
-因此：
 
 > **Task belongs to Shadow; Runtime executes it.**
 
@@ -83,36 +70,11 @@ Capability    “能做什么”
 Provider       “由谁实现”
 ```
 
-但 Shadow 不需要重做 Hermes 等 Runtime 已有的 Skill execution engine。
-
-当前边界是：
-
-**Shadow 负责：**
-
-- Canonical Skill identity 与原始 Skill Source；
-- Version / Provenance / Trust；
-- 用户级启用、禁用与可见范围；
-- Runtime compatibility；
-- Runtime Projection / Sync 状态；
-- 导入、导出、迁移与回滚；
-- Runtime 新产生 Skill 的候选接收与规范化。
-
-**Runtime 负责：**
-
-- Skill discovery；
-- 当前任务的 Skill activation；
-- progressive disclosure；
-- Skill 内部组合与编排；
-- Runtime-native bundle / prompt / reference 加载；
-- Runtime 内部工具使用策略。
-
-一句话：
+Shadow 负责 Canonical Skill、Raw Source、Version / Provenance / Trust、Scope、Runtime compatibility、Projection / Sync、导入导出和迁移；Runtime 负责 discovery、activation、progressive disclosure、composition 和执行。
 
 > **Shadow controls availability; Runtime controls activation.**
 
-Runtime 中的 Skill 表示属于可删除、可重建的 Projection。Runtime 学到的新 Skill 只能先成为 Candidate，不能直接修改 Canonical Skill。
-
-如果未来事实证明 Runtime 的 Skill 选择能力不足，可以增加一个**可插拔 Skill Manager**负责高级检索、关系管理和路由，但它不是稳定核心的一部分，可以独立替换升级。
+Runtime Skill 表示是可删除、可重建的 Projection。Runtime 新学到或修改的 Skill 只能先成为 Candidate，不能直接修改 Canonical Skill。
 
 ### 5. Capability 是长期能力契约，MCP 只是协议
 
@@ -131,9 +93,9 @@ file.read
 
 > **Tool 是接口，Capability 是长期能力资产，Skill 是可复用经验，MCP 是协议。**
 
-所有现实副作用仍统一经过 Capability Gateway、Policy、Approval、Idempotency 和 Execution Ledger。Runtime 不能因为直接支持 MCP 或 Tool Calling 就绕过 Shadow 的治理。
+所有现实副作用统一经过 Capability Gateway、Policy、Approval、Idempotency 和 Execution Ledger。
 
-### 6. Memory 是决策基础，不是长期 RAG
+### 6. Memory 默认可访问，但默认不注入
 
 Shadow 区分：
 
@@ -145,9 +107,23 @@ Canonical Memory
 Rebuildable Indexes / Summaries / Graphs
 ```
 
-原始证据负责保留事实来源，Canonical Memory 表达当前可修正、可追溯的认知；向量索引、摘要和图结构只是可重建派生层。
+长期拥有大量 Memory 不意味着每个 Task 都做 Recall。Runtime 只在当前问题可能依赖历史信息时主动提出 Recall Intent；Shadow 控制 Scope、Privacy、Validity 和 Context Budget，再通过可替换 Memory Engine 获取候选。
 
-Memory Engine 可以替换，但不能拥有 Canonical Memory 的唯一事实源。
+> **Shadow 持有 Memory truth 与访问边界；外部 Memory Engine 提供提取、检索、整理和关联智能。**
+
+当前默认实现方向：
+
+- **Shadow + PostgreSQL**：Raw Evidence / Canonical Memory / Task Working Memory 的事实源；
+- **Mem0 OSS**：第一版在线 Recall / candidate retrieval；
+- **LangMem**：后台 extraction / consolidation Candidate；
+- **Graphiti**：第二阶段 Derived Memory Graph / multi-hop association 实验；
+- **MemOS**：后续作为替代 Memory Engine 评估。
+
+这些组件都通过 Adapter 接入，可以替换；派生索引、摘要和图可以重建。
+
+Memory 的目标不是 Recall 越多越好，而是：
+
+> **在尽量少占用 Runtime 注意力的前提下，自动提供足以改善当前决策的最少相关 Memory。**
 
 ### 7. Shadow 围绕 Event、World State 和 Task 运行，而不是围绕聊天窗口运行
 
@@ -180,37 +156,12 @@ Interaction / Event Sources
           │  Hermes · DSH · Claude · Codex · Future
           │
           ├─ Replaceable Engines / Managers
-          │  Memory Engine · optional Skill Manager
+          │  Mem0 · LangMem · Graphiti · Future
+          │  optional Memory / Skill Manager
           │
           └─ Replaceable Providers / Protocols
              Home · PC · Server · Email · Files · Web
              MCP · REST · CLI · IPC · Local API
-```
-
-Skill 路径：
-
-```text
-Canonical Skill Store
-        │
-        ├─ version / provenance / trust / scope
-        │
-        ▼
-Runtime Skill Adapter
-        │
-        ▼
-Disposable Runtime Projection
-        │
-        ▼
-Runtime
-  discovery / activation
-  disclosure / composition
-  execution
-        │
-        ▼
-usage / change events
-        │
-        ▼
-Shadow
 ```
 
 ## Shadow 持有什么，外部系统做什么
@@ -218,7 +169,7 @@ Shadow
 | Shadow 稳定持有 / 治理 | 可替换实现 |
 | --- | --- |
 | Task / Semantic Checkpoint | Agent Loop / Planning |
-| Raw Evidence / Canonical Memory | Memory Engine / Search Engine |
+| Raw Evidence / Canonical Memory / Task Working Memory | Mem0 / LangMem / Graphiti / Search Engine |
 | Canonical Skill / Version / Provenance | Runtime-native Skill Engine / optional Skill Manager |
 | Capability Contract / Policy / Ledger | Provider / MCP Server / Tool implementation |
 | Event / World State / Scheduler | Event source adapters / notification channels |
@@ -234,15 +185,17 @@ Shadow
 
 - Event / World State；
 - Task / Semantic Checkpoint / Artifact；
-- Raw Evidence / Canonical Memory 基础闭环；
-- **Skill Store、Version / Provenance / Trust、Runtime Projection / Sync**；
+- Raw Evidence / Canonical Memory / Task Working Memory；
+- Memory Access API + Mem0 Adapter；
+- LangMem 后台 Memory Candidate / Consolidation 基础实验；
+- Skill Store、Version / Provenance / Trust、Runtime Projection / Sync；
 - SRI、至少两个 Runtime Adapter、Context Compiler；
 - Capability Registry / Gateway / Provider Binding；
 - Policy / Approval / Idempotency / Execution Ledger；
 - Scheduler / Event-driven execution；
 - PostgreSQL + 本地优先单机部署。
 
-V0.1 **不要求**自研 Skill Resolver、Skill Graph Executor、Progressive Disclosure Engine 或完整 Workflow Engine。优先验证 Runtime 自身能否完成 Skill 发现、选择和编排。
+V0.1 **不要求**自研 Skill Resolver、Skill Graph Executor、Progressive Disclosure Engine、Learned Memory Router 或完整 Workflow Engine。Graphiti 关联图先作为后续实验，不进入默认主链。
 
 ### 必须通过的验证
 
@@ -252,6 +205,8 @@ V0.1 **不要求**自研 Skill Resolver、Skill Graph Executor、Progressive Dis
 | Skill 可迁移性 | 同一 Canonical Skill 可同步/投影到两个 Runtime |
 | Skill 所有权 | Runtime 修改 Projection 不会直接篡改 Canonical Skill |
 | Cross-Runtime Memory | Runtime B 可使用 Runtime A 形成的长期 Memory |
+| Memory Selectivity | 简单 Task 可不 Recall，需要历史时只注入少量相关 Memory |
+| Memory Engine 可替换 | 更换在线检索 Engine 不迁移 Canonical Memory |
 | 自主事件处理 | 无 Chat Prompt 时 Event 也能更新状态、创建 Task 并触发执行 |
 | Capability 治理 | Runtime 不能绕过 Policy / Gateway 执行高风险动作 |
 | 副作用安全 | Crash / Retry 不重复执行已完成动作 |
