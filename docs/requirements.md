@@ -42,7 +42,7 @@ Memory 只是 Shadow 的一个子系统。
 即使 Memory 子系统暂时不可用，Shadow 仍必须能够：
 
 - 创建、保存、暂停、恢复 Task；
-- 保存 Semantic Checkpoint；
+- 保存和恢复 Checkpoint；
 - 在不同 Runtime 间接力 Task；
 - 持有 Canonical Skill 并同步 Runtime Projection；
 - 管理 Capability / Policy / Approval / Execution Ledger；
@@ -58,7 +58,7 @@ Memory 只是 Shadow 的一个子系统。
 | **Identity** | 用户身份、长期偏好、信任与隐私基线 |
 | **Event** | 已发生事实的持久记录 |
 | **World State** | 当前世界状态的紧凑投影 |
-| **Task** | 需要持续完成的工作及其状态 |
+| **Task** | 需要跨 Runtime / Session 持续存在的 Durable Work |
 | **Memory** | 对历史证据形成的可追溯、可修正认知 |
 | **Skill** | 可复用的方法、经验和程序性知识 |
 | **Capability** | 稳定、可治理、可版本化的动作或查询契约 |
@@ -69,20 +69,172 @@ Memory 只是 Shadow 的一个子系统。
 基本语义：
 
 ```text
-Task        = 我现在要完成什么
+Task        = 我现在持续承诺完成什么
 Memory      = 我知道什么
 Skill       = 这类事情应该怎么做
 Capability  = 系统实际上能做什么
 Policy      = 哪些行为被允许
 ```
 
-## 5. Task 与 Semantic Checkpoint 需求
+## 5. Task、Supervisor 与 Checkpoint 需求
 
-- Task 必须由 Shadow 持有，Runtime Session 不得作为唯一事实源；
-- Task 必须保留目标、阶段、已完成工作、已知事实、决策、Artifact、剩余工作、权限与副作用状态；
-- Runtime 中断或替换后，Task 必须能从最近持久化 Semantic Checkpoint 恢复；
-- Shadow 不要求迁移隐藏思维链、KV Cache 或 Runtime 私有 Planner 状态；
-- 跨 Runtime 接力最低保证：Task 语义、证据、产物、剩余工作和副作用状态不丢失。
+### 5.1 Task 所有权边界
+
+Task 是需要在 Runtime 生命周期之外持续存在的 **Durable Work Unit**，而不是 Runtime 内部 Planner 的任务节点。
+
+核心原则：
+
+> **Shadow owns durable work; Runtime owns execution decomposition.**
+
+> **Shadow supervises execution; it does not plan execution.**
+
+Runtime 可以自由使用自己的：
+
+- planning；
+- subtask；
+- subagent；
+- workflow / DAG；
+- tool loop；
+- runtime-native state。
+
+这些内部结构默认属于 Runtime，不要求同步为 Shadow Task，也不要求 Shadow 理解其 Planner 数据结构。
+
+### 5.2 Runtime Subtask 与 Task Promotion
+
+Runtime 内部 Subtask 默认不属于 Shadow。
+
+只有当某项工作跨过持久化边界，例如需要：
+
+- 跨 Session / Runtime 生存；
+- 长时间 WAITING；
+- 独立 Scheduler / Trigger；
+- 用户独立查看或管理；
+- 独立 Policy / Budget；
+- 独立 Artifact / Deliverable；
+- 长期外部副作用 reconciliation；
+
+Runtime 才可以提出将其 **promote** 为新的 Shadow Task。
+
+Shadow V0.1 不要求维护 Runtime 内部 Task Tree / Planner DAG。
+
+### 5.3 Task Contract 应保持薄而稳定
+
+Task 本体只冻结长期工作连续性需要的最小语义，概念上包括：
+
+```text
+task_id
+goal / commitment
+status
+lifecycle metadata
+policy / budget refs
+runtime binding
+checkpoint refs
+artifact refs
+schedule / trigger refs
+execution / ledger refs
+```
+
+`Current Stage`、`Known Facts`、`Decisions`、`Completed Work`、`Remaining Work` 等执行语义不要求成为 Task 的固定字段，优先进入 Semantic Checkpoint 或其他可扩展状态。
+
+### 5.4 Task Supervisor
+
+Shadow 需要具备 Task 级监督能力，但不替 Runtime 规划。
+
+Task Supervisor 根据 Durable Task、Runtime 状态、Event、Scheduler、Policy、Ledger 和 Checkpoint 做控制决策，例如：
+
+```text
+start
+resume
+pause
+wait
+retry
+request_checkpoint
+rebind_runtime
+escalate
+commit_complete
+commit_failed
+```
+
+Supervisor 的默认检查应 **deterministic-first**，包括：
+
+- Runtime health / heartbeat；
+- timeout / deadline；
+- retry count；
+- schedule / waiting condition；
+- budget；
+- artifact existence；
+- schema / state validity；
+- approval state；
+- capability / ledger / side-effect state。
+
+只有确定性检查不足时，才允许调用可替换 Semantic Verifier；高风险或主观结论可以继续进入 Human Approval。
+
+```text
+Deterministic Check
+        ↓ insufficient
+Semantic Verifier
+        ↓ required
+Human Approval
+```
+
+### 5.5 Durable State 的提交权
+
+Runtime 可以报告 progress、failure 或 completion，但不能单方面提交 Shadow 的 Durable Task 状态。
+
+> **Runtime proposes progress and completion; Shadow commits durable task state.**
+
+例如 Runtime 提出完成后，Supervisor 可以检查 Artifact、Ledger、Pending Approval、Acceptance Condition 等，再决定是否写入 `COMPLETED`。
+
+### 5.6 双层 Checkpoint
+
+Checkpoint 是恢复边界，不是统一 Planner 数据结构。
+
+Shadow 区分：
+
+**Runtime Checkpoint**
+
+- runtime-specific；
+- 可以 opaque；
+- 用于同一 Runtime 的高保真恢复；
+- 可以保存 Session / Event Log / Planner State 的引用；
+- Shadow 不要求理解内部格式。
+
+**Semantic Checkpoint**
+
+- runtime-neutral；
+- 用于 Runtime 切换、长期暂停、Runtime 状态丢失或版本不兼容；
+- 保存足以让其他 Runtime 继续工作的可验证语义状态。
+
+Semantic Checkpoint 概念上由两部分组成：
+
+```text
+Runtime-provided semantic state
+        +
+Shadow-owned durable facts
+```
+
+Runtime 可以提供 Goal、Meaningful Progress、Important Facts / Decisions、Open Commitments、Remaining Work 等；Shadow 自己补充 Artifact、Capability Result、Approval、Policy、Ledger、Side-effect State、Runtime Binding 等权威状态。
+
+Shadow 不要求迁移 hidden chain-of-thought、KV Cache 或 Runtime 私有 Planner Graph。
+
+### 5.7 Durability Boundary
+
+Shadow 不要求按固定 Step 数生成 Semantic Checkpoint。
+
+> **Shadow defines durability boundaries; Runtime retains freedom over its internal state model.**
+
+可触发 Checkpoint 的典型 Durable Boundary 包括：
+
+- 阶段性成果或重要 Artifact 完成；
+- 进入长期 WAITING；
+- 即将执行或已经完成重要现实副作用；
+- 用户 Pause；
+- Runtime switch / upgrade / shutdown；
+- 长任务周期性保护；
+- Supervisor 判断恢复风险升高；
+- Runtime 主动请求 checkpoint。
+
+具体 checkpoint policy 在 Contract 阶段冻结最小要求，不在需求阶段固定频率。
 
 ## 6. Memory 需求
 
@@ -512,10 +664,11 @@ Provider 是 Capability 的实际实现者。Provider 可以替换，但 Capabil
 ## 9. Runtime 与 SRI 需求
 
 - Runtime 是可替换执行器；
-- Shadow 通过 SRI 统一执行、恢复、暂停、取消、检查点、状态、能力发现和健康检查；
+- Shadow 通过 SRI 统一执行、恢复、暂停、取消、Checkpoint 请求、状态、能力发现和健康检查；
+- Runtime 可以暴露自己的 opaque Runtime Checkpoint / Session State Reference；
 - 至少支持两个不同 Runtime Adapter 以验证 Runtime-neutral；
 - Runtime-native Session 只作为 Binding，不作为 Task 事实源；
-- Runtime 切换通过 Shadow 规范化状态重新 hydrate；
+- Runtime 切换优先使用 Semantic Checkpoint + Shadow durable state 重新 hydrate；
 - Runtime Adapter 必须可独立替换升级。
 
 ## 10. Event、World State 与持续运行需求
@@ -523,7 +676,7 @@ Provider 是 Capability 的实际实现者。Provider 可以替换，但 Capabil
 - Event 采用 append-oriented 方式持久记录；
 - World State 由 Event 投影生成；
 - Task 可以由 User、Event、Schedule 或 Condition 触发；
-- 删除 Chat UI 后系统仍应能接收 Event、维护状态、恢复 Task 并执行允许的动作；
+- 删除 Chat UI 后系统仍应能接收 Event、维护状态、监督 / 恢复 Task 并执行允许的动作；
 - Pulse / 小模型分层属于实现优化，不属于核心所有权原则。
 
 ## 11. Capability Gateway 与治理需求
@@ -555,7 +708,8 @@ Context Compiler 负责把 Shadow 规范化资产转换为当前 Runtime 可以�
 可能包括：
 
 ```text
-Task / Checkpoint
+Durable Task
+Semantic Checkpoint
 Relevant Memory / Task Working Memory
 Available Skill refs / projections
 World State
@@ -564,13 +718,14 @@ Allowed Capabilities
 Artifact / Evidence refs
 ```
 
-Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
+Context Compiler 不负责替代 Runtime 的 Planning、Subtask Decomposition、Skill Activation 或 Agent Loop。
 
 ## 13. 可替换组件升级需求
 
 下列组件必须通过稳定边界接入：
 
 - Runtime；
+- Semantic Verifier；
 - Memory Engine；
 - Memory Attention / Recall Router；
 - Background Memory Worker；
@@ -590,8 +745,8 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 | --- | --- |
 | 本地优先 | Raw Evidence、Canonical Memory、Policy、Canonical Skill 默认本地持有 |
 | 可移植性 | 核心数据不依赖单一 Runtime / Provider / Skill / Memory Engine 私有格式 |
-| 可审计性 | 重要状态、Memory provenance、Skill 来源和现实动作可追溯 |
-| 可恢复性 | Core 重启不丢 Task / Event / Ledger；Runtime crash 可恢复 |
+| 可审计性 | Task durable state、Checkpoint、Memory provenance、Skill 来源和现实动作可追溯 |
+| 可恢复性 | Core 重启不丢 Task / Event / Ledger；Runtime crash 可从 Runtime 或 Semantic Checkpoint 恢复 |
 | 可升级性 | Runtime / Memory Engine / Skill Adapter / Manager / Provider 具有清晰替换边界 |
 | 最小权限 | Runtime 与外部 Provider 只获得所需数据与权限 |
 | 可重建性 | 派生索引、Memory Graph、Runtime Projection 可以重新生成 |
@@ -601,7 +756,9 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 ### 必做
 
 - Event / World State；
-- Task / Semantic Checkpoint / Artifact；
+- Durable Task / Task Supervisor；
+- Runtime Checkpoint Reference / Semantic Checkpoint / Artifact；
+- deterministic-first Task supervision；
 - Raw Evidence / Canonical Memory / Task Working Memory 基础闭环；
 - Memory Access API + 可替换 Memory Adapter；
 - Mem0 OSS 作为首个在线检索后端；
@@ -617,6 +774,7 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 
 ### 后续实验
 
+- Semantic Verifier / Judge Runtime；
 - Graphiti Derived Memory Graph / multi-hop recall；
 - Learned Memory Attention / Personal Memory Router；
 - MemOS 作为替代 Memory Engine；
@@ -625,10 +783,12 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 ### 暂不做
 
 - 自研 Agent Loop；
+- 自研 Runtime Planner；
+- Runtime Subtask Graph 同步；
+- 完整 Workflow Engine；
 - 自研 Skill Resolver；
 - Skill Graph Executor；
 - Progressive Disclosure Engine；
-- 完整 Workflow Engine；
 - 自研 Browser Agent / Coding Agent；
 - 自研 Vector DB / Graph DB；
 - Plugin Marketplace；
@@ -640,7 +800,11 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 
 | 场景 | 通过条件 |
 | --- | --- |
-| Runtime Continuity | Runtime A 中断后 Runtime B 能继续同一 Task |
+| Durable Task Ownership | Runtime 内部 Subtask / Planner 状态无需进入 Shadow，Durable Task 仍可独立存在 |
+| Task Supervision | Shadow 能用确定性状态检查执行 start / wait / retry / resume / checkpoint / completion commit |
+| Runtime Continuity | Runtime A 中断后 Runtime B 能从 Semantic Checkpoint + durable state 继续同一 Task |
+| Runtime-native Resume | 原 Runtime 可通过自己的 opaque Runtime Checkpoint / Session Ref 高保真恢复 |
+| Completion Ownership | Runtime 只能 propose completion；最终 Durable Task 状态由 Shadow commit |
 | Skill Portability | 同一 Canonical Skill 可投影到两个 Runtime |
 | Skill Ownership | Runtime 修改 Projection 不直接修改 Canonical Skill |
 | Cross-Runtime Memory | Runtime A 形成的长期 Memory 可被 Runtime B 使用 |
@@ -656,7 +820,8 @@ Context Compiler 不负责替代 Runtime 的 Skill 激活或 Agent Loop。
 
 ```text
 Event / World State
-Task / Semantic Checkpoint
+Durable Task / Task Supervisor
+Runtime Checkpoint / Semantic Checkpoint
 Memory Authority / Access Boundary
 Skill Authority / Projection Boundary
 Capability / Provider / Protocol
@@ -664,5 +829,7 @@ Policy / Approval
 SRI
 Artifact
 ```
+
+Task 方向已经基本冻结，但 Contract 阶段仍需明确：Task Status 最小集合、Semantic Checkpoint 最低字段、Durability Policy、Task Promotion 接口和 Completion Contract。
 
 这些边界严格对齐后，再进入数据库 Schema、API、详细设计和实现。
