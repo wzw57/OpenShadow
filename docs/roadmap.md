@@ -12,6 +12,9 @@
 
 - Shadow 的稳定核心层边界；
 - Task / Memory / Skill / Capability / Policy 的定义；
+- Durable Task 与 Runtime execution decomposition 的边界；
+- Task Supervisor 与 Runtime Planner 的边界；
+- Runtime Checkpoint 与 Semantic Checkpoint 的边界；
 - Skill Authority 与 Runtime Skill Execution 的边界；
 - Memory Authority 与 Memory Intelligence 的边界；
 - Capability / Provider / Tool / MCP 的关系；
@@ -23,6 +26,7 @@
 - 前期文档不存在互相冲突的对象定义；
 - 不再使用 Runtime / Memory Engine 私有概念作为核心对象事实源；
 - 明确哪些能力属于稳定核心，哪些属于可替换 Manager / Adapter / Runtime；
+- Shadow 不承担 Runtime Planner / Subtask Graph；
 - 详细模块文档暂不提前展开。
 
 ---
@@ -35,13 +39,36 @@
 
 ```text
 Event / World State
-Task / Semantic Checkpoint
+Durable Task / Task Supervisor
+Runtime Checkpoint / Semantic Checkpoint
 Memory Authority / Access
 Skill Authority
 Capability
 Policy / Approval
 SRI
 Artifact
+```
+
+Task Contract 先冻结：
+
+```text
+task identity / goal / status
+runtime binding
+checkpoint refs
+artifact / schedule / ledger refs
+Task Supervisor control actions
+Runtime subtask vs Shadow task boundary
+Task Promotion boundary
+Completion Proposal / Commit boundary
+```
+
+Checkpoint Contract 先冻结：
+
+```text
+Runtime Checkpoint = opaque / runtime-native ref
+Semantic Checkpoint = portable semantic state
+Shadow-owned durable facts
+Durability Boundary / request rules
 ```
 
 Memory Contract 先冻结：
@@ -68,20 +95,21 @@ runtime compatibility
 projection / sync state
 ```
 
-暂不冻结 Runtime 内部的 Skill Resolver / Skill Graph Executor / Progressive Disclosure，也不冻结复杂 Learned Memory Router。
+暂不冻结 Runtime 内部 Planner / Subtask Graph / Skill Resolver / Skill Graph Executor / Progressive Disclosure，也不冻结复杂 Learned Memory Router。
 
 退出条件：
 
 - 每个 Contract 有清晰版本边界；
 - durable 字段与 derived / replaceable 字段分离；
 - Contract 不依赖 Hermes / DSH / Claude / Mem0 / Graphiti 私有类型；
+- Shadow Supervision 与 Runtime Planning 不再混淆；
 - Memory Authority、Skill Authority 与外部执行智能不再混淆。
 
 ---
 
-## 阶段 2：持久化与 Task 主干
+## 阶段 2：持久化与 Durable Task 主干
 
-目标：建立最小可恢复核心。
+目标：建立最小可恢复、可监督核心。
 
 实现：
 
@@ -89,16 +117,31 @@ projection / sync state
 - PostgreSQL migration；
 - Event Store；
 - 最小 World State projection；
-- Task Store；
+- Durable Task Store；
+- 最小 Task Supervisor；
+- Runtime Checkpoint Reference；
 - Semantic Checkpoint；
 - Artifact metadata；
 - Execution Ledger；
 - Structured Logging。
 
+Task Supervisor V0.1 先只做 deterministic-first 控制：
+
+```text
+start / resume / pause / wait
+retry / timeout / deadline
+request_checkpoint
+commit_complete / commit_failed
+```
+
+不引入 Planner 或模型依赖。
+
 退出条件：
 
 - Shadow Core 重启不丢 Event / Task / Checkpoint / Ledger；
-- 没有任何 Runtime 时，Task 仍可以创建、暂停、检查点化和恢复。
+- 没有任何 Runtime 时，Durable Task 仍可以创建、暂停、等待、检查点化和恢复；
+- Runtime 内部 Subtask 不需要写入 Shadow；
+- Runtime 不能单方面提交 Durable Task 最终状态。
 
 ---
 
@@ -112,12 +155,16 @@ projection / sync state
 - Runtime Registry；
 - Hermes Adapter；
 - Task Runtime Binding；
+- Runtime-native Session / Checkpoint Ref；
 - 最小 Context Compiler；
-- Runtime health / status。
+- Runtime health / status；
+- progress / completion proposal。
 
 退出条件：
 
-- Runtime Session 删除后 Shadow Task 仍存在；
+- Runtime Session 删除后 Shadow Durable Task 仍存在；
+- Hermes 可以自由 planning / subtask，不需要 Shadow 同步其内部 DAG；
+- 原 Runtime 可通过 native checkpoint/session ref 高保真恢复；
 - Runtime 不能成为 Task / Memory / Skill 的唯一事实源。
 
 ---
@@ -285,48 +332,55 @@ MCP / REST / CLI / IPC / Local API
 - DSH Adapter；
 - Canonical Task hydration；
 - Runtime switch / rebind；
-- last durable checkpoint recovery；
+- Runtime Checkpoint fallback；
+- Semantic Checkpoint recovery；
 - side-effect reconciliation；
 - 第二个 Runtime Skill Adapter / Projection。
 
 核心 Demo：
 
 ```text
-Runtime A 执行 Task
+Runtime A 自由执行 / 拆分内部 Subtask
+        ↓
+Durability Boundary
         ↓
 Semantic Checkpoint
         ↓
 Runtime A 中断
         ↓
-Shadow 重新提供 Task / Working Memory / Available Skills / Policy
+Shadow 重新提供 Durable Task / Checkpoint /
+Working Memory / Available Skills / Policy
         ↓
-Runtime B 继续执行
+Runtime B 自己重新规划并继续执行
 ```
 
 退出条件：
 
-- Task 语义、Artifact、Task Working Memory、Skill 可用性和副作用状态不丢失；
+- Task 目标、Artifact、Task Working Memory、Skill 可用性和副作用状态不丢失；
+- 不要求 Runtime B 继承 Runtime A 的 Planner DAG；
 - 同一 Canonical Skill 可投影给两个不同 Runtime。
 
 ---
 
-## 阶段 9：Event-driven 持续运行
+## 阶段 9：Event-driven 持续运行与 Supervisor
 
-目标：证明 Shadow 不是 Chat 聚合器，也不是 Memory Engine 外壳。
+目标：证明 Shadow 是长期 Control Plane，而不是 Chat 聚合器或 Memory Engine 外壳。
 
 实现：
 
 - Scheduler；
 - Event → World State → Task；
 - waiting Task resume；
+- Runtime health / heartbeat supervision；
+- deterministic retry / timeout / deadline；
 - notification；
-- deterministic rules；
 - 可选 tiny Pulse。
 
 退出条件：
 
-- 没有用户 Chat Prompt 时，Event / Scheduler 仍可触发 Task；
-- 即使暂时禁用 Memory，Task / Runtime / Capability / Skill / Event 主干仍能运行。
+- 没有用户 Chat Prompt 时，Event / Scheduler / Supervisor 仍可推进 Task；
+- 即使暂时禁用 Memory，Task / Runtime / Capability / Skill / Event 主干仍能运行；
+- 日常监督不依赖 LLM。
 
 ---
 
@@ -372,12 +426,13 @@ Mem0 + Graph Association
 
 ---
 
-## 阶段 11：可插拔 Manager 与升级验证
+## 阶段 11：可插拔 Manager、Verifier 与升级验证
 
-只有真实使用出现明确缺口后，才增加高级 Manager。
+只有真实使用出现明确缺口后，才增加高级 Manager / Verifier。
 
 候选扩展：
 
+- Semantic Verifier / Judge Runtime；
 - Learned Memory Attention / Personal Memory Router；
 - Advanced Skill Manager；
 - MemOS Adapter / alternative Memory Engine；
@@ -393,6 +448,7 @@ Mem0 + Graph Association
 
 退出条件：
 
+- 更换 Verifier 不迁移 Task；
 - 更换 Memory Router 不迁移 Canonical Memory；
 - 更换 Skill Manager 不迁移 Canonical Skill；
 - 更换 Runtime / Memory Engine / Provider 不迁移核心资产。
@@ -403,20 +459,26 @@ Mem0 + Graph Association
 
 | ID | 场景 | 目标 |
 | --- | --- | --- |
-| AC-01 | Runtime Continuity | Runtime A 中断后 Runtime B 继续同一 Task |
-| AC-02 | Skill Portability | 同一 Canonical Skill 可投影到两个 Runtime |
-| AC-03 | Skill Ownership | Runtime 修改 Projection 不直接修改 Canonical Skill |
-| AC-04 | Cross-Runtime Memory | Runtime B 可使用 Runtime A 形成的长期 Memory |
-| AC-05 | Memory Selectivity | 简单 Task 无 Recall；需要历史时只注入少量相关 Memory |
-| AC-06 | Memory Engine Replaceability | 替换在线检索 Engine 不迁移 Canonical Memory |
-| AC-07 | Autonomous Event Handling | 无 Chat Prompt 时 Event 可触发 Task |
-| AC-08 | Capability Governance | Runtime 不能绕过 Policy / Gateway 执行高风险动作 |
-| AC-09 | Exactly-once Side Effect | Crash / Retry 不重复执行已完成动作 |
-| AC-10 | Non-Memory Core | 禁用 Memory 后 Task / Skill / Capability / Event 主干仍工作 |
+| AC-01 | Durable Task Ownership | Runtime 内部 Planner / Subtask 不进入 Shadow，Durable Task 仍独立存在 |
+| AC-02 | Task Supervision | Shadow 用确定性检查完成 wait / retry / resume / checkpoint / completion commit |
+| AC-03 | Runtime Continuity | Runtime A 中断后 Runtime B 从 Semantic Checkpoint + durable state 继续 Task |
+| AC-04 | Runtime-native Resume | 原 Runtime 可通过 opaque Runtime Checkpoint / Session Ref 高保真恢复 |
+| AC-05 | Completion Ownership | Runtime propose completion，Shadow commit Durable Task 状态 |
+| AC-06 | Skill Portability | 同一 Canonical Skill 可投影到两个 Runtime |
+| AC-07 | Skill Ownership | Runtime 修改 Projection 不直接修改 Canonical Skill |
+| AC-08 | Cross-Runtime Memory | Runtime B 可使用 Runtime A 形成的长期 Memory |
+| AC-09 | Memory Selectivity | 简单 Task 无 Recall；需要历史时只注入少量相关 Memory |
+| AC-10 | Memory Engine Replaceability | 替换在线检索 Engine 不迁移 Canonical Memory |
+| AC-11 | Autonomous Event Handling | 无 Chat Prompt 时 Event / Scheduler / Supervisor 可推进 Task |
+| AC-12 | Capability Governance | Runtime 不能绕过 Policy / Gateway 执行高风险动作 |
+| AC-13 | Exactly-once Side Effect | Crash / Retry 不重复执行已完成动作 |
+| AC-14 | Non-Memory Core | 禁用 Memory 后 Task / Skill / Capability / Event 主干仍工作 |
 
 ## v0.1 明确不做
 
 - 自研完整 Agent Loop；
+- 自研 Runtime Planner；
+- Runtime Subtask Graph 同步；
 - 自研 Skill Resolver；
 - Skill Graph Executor；
 - Progressive Disclosure Engine；
@@ -443,7 +505,7 @@ Mem0 + Graph Association
   ↓
 PostgreSQL 逻辑模型
   ↓
-Event / Task / Checkpoint / Ledger
+Durable Task / Supervisor / Checkpoint / Ledger
   ↓
 第一个 Runtime
   ↓
@@ -457,11 +519,11 @@ Capability / Provider / Protocol
   ↓
 第二 Runtime / Handoff
   ↓
-Event-driven Runtime
+Event-driven Supervision
   ↓
 Graphiti Association Experiment
   ↓
-按真实缺口增加可插拔 Manager
+按真实缺口增加可插拔 Verifier / Manager
 ```
 
 在 Contract 冻结之前，不继续扩展详细模块设计。
