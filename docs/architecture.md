@@ -4,7 +4,7 @@
 
 OpenShadow 是一个**本地优先、运行时无关的个人 AI 连续性与控制层**。
 
-它不负责成为最聪明的 Agent，也不重做 Runtime 已经具备的推理、规划、Skill 激活和工具编排。Shadow 的职责是长期持有规范化个人资产、维护 Task 连续性、统一治理现实能力，并把这些资产安全地交给可替换 Runtime 使用。
+它不负责成为最聪明的 Agent，也不重做 Runtime 已经具备的推理、规划、Skill 激活和工具编排。Shadow 的职责是长期持有规范化个人资产、维护 Task 连续性、监督长期执行、统一治理现实能力，并把这些资产安全地交给可替换 Runtime 使用。
 
 > **Shadow 持有连续性。Runtime 负责推理与执行，但不拥有用户的长期状态。**
 
@@ -33,7 +33,8 @@ Memory 是 Shadow 的一个子系统，不是 Shadow 的全部。
 
 即使暂时关闭 Memory 子系统，Shadow 仍然必须能够：
 
-- 保存与恢复 Task / Semantic Checkpoint；
+- 保存与恢复 Durable Task / Checkpoint；
+- 监督和调度长期 Task；
 - 在多个 Runtime 之间接力 Task；
 - 持有并同步 Canonical Skill；
 - 管理 Capability / Policy / Approval / Execution Ledger；
@@ -50,7 +51,8 @@ Shadow 当前确认长期持有或治理：
 
 - Identity / Policy；
 - Event / World State；
-- Task / Semantic Checkpoint；
+- Durable Task / Task Supervisor；
+- Runtime Checkpoint Ref / Semantic Checkpoint；
 - Raw Evidence / Canonical Memory；
 - Canonical Skill / Version / Provenance / Trust；
 - Capability Contract / Registry；
@@ -64,6 +66,7 @@ Shadow 当前确认长期持有或治理：
 优先交给外部实现：
 
 - Agent Loop / Planning；
+- Runtime-native Subtask / Workflow / Multi-Agent orchestration；
 - Runtime-native Skill discovery / activation / progressive disclosure / composition；
 - Hermes、DSH、Claude、Codex 等 Runtime；
 - Mem0、LangMem、Graphiti、MemOS 等 Memory Intelligence 实现；
@@ -83,7 +86,7 @@ V0.1 采用**模块化单体 + PostgreSQL**，不因为逻辑边界而提前拆�
 | **Identity** | 用户身份、长期偏好、信任与隐私基线 | 所有 Runtime 的共同根身份 |
 | **Event** | 已发生事实的持久记录 | 支撑审计、重建和状态投影 |
 | **World State** | 当前世界状态的紧凑投影 | 让系统持续面对“现在” |
-| **Task** | 需要持续完成的工作及其状态 | 不能随 Runtime Session 消失 |
+| **Task** | 需要跨 Runtime / Session 持续存在的 Durable Work | 不能随 Runtime Planner / Session 消失 |
 | **Memory** | 对历史证据形成的可追溯认知 | 属于用户，而非某个 Agent |
 | **Skill** | 可复用的方法、经验和程序性知识 | 用户教会 AI 的“怎么做”应可迁移 |
 | **Capability** | 稳定、可治理的动作或查询契约 | 表示用户真正拥有的可执行能力 |
@@ -94,7 +97,7 @@ V0.1 采用**模块化单体 + PostgreSQL**，不因为逻辑边界而提前拆�
 对象关系可以用五个问题理解：
 
 ```text
-Task        = 我现在要完成什么
+Task        = 我现在持续承诺完成什么
 Memory      = 我知道什么
 Skill       = 这类事情应该怎么做
 Capability  = 系统实际上能做什么
@@ -103,35 +106,161 @@ Policy      = 哪些行为被允许
 
 ---
 
-## 4. Task 与 Runtime 连续性
+## 4. Durable Task、Supervisor 与 Checkpoint
 
-### 4.1 Task 属于 Shadow
+### 4.1 Durable Task 属于 Shadow
 
-Runtime 只负责推理和执行。Hermes Session、DSH Session、Claude Thread 等都只是临时执行引用。
+Task 是需要在 Runtime 生命周期之外持续存在的工作承诺与状态，而不是 Runtime 内部 Planner Task。
 
-Task 至少长期保留：
+核心边界：
+
+> **Shadow owns durable work; Runtime owns execution decomposition.**
+
+Runtime 可以自由选择自己的 ReAct、Plan-and-Execute、Subtask、Subagent、Workflow、DAG 或其他执行结构，Shadow 不要求同步 Runtime 的内部 Task Graph。
 
 ```text
-Goal
-Current Stage
-Known Facts
-Decisions / Evidence
-Completed Work
-Artifacts / Tool Results
-Remaining Work
-Policy / Budget
-Runtime Binding
-Checkpoint
-Side-effect State
+Shadow Durable Task
+        │
+        ▼
+      Runtime
+        │
+   ┌────┼──────────────┐
+   ▼    ▼              ▼
+subtask subagent   internal workflow
+   └────┼──────────────┘
+        ▼
+   runtime execution
 ```
 
-### 4.2 Semantic Checkpoint
+只有内部工作跨过持久化边界，例如需要跨 Session / Runtime 生存、长期等待、独立调度、独立 Policy / Budget 或用户独立管理时，Runtime 才可以提出将其晋升为新的 Shadow Task。
 
-跨 Runtime 接力迁移的是可验证语义状态，而不是 hidden chain-of-thought、KV Cache、Runtime 私有 Planner Graph 或 Runtime-specific Session object。
+### 4.2 Task Contract 保持薄而稳定
 
-因此“连续”意味着：**目标、进度、证据、产物、剩余工作和副作用状态不丢失。**
+Shadow Task 本体只持有长期连续性需要的最小语义，概念上包括：
 
-### 4.3 SRI
+```text
+task_id
+goal / commitment
+status
+lifecycle metadata
+policy / budget refs
+runtime binding
+checkpoint refs
+artifact refs
+schedule / trigger refs
+execution / ledger refs
+```
+
+`Current Stage`、`Known Facts`、`Decisions`、`Completed Work`、`Remaining Work` 等不是必须固定在 Task Schema 中，优先属于 Semantic Checkpoint 的可扩展语义状态。
+
+### 4.3 Task Supervisor
+
+Shadow 作为 Runtime 上层需要监督长期执行，但不能退化成第二套 Planner。
+
+> **Shadow supervises execution; it does not plan execution.**
+
+Task Supervisor 可以根据 Task、Scheduler、Event、Runtime Health、Policy、Artifact、Approval 和 Ledger 决定：
+
+```text
+start / resume / pause / wait
+retry / request_checkpoint
+rebind_runtime / escalate
+commit_complete / commit_failed
+```
+
+检查遵循 **deterministic-first**：
+
+```text
+Runtime health / heartbeat
+Timeout / deadline
+Retry count
+Schedule / waiting condition
+Budget
+Artifact existence
+Approval state
+Capability / Ledger / side-effect state
+```
+
+这些都不要求调用模型。
+
+当确定性规则无法判断语义完成度时，才调用可替换的 Semantic Verifier；高风险或主观判断可以继续进入 Human Approval。
+
+```text
+Deterministic Check
+        ↓ insufficient
+Semantic Verifier
+        ↓ required
+Human Approval
+```
+
+### 4.4 Runtime 提议，Shadow 提交 Durable State
+
+Task 属于 Shadow，因此最终 Durable Task 状态也由 Shadow 提交。
+
+> **Runtime proposes progress and completion; Shadow commits durable task state.**
+
+Runtime 可以提出 `completed` / `failed` / `waiting` 等状态建议；Supervisor 检查 Artifact、Ledger、Pending Approval、Acceptance Condition 后再写入权威 Task 状态。
+
+### 4.5 双层 Checkpoint
+
+Checkpoint 是恢复边界，而不是统一 Runtime 的内部状态模型。
+
+```text
+                Shadow Task
+                    │
+              Checkpoint Record
+               /             \
+              ▼               ▼
+   Semantic Checkpoint   Runtime Checkpoint
+        portable              opaque
+```
+
+**Runtime Checkpoint**：
+
+- runtime-specific；
+- 可以完全 opaque；
+- 用于同 Runtime 高保真恢复；
+- 可以只是 Hermes Session、DSH Event Log、Planner State 等引用；
+- Shadow 不要求理解其内部格式。
+
+**Semantic Checkpoint**：
+
+- runtime-neutral；
+- 用于 Runtime 切换、长期暂停、Runtime 状态丢失或版本不兼容；
+- 保存其他 Runtime 能理解的可验证语义状态。
+
+Semantic Checkpoint 由两类状态组成：
+
+```text
+Runtime-provided semantic state
+            +
+Shadow-owned durable facts
+```
+
+Runtime 可以提供 Goal、Meaningful Progress、Important Facts / Decisions、Open Commitments、Remaining Work；Shadow 补充 Artifact、Capability Result、Policy、Approval、Ledger、Side-effect State、Runtime Binding 等自己掌握的权威事实。
+
+Shadow 不迁移 hidden chain-of-thought、KV Cache 或 Runtime 私有 Planner Graph。
+
+### 4.6 Durability Boundary
+
+Shadow 不规定 Runtime 每执行多少 Step 必须 Checkpoint。
+
+> **Shadow defines durability boundaries; Runtime retains freedom over its internal state model.**
+
+Supervisor 可以在以下边界请求 Checkpoint：
+
+- 阶段性成果 / 重要 Artifact 完成；
+- 进入长期 WAITING；
+- 重要外部副作用前后；
+- 用户 Pause；
+- Runtime switch / upgrade / shutdown；
+- 长任务周期性保护；
+- Runtime 主动请求；
+- Supervisor 判断恢复风险升高。
+
+如果原 Runtime 仍然可用，优先从 Runtime Checkpoint 高保真恢复；否则使用 Semantic Checkpoint + Shadow Durable State 重新 hydrate 新 Runtime。
+
+### 4.7 SRI
 
 SRI（Shadow Runtime Interface）提供稳定 Runtime 边界，概要能力包括：
 
@@ -146,7 +275,7 @@ capabilities
 health
 ```
 
-Runtime Adapter 可以被独立替换和升级。
+具体 Runtime 可以扩展自己的 Session / Checkpoint 能力，但 Runtime Adapter 可以独立替换和升级。
 
 ---
 
@@ -442,7 +571,8 @@ Email / Calendar / Home / Server / Files / User
 - Event = 发生了什么；
 - World State = 现在是什么状态；
 - Scheduler = 什么时候需要恢复或检查；
-- Task = 哪件工作需要持续到完成。
+- Task Supervisor = 当前 Durable Task 应该继续、等待、重试、切换还是提交状态；
+- Runtime = 具体怎么完成。
 
 `Pulse`、小模型、规则分层等属于运行成本优化，可以替换，不进入最底层所有权原则。
 
@@ -455,7 +585,7 @@ Context Compiler 将 Shadow 规范化资产编译为当前 Runtime 能消费的�
 输入可能包括：
 
 ```text
-Task / Checkpoint
+Durable Task / Semantic Checkpoint
 Relevant Memory / Task Working Memory
 Available Skill references / projections
 World State
@@ -464,7 +594,7 @@ Allowed Capabilities
 Artifact / Evidence references
 ```
 
-这里的原则不是 Shadow 重新控制 Runtime 内部推理，而是确保 Runtime 切换时可以从稳定状态重新 hydrate。
+这里的原则不是 Shadow 重新控制 Runtime 内部推理，而是确保 Runtime 切换时可以从稳定状态重新 hydrate。Context Compiler 不负责 Runtime 的内部 Planning / Subtask / Skill Activation。
 
 ---
 
@@ -480,7 +610,7 @@ Canonical Asset / Contract
 Replaceable Implementation
 ```
 
-适用对象包括：Runtime、Memory Engine、Memory Attention、Background Memory Worker、Skill Manager、Runtime Skill Adapter、Provider、Protocol Adapter、Search / Index Engine。
+适用对象包括：Runtime、Semantic Verifier、Memory Engine、Memory Attention、Background Memory Worker、Skill Manager、Runtime Skill Adapter、Provider、Protocol Adapter、Search / Index Engine。
 
 升级原则：
 
@@ -493,21 +623,23 @@ Replaceable Implementation
 V0.1 只证明核心边界成立：
 
 1. Event / World State；
-2. Task / Semantic Checkpoint / Artifact；
-3. Raw Evidence / Canonical Memory / Task Working Memory；
-4. Memory Access API + Mem0 Adapter；
-5. LangMem 后台 Candidate / Consolidation 基础实验；
-6. Skill Store + Version / Provenance / Trust + Runtime Projection / Sync；
-7. SRI + 两个 Runtime Adapter；
-8. Context Compiler；
-9. Capability Registry / Gateway / Provider Binding；
-10. Policy / Approval / Idempotency / Execution Ledger；
-11. Scheduler / Event-driven execution；
-12. PostgreSQL 本地持久化。
+2. Durable Task / Task Supervisor；
+3. Runtime Checkpoint Reference / Semantic Checkpoint / Artifact；
+4. deterministic-first supervision；
+5. Raw Evidence / Canonical Memory / Task Working Memory；
+6. Memory Access API + Mem0 Adapter；
+7. LangMem 后台 Candidate / Consolidation 基础实验；
+8. Skill Store + Version / Provenance / Trust + Runtime Projection / Sync；
+9. SRI + 两个 Runtime Adapter；
+10. Context Compiler；
+11. Capability Registry / Gateway / Provider Binding；
+12. Policy / Approval / Idempotency / Execution Ledger；
+13. Scheduler / Event-driven execution；
+14. PostgreSQL 本地持久化。
 
-Graphiti Derived Memory Graph、Learned Memory Router 和 MemOS 替代后端属于后续实验。
+Graphiti Derived Memory Graph、Learned Memory Router、Semantic Verifier / Judge Runtime 和 MemOS 替代后端属于后续实验。
 
-明确不要求：自研 Agent Loop、自研 Skill Resolver、Skill Graph Executor、Progressive Disclosure Engine、完整 Workflow Engine、自研 Browser / Coding Agent、自研 Vector / Graph DB、完整 Chat / Voice 平台。
+明确不要求：自研 Agent Loop、自研 Runtime Planner、同步 Runtime Subtask Graph、自研 Skill Resolver、Skill Graph Executor、Progressive Disclosure Engine、完整 Workflow Engine、自研 Browser / Coding Agent、自研 Vector / Graph DB、完整 Chat / Voice 平台。
 
 ---
 
@@ -515,13 +647,17 @@ Graphiti Derived Memory Graph、Learned Memory Router 和 MemOS 替代后端属�
 
 | 验收 | 目标 |
 | --- | --- |
-| Runtime Continuity | Runtime A 失败后 Runtime B 继续同一 Task |
+| Durable Task Ownership | Runtime 内部 Planner / Subtask 不进入 Shadow 也不影响 Durable Task 独立存在 |
+| Task Supervision | Shadow 用确定性检查完成 start / wait / retry / resume / checkpoint / completion commit |
+| Runtime Continuity | Runtime A 失败后 Runtime B 从 Semantic Checkpoint + durable state 继续同一 Task |
+| Runtime-native Resume | 原 Runtime 可从 opaque Runtime Checkpoint / Session Ref 高保真恢复 |
+| Completion Ownership | Runtime propose completion；Shadow commit Durable Task 状态 |
 | Skill Portability | 同一 Canonical Skill 可投影到两个 Runtime |
 | Skill Ownership | Runtime 修改 Projection 不直接修改 Canonical Skill |
 | Cross-Runtime Memory | Runtime B 可使用 Runtime A 形成的长期 Memory |
 | Memory Selectivity | 简单 Task 可不 Recall，需要历史时只提供少量相关 Memory |
 | Memory Engine Replaceability | 更换 Engine 不迁移 Raw Evidence / Canonical Memory |
-| Autonomous Operation | 无 Chat Prompt 时 Event / Scheduler 仍可触发 Task |
+| Autonomous Operation | 无 Chat Prompt 时 Event / Scheduler / Supervisor 仍可推进 Task |
 | Capability Governance | Runtime 无法绕过 Policy / Gateway 执行高风险动作 |
 | Exactly-once Side Effect | Crash / Retry 不重复执行已完成动作 |
 
@@ -532,7 +668,11 @@ Graphiti Derived Memory Graph、Learned Memory Router 和 MemOS 替代后端属�
 在进入 Schema 和 API 设计之前，当前仍需继续严格讨论：
 
 ```text
-Task / Semantic Checkpoint 的最小语义与状态机
+Task Status 最小集合
+Semantic Checkpoint 最低字段
+Durability Policy
+Task Promotion 接口
+Completion Contract
 Memory Attention / Recall Intent 的最小 Contract
 Canonical Memory 的写入 / 修正 / 冲突规则
 Capability / Provider / Policy / Approval 的边界
@@ -543,5 +683,7 @@ Identity / Trust / Privacy 边界
 Artifact 生命周期与引用语义
 Scheduler / Condition / Autonomous Trigger 的权威语义
 ```
+
+Task 的架构方向已经基本冻结；剩余内容属于 Contract 细化，而不是重新设计 Planner。
 
 这些边界冻结后，再进入 PostgreSQL Schema、API 和详细实现。
