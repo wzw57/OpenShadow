@@ -7,7 +7,7 @@
 
 OpenShadow is a **local-first, runtime-neutral Personal AI Continuity & Control Layer**.
 
-It is not another all-in-one agent, and it does not reimplement reasoning, planning, skill activation, or tool orchestration that strong runtimes already provide. Shadow owns durable personal assets, task continuity, and governance boundaries so that Hermes, DSH, Claude, Codex, and future runtimes can remain replaceable execution engines.
+It is not another all-in-one agent, and it does not reimplement reasoning, planning, skill activation, or tool orchestration that strong runtimes already provide. Shadow owns durable personal assets, task continuity, supervision, and governance boundaries so that Hermes, DSH, Claude, Codex, and future runtimes can remain replaceable execution engines.
 
 ## Why OpenShadow
 
@@ -39,22 +39,38 @@ Memory is only one subsystem of Shadow.
 
 | Object | Question | Shadow responsibility |
 | --- | --- | --- |
-| **Task** | What am I doing now? | Preserve goals, progress, checkpoints, artifacts, and side-effect state |
+| **Task** | What durable work am I committed to completing? | Own Durable Work, checkpoints, artifacts, and side-effect state |
 | **Memory** | What do I know? | Preserve traceable, revisable long-term knowledge and evidence |
 | **Skill** | How should this kind of work be done? | Own, version, migrate, and distribute reusable methods |
 | **Capability** | What can the system actually do? | Define stable, governable action and query contracts |
 | **Policy** | What is allowed? | Govern permission, risk, privacy, budget, and approval |
 | **Event / World State** | What happened, and what is true now? | Let the system persist beyond a chat window |
 
-Even with Memory temporarily removed, Shadow should still persist and resume Tasks, hand work across Runtimes, synchronize Skills, govern Capabilities and Policies, maintain Events / World State / Scheduler, and preserve Artifacts and side-effect state.
+Even with Memory temporarily removed, Shadow should still persist and resume Tasks, supervise long-running execution, hand work across Runtimes, synchronize Skills, govern Capabilities and Policies, maintain Events / World State / Scheduler, and preserve Artifacts and side-effect state.
 
-### 3. Tasks belong to Shadow; runtimes only reason and execute
+### 3. Shadow owns durable work; the Runtime owns execution decomposition
 
-A Runtime may own temporary Sessions, planning state, and internal context, but it must not become the durable source of truth for a Task.
+A Shadow Task is **Durable Work** that must survive beyond a Runtime Session or Planner. It is not a Runtime-internal task node.
 
-When a Runtime fails, is upgraded, or is replaced, Shadow transfers verifiable semantic state: goal, known facts, decision evidence, completed work, Artifacts, remaining work, and side-effect state—not hidden reasoning or private Runtime objects.
+> **Shadow owns durable work; Runtime owns execution decomposition.**
 
-> **Task belongs to Shadow; Runtime executes it.**
+A Runtime may freely create subtasks, subagents, workflows, DAGs, or use any planning architecture it prefers. Those internal structures stay inside the Runtime by default. Internal work is promoted to a new Shadow Task only when it crosses a durability boundary, such as requiring cross-session or cross-runtime survival, long waits, independent scheduling, independent Policy / Budget, or user-level management.
+
+Shadow acts as a control plane above the Runtime:
+
+> **Shadow supervises execution; it does not plan execution.**
+
+The Task Supervisor uses deterministic checks first for Runtime health, timeout, deadline, retry, schedule, Artifact, Approval, Ledger, and side-effect state. A replaceable Semantic Verifier is used only when deterministic checks are insufficient; high-risk or subjective decisions can escalate to Human Approval.
+
+A Runtime may report progress or propose completion, but Shadow commits the durable state:
+
+> **Runtime proposes progress and completion; Shadow commits durable task state.**
+
+Checkpoints have two layers. A Runtime Checkpoint may be an opaque native Session / Planner State reference for high-fidelity resume within the same Runtime. A Semantic Checkpoint is runtime-neutral recovery state used for Runtime handoff, long pauses, or loss of Runtime-native state.
+
+> **Shadow defines durability boundaries; Runtime retains freedom over its internal state model.**
+
+Shadow therefore does not migrate hidden chain-of-thought, KV cache, or Runtime-private planner graphs, and does not prescribe checkpointing every fixed number of execution steps.
 
 ### 4. Skill assets belong to Shadow; Skill execution belongs to the Runtime
 
@@ -127,7 +143,7 @@ The long-term Memory goal is not to maximize recall volume, but to:
 
 ### 7. Shadow runs around Events, World State, and Tasks—not around a chat window
 
-Tasks may come from a user, an Event, a Schedule, or a changing Condition. Even if every Chat UI is removed, Shadow should still maintain World State, resume waiting Tasks, select a Runtime, execute governed Capabilities, and record results.
+Tasks may come from a user, an Event, a Schedule, or a changing Condition. Even if every Chat UI is removed, Shadow should still maintain World State, supervise and resume waiting Tasks, select a Runtime, execute governed Capabilities, and record results.
 
 Rules, `Pulse`, and local small models may reduce continuous-operation cost, but they are implementation strategies rather than core ownership principles.
 
@@ -145,11 +161,11 @@ Interaction / Event Sources
 │             Stable Continuity Core           │
 │                                              │
 │ Identity / Policy       Event / World State  │
-│ Task / Checkpoint       Memory Authority      │
-│ Skill Authority         Runtime Registry / SRI│
-│ Context Compiler        Scheduler             │
-│ Capability Registry / Gateway / Ledger        │
-│ Artifact / History                            │
+│ Durable Task / Supervisor / Checkpoint       │
+│ Memory Authority        Skill Authority      │
+│ Runtime Registry / SRI  Context Compiler     │
+│ Scheduler               Capability Gateway   │
+│ Execution Ledger        Artifact / History   │
 └──────────────────────────────────────────────┘
                │
                ├─ Replaceable Runtimes
@@ -157,7 +173,7 @@ Interaction / Event Sources
                │
                ├─ Replaceable Engines / Managers
                │  Mem0 · LangMem · Graphiti · Future
-               │  optional Memory / Skill Manager
+               │  optional Verifier / Memory / Skill Manager
                │
                └─ Replaceable Providers / Protocols
                   Home · PC · Server · Email · Files · Web
@@ -168,7 +184,8 @@ Interaction / Event Sources
 
 | Shadow owns / governs | Replaceable implementation |
 | --- | --- |
-| Task / Semantic Checkpoint | Agent Loop / Planning |
+| Durable Task / Supervisor / Semantic Checkpoint | Runtime Planner / Subtask / Workflow |
+| Runtime Checkpoint Reference / Binding | Runtime-native Session / Checkpoint implementation |
 | Raw Evidence / Canonical Memory / Task Working Memory | Mem0 / LangMem / Graphiti / Search Engine |
 | Canonical Skill / Version / Provenance | Runtime-native Skill Engine / optional Skill Manager |
 | Capability Contract / Policy / Ledger | Provider / MCP Server / Tool implementation |
@@ -184,7 +201,9 @@ The first release exists to validate continuity and ownership boundaries, not to
 ### Core scope
 
 - Event / World State;
-- Task / Semantic Checkpoint / Artifact;
+- Durable Task / Task Supervisor;
+- Runtime Checkpoint Reference / Semantic Checkpoint / Artifact;
+- deterministic-first Task supervision;
 - Raw Evidence / Canonical Memory / Task Working Memory;
 - Memory Access API + Mem0 Adapter;
 - basic LangMem background Memory Candidate / Consolidation experiment;
@@ -195,19 +214,23 @@ The first release exists to validate continuity and ownership boundaries, not to
 - Scheduler / Event-driven execution;
 - PostgreSQL + local-first single-node deployment.
 
-V0.1 does **not** require a custom Skill Resolver, Skill Graph Executor, Progressive Disclosure Engine, Learned Memory Router, or full Workflow Engine. Graphiti remains a later association-graph experiment rather than part of the default critical path.
+V0.1 does **not** require a custom Runtime Planner, synchronization of Runtime-internal subtask graphs, a custom Skill Resolver, Skill Graph Executor, Progressive Disclosure Engine, Learned Memory Router, or full Workflow Engine. Graphiti association and Semantic Verifier remain later experiments rather than part of the default critical path.
 
 ### Must-pass demonstrations
 
 | Scenario | Proof target |
 | --- | --- |
-| Runtime continuity | Runtime A fails; Runtime B continues the same Task |
+| Durable Task ownership | Runtime-internal planning and subtasks remain private while Durable Task state survives independently |
+| Task supervision | Shadow can deterministically wait, retry, resume, request checkpoints, and commit completion |
+| Runtime continuity | Runtime A fails; Runtime B continues from Semantic Checkpoint + durable state |
+| Runtime-native resume | The original Runtime can resume with high fidelity from an opaque Runtime Checkpoint / Session reference |
+| Completion ownership | Runtime proposes completion; Shadow commits the Durable Task state |
 | Skill portability | One Canonical Skill can be synchronized/projected to two Runtimes |
 | Skill ownership | Runtime edits to a Projection cannot directly mutate the Canonical Skill |
 | Cross-runtime Memory | Runtime B can use durable Memory created through Runtime A |
 | Memory selectivity | Simple Tasks can perform no recall; history-dependent Tasks receive only a small relevant set |
 | Memory Engine replaceability | Replacing the online retrieval Engine does not migrate Canonical Memory |
-| Autonomous event handling | Events can update state, create Tasks, and trigger execution without chat prompts |
+| Autonomous event handling | Events / Scheduler / Supervisor can advance Tasks without chat prompts |
 | Capability governance | A Runtime cannot bypass Policy / Gateway for high-risk actions |
 | Side-effect safety | Crash / retry does not repeat already-completed actions |
 
@@ -224,4 +247,4 @@ At this stage the repository intentionally keeps only early design documents. De
 
 **Early design alignment / pre-MVP.**
 
-The current priority is to freeze which assets Shadow must own durably and which execution responsibilities should remain in Runtime / Engine / Provider layers. Database schema, APIs, and detailed implementation follow only after that boundary is stable.
+The current priority is to freeze which assets Shadow must own durably, which control responsibilities belong to Shadow, and which execution responsibilities should remain in Runtime / Engine / Provider layers. Database schema, APIs, and detailed implementation follow only after that boundary is stable.
