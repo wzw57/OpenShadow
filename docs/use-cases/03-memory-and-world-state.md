@@ -117,6 +117,14 @@ Memory 存在且用户有权管理其 Owner / Space。
 - Memory Engine 再次提出已删除内容时，Tombstone 触发拒绝或人工复核；
 - 敏感历史彻底擦除后，不保留原文版本审计。
 
+### Durable State Changes
+
+Memory version / supersede、Evidence availability、source_dependency decision、logical delete、Erasure Request、Tombstone 和逐组件删除状态。
+
+### External Side Effects
+
+通知 Memory、Index、Cache、Graph、Backup 和 Source Adapter 失效或清除；不自动删除外部来源原始内容。
+
 ### Acceptance Criteria
 
 - 纠正不会被旧 Index 覆盖；
@@ -232,6 +240,14 @@ Scheduler / Clock、User、State Source、State Resolver、Shadow State Authorit
 - 用户纠正属于高优先级 Observation，但后续更可靠信息仍可替代；
 - 多来源全部失效时不得继续显示 fresh；
 - 删除 Source 不等于自动删除由其形成的 independent Memory。
+
+### Durable State Changes
+
+Projection freshness、accepted value、conflict refs、source availability、expires_at、Resolution Proposal decision，以及可选 Erasure Request。
+
+### External Side Effects
+
+按需刷新 Source、调用 State Resolver、向客户端推送状态变化；不会自动控制设备或产生其他现实动作。
 
 ### Acceptance Criteria
 
