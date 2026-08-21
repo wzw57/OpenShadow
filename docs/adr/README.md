@@ -49,7 +49,7 @@ NNNN-short-title.md
 后续应为以下共识创建独立 ADR：
 
 1. **Shadow 是完整 Agent，Agent Runtime 是 Shadow 内部可替换组件。**
-2. **所有请求经过 Shadow，并至少产生最小 Run 记录。**
+2. **所有输入经过 Shadow Admission；被接受的 Request 创建 Root Run，准入失败只创建最小 Admission Record。**
 3. **所有执行由 Shadow 绑定和治理，但并非所有执行都经过 Agent Runtime。**
 4. **Shadow Core 只持有 Domain Contract、Authority、Continuity、最小 World State、Execution Dispatch、Extension Control 和 Portability。**
 5. **Agent Runtime、Model Worker、Deterministic Runner 和 Capability Provider 是不同的 Execution Target。**
