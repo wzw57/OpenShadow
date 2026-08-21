@@ -46,7 +46,7 @@ Shadow is the complete product. Shadow Core is only the smallest part that must 
 
 ### Every request goes through Shadow, but not necessarily an Agent Runtime
 
-Every Request accepted by Shadow creates one Root Run; rejected admission creates only a minimal Admission Record. Shadow uses an explicit Execution Binding to dispatch work to an Agent Runtime, a bounded Model Worker, a Deterministic Runner, or a Capability Provider. Full prompts, outputs, and tool traces are retained according to user policy and durable value. Only work that must survive sessions, execution targets, waiting conditions, or long periods becomes a Durable Task.
+Every Request accepted by Shadow creates one Root Run; rejected admission creates only a minimal Admission Record. Shadow uses an explicit Execution Binding to dispatch work to an Agent Runtime, a bounded Model Worker, a Deterministic Runner, an external Workflow Target, or a Capability Provider. Full prompts, outputs, and tool traces are retained according to user policy and durable value. Only work that must survive sessions, execution targets, waiting conditions, or long periods becomes a Durable Task.
 
 ### Shadow owns assets, continuity, current state, and authority
 
@@ -91,6 +91,7 @@ Shadow supports four replaceable Execution Targets:
 | Agent Runtime | Open-ended, multi-step work requiring planning or tool loops |
 | Model Worker | One bounded inference such as classification, extraction, or summarization |
 | Deterministic Runner | Scripts, functions, and fixed programs |
+| Workflow Target | Explicit steps, waits, and compensation; the workflow engine remains external |
 | Capability Provider | External APIs, accounts, devices, and real-world actions |
 
 Core owns admission, permissions, budgets, Binding validation, status, and result records. Advanced task classification, multi-model scoring, and dynamic selection are proposed by a replaceable Routing Component. Early implementations can use explicit user choices and static rules.
@@ -189,6 +190,7 @@ Near-term implementation focuses on a single-user path without making future mul
 - [State Machine Baseline](docs/state-machines.md)
 - [Complete Technical Architecture](docs/technical-architecture.md)
 - [Phased Implementation Plan](docs/implementation-stages.md)
+- [Reference Implementation Profile](docs/implementation-profile.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
@@ -196,4 +198,4 @@ Near-term implementation focuses on a single-user path without making future mul
 
 **The Stage 3 domain model has been narrowed, and Stage 4 is establishing the complete technical architecture and phased implementation baseline.**
 
-Stage 4 does not treat the MVP as the architecture boundary. The target architecture now defines the Interaction, Access, Core, Execution, Adapter, Canonical State, and Infrastructure planes, together with the unified execution model, key data flows, and deployment evolution. Delivery proceeds through Phases 0–5, each a true subset of the same target architecture.
+Stage 4 does not treat the MVP as the architecture boundary. The target architecture now defines the Interaction, Access, Core, Execution, Adapter, Canonical State, and Infrastructure planes, together with the unified execution model, key data flows, and deployment evolution. Delivery proceeds through Phases 0–5, each a true subset of the same target architecture. The first reference implementation uses Python, FastAPI, React + TypeScript + Vite, OpenAPI / JSON Schema, SSE, SQLite WAL, SQLAlchemy, Alembic, and both in-process and isolated stdio Adapter transports.
