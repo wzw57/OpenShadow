@@ -33,6 +33,7 @@ Shadow
 └─ User-owned Assets
    ├─ Tasks / Runs / Checkpoints
    ├─ Canonical Memories / World State
+   ├─ Owner / Personal Space / Home Space
    ├─ Skills / Executable Assets
    ├─ Extensions / Integrations
    ├─ Asset Catalog / Artifacts
@@ -79,6 +80,8 @@ Calendar / Weather / Device / Location / User
 
 World State 与 Memory 不同：Memory 是长期历史知识，World State 是带时效性的当前判断；Event 表示发生过什么，Task 表示未来承诺。
 
+Accepted World State 属于可迁移的 Canonical State。Shadow 保存当前投影、冲突候选、证据和过期原因；Observation 按类型保留。用户明确陈述优先，但更新、更可靠的 Observation 可以替换它。复杂融合由外部 State Resolver 返回 Proposal。
+
 ## 灵活执行平面
 
 Shadow 支持四类可替换 Execution Target：
@@ -93,6 +96,8 @@ Shadow 支持四类可替换 Execution Target：
 Core 负责准入、权限、预算、Binding、状态与结果记录。高级任务分类、多模型评分和动态选择由外部 Routing Component 提议；Core 只校验并接受或拒绝。早期版本可以使用用户显式选择和静态规则。
 
 脚本作为 Executable Asset 长期登记其身份、版本、输入输出、依赖、权限、来源和校验信息；实际语言运行时、依赖解析、隔离和执行由 Runner 提供。
+
+Runtime 在 Shadow 签发的 Capability Envelope 内拥有执行自由；越过数据、能力、资源、副作用、预算或有效期边界时必须重新授权。Shadow 不保存 Runtime 私有推理，但记录跨 Adapter、预算和副作用边界的最小 Usage / Action Record。
 
 ## Heartbeat 与 Semantic Pulse
 
@@ -140,6 +145,18 @@ Capability Assets
 
 这些资产应具有稳定身份、版本、来源、配置、权限、兼容性和迁移信息，使用户切换模型、Runtime 或设备后仍能复用已有能力。
 
+## 长期治理、本地优先与故障边界
+
+每个 Canonical Asset 从第一版起具有显式 Owner 和 Space。Owner 可以是 User 或 Space；个人资产归 User，公共房间和家庭设备状态可以归 Home Space。近期只实现默认 Personal Space 和隐式 Home Space，不开发成员、角色和共享功能。
+
+Core 执行 public、personal、sensitive、restricted 四级数据约束；无法判断时默认 sensitive。Model Binding 必须声明允许的数据等级、Memory / World State / 外部资产边界，以及 retention、training 和地域限制。外部分类器可以提高保护等级，不能自行降低。
+
+用户删除 Canonical Memory 时默认先逻辑删除，之后可以物理清除；纠正默认保留版本关系，但敏感历史允许彻底擦除。统一 Erasure Request 追踪各 Adapter 的删除状态，无法确认时显示 pending 或 unreachable。
+
+“本地优先”表示用户控制、可迁移和可验证，不把物理位置写死。标准导出不包含 Secret 和可重建状态；完整设备备份可以在独立授权和加密后包含 Secret、Checkpoint 和部分派生状态。
+
+Primary Durable Store 不可用时，Shadow 允许明确标记的只读和临时交互，但暂停 Canonical Commit，默认禁止现实副作用。只有预先配置的紧急能力可以先写入可靠的本地持久 Outbox，再执行并在恢复后 reconciliation。
+
 ## 当前边界
 
 OpenShadow 不自研数据库、通用 Agent Loop、基础模型、智能路由算法、Memory Intelligence、向量数据库、知识图谱、脚本运行时与沙箱、语音引擎、浏览器 Agent、Coding Agent、设备协议栈或领域数字孪生。
@@ -149,7 +166,9 @@ OpenShadow 必须自行定义和实现：
 - Shadow Domain Contracts；
 - 权威状态提交边界；
 - Task / Run 连续性；
-- 最小 World State 与 Observation 语义；
+- 最小 World State、Observation、Owner 与 Space 语义；
+- Data Classification、Retention 与 Erasure 语义；
+- Capability Envelope；
 - Execution Dispatch 与 Binding；
 - Adapter SDK 与 Extension Registry；
 - Integration / Capability Binding；
