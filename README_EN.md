@@ -183,11 +183,12 @@ Near-term implementation focuses on a single-user path without making future mul
 
 - [Requirements](docs/requirements.md)
 - [Architecture](docs/architecture.md)
+- [Core / External Responsibility Matrix](docs/responsibility-matrix.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
 ## Status
 
-**Requirements refinement and Core / External responsibility design.**
+**Stage 1 Core / External responsibility mapping is complete; Stage 2 key use cases are next.**
 
-The current priority is to freeze complete requirements and the irreducible core before selecting concrete external projects.
+Top-level requirements, architecture, and per-domain ownership boundaries are now defined. The next step is to specify actors, triggers, normal flows, failure flows, durable state changes, external side effects, and acceptance criteria for key use cases.
