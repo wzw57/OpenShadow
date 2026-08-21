@@ -1,6 +1,6 @@
 # OpenShadow 开发路线
 
-- 状态：需求与责任边界收紧阶段
+- 状态：Stage 1 责任矩阵完成，准备进入 Stage 2 关键用例
 - 原则：先明确完整需求，再决定 Core 与 External 的边界，最后选择具体实现
 
 OpenShadow 不按外部项目名称制定路线，也不因为某项能力可能有用就提前实现。每个阶段都必须产生可审阅的工程产物和退出条件。
@@ -29,7 +29,9 @@ OpenShadow 不按外部项目名称制定路线，也不因为某项能力可能
 - 文档不把具体数据库、Runtime、Model、Runner、Router 或 Memory 项目写成既定选择；
 - 已确认需求与推测性设计明确分离。
 
-## Stage 1：Core / External 责任矩阵
+## Stage 1：Core / External 责任矩阵（已完成）
+
+正式产物：[Core / External 责任矩阵](responsibility-matrix.md)
 
 对每项需求分别确定：
 
@@ -75,7 +77,15 @@ Execution
 - 每项能力都明确哪些实现必须外置；
 - Core 中不存在仅因“以后可能需要”而加入的机制。
 
-## Stage 2：关键用例
+完成结论：
+
+- 13 个能力域已分别明确 Authority、Canonical State、Intelligence 和 Execution；
+- 已列出 Core 必须实现与必须外置的完整清单；
+- Request / Run / Attempt / Durable Task 关系和取消语义已经冻结；
+- External Component 统一通过 Proposal / Result 返回，不持有权威提交路径；
+- Stage 2 用例可以直接引用责任矩阵确定参与者。
+
+## Stage 2：关键用例（下一阶段）
 
 先设计用户可观察行为，不设计数据库表。
 
