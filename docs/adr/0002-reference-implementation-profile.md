@@ -1,13 +1,13 @@
 # ADR-0002: 第一套参考实现 Profile
 
-- Status: Proposed — pending final PR review and merge
+- Status: Accepted — merged in Stage 4 PR
 - Constrained by: [ADR-0003](0003-tiny-core-and-typed-profiles.md)、[ADR-0004](0004-agent-skills-compatibility.md)
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
 
 ## Context
 
-Stage 4 的 D1–D8 架构决策已经冻结，但字段级工件仍需完成验证与最终 PR review。开始 Phase 0–1 开发仍需要选择 Kernel 语言、Server、Web Client、Contract 事实源、Adapter Transport、Primary Store 和参考 Execution Adapter。
+Stage 4 的 D1–D8 架构决策已经冻结并完成验证、review 与合并；Phase 0–1 开发采用本 ADR 的参考实现组合。
 
 这些选择需要支持快速开发和 AI 生态接入，同时不能成为长期 Domain 依赖。
 

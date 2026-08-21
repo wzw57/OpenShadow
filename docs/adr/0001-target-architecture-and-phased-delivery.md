@@ -1,6 +1,6 @@
 # ADR-0001: 完整目标架构与分阶段实现
 
-- Status: Proposed — pending final PR review and merge
+- Status: Accepted — merged in Stage 4 PR
 - Refined by: [ADR-0003](0003-tiny-core-and-typed-profiles.md)
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers

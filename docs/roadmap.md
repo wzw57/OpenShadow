@@ -92,7 +92,7 @@
 - 数据库物理模型；
 - 微服务拓扑。
 
-## Stage 4：完整技术架构与 Contract（进行中）
+## Stage 4：完整技术架构与 Contract（已完成）
 
 产物：
 
@@ -128,14 +128,14 @@
 - 声明式 Contract Test cases；
 - OpenAPI 3.1。
 
-### Stage 4 剩余工程化工作
+### Stage 4 完成条件
 
-1.完成 Schema、offline references、fixtures 与 OpenAPI 的工件验证；
-2.完成全仓术语与语义一致性复核；
-3.完成 PR review 并合并；
-4.合并时将 Stage 4 ADR 与 Implementation Profile 从 Proposed 改为 Accepted。
+- Schema、offline references、fixtures 与 OpenAPI 的工件验证已完成；
+- 全仓术语与语义一致性复核已完成；
+- Stage 4 PR 已 review 并合并；
+- Stage 4 ADR 与 Implementation Profile 已切换为 Accepted。
 
-完成后不再继续扩展概念清单，进入实现。
+Stage 4 不再继续扩展概念清单，进入 Phase 0–1 实现。
 
 ## Stage 5：实现启动与分阶段交付
 

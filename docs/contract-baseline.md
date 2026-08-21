@@ -1,6 +1,6 @@
 # Stage 4 Contract Baseline
 
-- Status: Proposed — frozen by maintainer decision, pending final PR review and merge
+- Status: Accepted — frozen by maintainer decision and merged in the Stage 4 PR
 - Scope: Phase 0–1 cross-language contracts; no Stage 5 business implementation
 - Normative artifacts: [`contracts/`](../contracts/)
 
@@ -243,5 +243,5 @@ Stage 4 can be accepted only when:
    contradiction with this baseline;
 6. PR review is complete and the branch is merged.
 
-Until then, Stage 4 ADRs and the reference implementation profile remain
-`Proposed`.
+The Stage 4 ADRs and the reference implementation profile are now `Accepted`.
+Changes to these boundaries require a new ADR or a versioned contract update.
