@@ -1,5 +1,7 @@
 # 外部动作、故障与可移植性用例
 
+> Action 使用专门安全 Contract；Store、Backup、Outbox 与 Erasure 使用 family-specific Capability，不共享一个万能 Durable Store Port。
+
 ## UC-011 受治理的外部 Action
 
 ### 目标
@@ -163,7 +165,7 @@ Shadow 已知当前 Primary Store Binding 和 Capability。
 - 只读 Snapshot 已过期时明确显示 stale；
 - Shadow 进程重启会丢失普通 Ephemeral Run；
 - Emergency Action outcome unknown 时按 UC-012；
-- 不允许把普通所有请求都写入 Outbox。
+- Outbox 只用于需要可靠跨边界提交的副作用，不接管普通 Request。
 
 ### Durable State Changes
 
@@ -272,7 +274,7 @@ User；Shadow Erasure Authority；Store、Memory、Index、Cache、Backup 和 In
 
 1. Core 创建 Erasure Request 和受影响对象集合。
 2. Primary Store 提交 erase intent，阻止新 Recall 和派生。
-3. Core 向所有受管 Adapter 发送版本化 Erasure Command。
+3. Core 提交 Erasure Intent，并通过各 Family Capability 向受管 Adapter 发送版本化 Erasure Command。
 4. Adapter 返回 completed、scheduled、pending、unreachable 或 failed。
 5. Backup Adapter 返回最长保留和清除计划。
 6. Core 展示逐组件状态。
