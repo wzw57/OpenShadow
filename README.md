@@ -187,11 +187,13 @@ OpenShadow 必须自行定义和实现：
 - [关键用例](docs/use-cases/README.md)
 - [领域模型](docs/domain-model.md)
 - [状态机基线](docs/state-machines.md)
+- [完整技术架构](docs/technical-architecture.md)
+- [分阶段实现计划](docs/implementation-stages.md)
 - [开发路线](docs/roadmap.md)
 - [架构决策记录](docs/adr/README.md)
 
 ## 当前状态
 
-**Stage 2 已完成，Stage 3 正在收紧最小领域模型。**
+**Stage 3 领域模型已经收紧，Stage 4 正在形成完整技术架构与分阶段实现基线。**
 
-19 个关键用例已经合并为正式基线。领域模型按 MVP-1、MVP-2、Later 和 Contract-only 分层：第一条实现闭环只包含本地 Web、Conversation、Run、静态 Binding、一个执行 Adapter、Canonical Memory 和一个 Primary Store。
+Stage 4 不把 MVP 当作架构边界。完整目标架构已经定义 Interaction、Access、Core、Execution、Adapter、Canonical State 与 Infrastructure 平面，以及统一执行模型、关键数据流和部署演进；实现按照 Phase 0–5 逐步交付，每个阶段都是同一目标架构的真子集。
