@@ -72,7 +72,7 @@ Phase 0–1 不要求立即实现：
 - 基础 Export / Import；
 - Runtime Handoff。
 
-### Later：高级治理与主动智能
+### Phase 4+：高级治理与主动智能
 
 按真实用例增加：
 
@@ -108,8 +108,8 @@ Phase 0–1 不要求立即实现：
 | Continuity | Durable Task、Checkpoint、Trigger refs | Phase 3 |
 | Knowledge | Memory、Observation、World State | Memory Phase 2，World State Phase 3 |
 | Capability | Skill、Executable、Integration、Profiles | 最小 Integration / Profile |
-| Authority | Policy、Envelope、Approval、Action | 最小 Envelope；Action Later |
-| Portability | Store、Export、Erasure、Migration | Store 必须，其余 Contract-only |
+| Authority | Policy、Envelope、Approval、Action | 最小 Envelope Phase 1；Action Phase 4 |
+| Portability | Store、Export、Erasure、Migration | Store Phase 1；其余 Phase 3–4 / Contract-only |
 
 这些是逻辑领域，不要求拆成独立进程。
 
@@ -127,8 +127,8 @@ Phase 0–1 不要求立即实现：
 | Memory | Canonical Memory 与版本头 | Phase 2 |
 | WorldStateProjection | 一个状态键的当前投影 | Phase 3 |
 | Integration | 已配置外部连接 | Phase 2 |
-| Action | 一个现实副作用 | Later |
-| OperationJob | Export、Import、Migration、Backup、Erasure | Contract-only / Later |
+| Action | 一个现实副作用 | Phase 4 |
+| OperationJob | Export、Import、Migration、Backup、Erasure | Phase 3–4 / Contract-only |
 
 不为 Principal、Space、Schedule、Endpoint、CapabilityAsset、Policy、RoutingRule、Descriptor 分别建立复杂聚合，除非真实并发和生命周期证明必要。
 
@@ -379,7 +379,7 @@ Observation committed
 - expires_at 后不得保持 fresh；
 - unknown 是显式状态，不是 null。
 
-复杂 State Resolver、预测和数字孪生不属于 MVP。
+复杂 State Resolver、预测和数字孪生不属于 Core；Resolver 在 Phase 3 可通过普通 Adapter 接入，预测和数字孪生按真实需求后续实现。
 
 ## 12. Capability 与 Integration
 
@@ -395,7 +395,7 @@ Secret 内容外置。Adapter 更换不改变 Integration ID。
 
 ### Action
 
-Later Aggregate。采用已确认方案：
+Phase 4 Aggregate。采用已确认方案：
 
 - ActionProposal 与 Action 分离；
 - Proposal 通过 Schema 和 Policy 后才创建 Action；
@@ -495,11 +495,11 @@ flowchart LR
 
 不再继续扩展候选对象。只需要：
 
-1. 校验上述聚合是否足以覆盖 19 个用例；
+1. 校验上述聚合是否足以覆盖 Stage 2 的 19 个用例与 Stage 4 Workflow 扩展用例；
 2. 冻结 Phase 0–1 对象的最小字段；
 3. 冻结 Run 和 Memory 必需状态；
 4. 定义最小 Domain Event Envelope；
-5. 把 Later / Contract-only 项目明确留到后续；
+5. 把 Phase 4+ / Contract-only 项目明确留到对应实现阶段；
 6. 为 Stage 4 字段级 Port Contract 提供对象引用和一致性要求。
 
 多用户 ACL、复杂 Task、Action、Erasure、Portability、Pulse 和家庭设备细节按 Phase 3–5 实现，不阻塞 Phase 0–1。
