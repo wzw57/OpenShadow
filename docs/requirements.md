@@ -84,7 +84,7 @@ Shadow 用于执行数据边界的少量稳定敏感度等级：public、persona
 
 Chat、CLI、API、Voice、Event 和 Schedule 产生的请求统一由 Shadow 准入、绑定和调度。
 
-每个请求至少保存最小 Run 记录。完整内容是否长期保留，由用户策略和是否产生 Memory、Artifact、Action 或 Durable Task 决定。
+每个被接受的 Request 创建一个 Root Run；准入失败只保存最小 Admission Record。完整内容是否长期保留，由用户策略和是否产生 Memory、Artifact、Action 或 Durable Task 决定。
 
 ### R-002 Shadow 统一长期身份
 
@@ -614,7 +614,7 @@ Shadow 可以提供这些外部实现所需的 Adapter 和官方集成。
 
 ## 7. 顶层验收原则
 
-- 所有请求由 Shadow 准入并产生最小 Run 记录；
+- 所有输入由 Shadow 准入；被接受的 Request 创建 Root Run，准入失败只创建最小 Admission Record；
 - Runtime 更换后，Durable Task 和用户资产继续存在；
 - Memory Intelligence 更换后，Canonical Memory 继续存在；
 - Durable Store 可以通过导出、迁移和验证替换；
