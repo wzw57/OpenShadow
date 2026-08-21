@@ -43,7 +43,7 @@
 | Contract source | Checked-in JSON Schema + OpenAPI | Compatibility and Contract Tests |
 | In-process Adapter | Python Port / Protocol | Adapter Contract |
 | Isolated Adapter | JSON-RPC-style messages over stdio | Transport-neutral Adapter Envelope |
-| Primary local Store | SQLite file database with WAL | Durable Store Port |
+| Primary local Store | SQLite file database with WAL | Canonical Repository Capability |
 | Relational access | SQLAlchemy | Repository / Unit of Work boundary |
 | Schema migration | Alembic | Shadow Migration Semantics |
 | Second Store profile | PostgreSQL | Same Canonical semantics |
@@ -61,7 +61,10 @@ OpenShadow/
 │  ├─ shadow-server/
 │  └─ shadow-web/
 ├─ packages/
-│  ├─ shadow-domain/
+│  ├─ shadow-kernel/
+│  ├─ shadow-profiles/
+│  │  ├─ conversation/
+│  │  └─ memory/
 │  ├─ shadow-application/
 │  ├─ shadow-contracts/
 │  ├─ shadow-adapter-sdk/
@@ -84,22 +87,30 @@ shadow-web
 
 shadow-server
     -> shadow-application
-        -> shadow-domain
+        -> shadow-kernel
+        -> shadow-profiles
         -> shadow-contracts
-        -> Port interfaces
+        -> family Port interfaces
+
+profiles
+    -> kernel contracts
+    -X-> concrete Adapter / infrastructure
 
 adapters
-    -> Port interfaces
+    -> family Port interfaces
     -> external SDK / database driver
 
-shadow-domain
+shadow-kernel
     -X-> FastAPI
     -X-> SQLAlchemy
     -X-> Pydantic transport models
+    -X-> profile business payloads
     -X-> model / Runtime SDK
 ~~~
 
-Domain 可以使用 Python 标准类型和自身 Value Object。API DTO、Pydantic Transport Model、ORM Entity 和外部 SDK Object 必须在边界映射。
+Kernel 可以使用 Python 标准类型和自身 Value Object。Profile Validator、API DTO、Pydantic Transport Model、ORM Entity 和外部 SDK Object 必须在边界映射。
+
+Memory、State、Skill 等 Profile 不得通过 import 反向扩张 Kernel 类型分支。
 
 ## 4. API Profile
 
@@ -137,53 +148,73 @@ WebSocket 不作为普通 Chat 的默认协议。它为未来双向音频、实�
 
 ### 5.1 跨语言事实源
 
-以下 Schema 必须以独立文件保存并纳入兼容性测试：
+以下 Schema 必须独立保存并纳入兼容性测试：
 
 - Canonical Record Envelope；
-- Adapter Manifest；
+- Profile Descriptor / Proposal Envelope；
+- AdapterDescriptor；
 - Capability Declaration；
-- Execution Request / Event / Result；
-- Proposal / Observation；
-- Shadow Error；
+- Execution Request / Event；
+- common Message Envelope / Shadow Error；
+- family-specific Result；
+- Execution Binding / Capability Envelope；
 - Version Negotiation；
 - Export Manifest。
 
-Python Model 和 TypeScript Type 可以由 Schema 生成或与其双向校验，但不能成为唯一事实源。
+Python Model 和 TypeScript Type 可以由 Schema 生成或双向校验，但不能成为唯一事实源。
+
+不建立一个覆盖所有 Port 的万能 Result union。Execution / Intelligence Family 与 Store / Secret / Interaction Family 分别维护 typed payload。
 
 ### 5.2 兼容性
 
 Contract 使用 major / minor 兼容模型：
 
-- minor：只增加可选字段、可选 Capability 或新枚举处理规则；
+- minor：增加可选字段、可选 Capability、namespaced target kind 或 Profile extension；
 - major：删除字段、改变语义、收紧必填条件或改变状态含义；
-- 接收方必须忽略明确允许的未知扩展字段；
-- 未识别的关键 Capability 必须拒绝 Binding，不能静默降级；
-- Canonical Schema Migration 与 Adapter Contract Upgrade 分开管理。
+- 接收方忽略明确允许的未知扩展字段；
+- 未识别的 required Capability 必须拒绝 Binding；
+- 未识别 target kind 不能仅因名称未知而拒绝，先按 Descriptor 与 Capability 校验；
+- Canonical Profile Migration、physical Store Migration 与 Adapter Contract Upgrade 分开管理；
+- Profile major upgrade 必须包含语义 Migration，不能只更新 JSON Schema。
 
 ## 6. Adapter Transport Profile
 
 ### 6.1 进程内
 
-可信、轻量官方 Adapter 可以实现 Python Port。进程内实现仍必须通过相同 Contract Test，不能直接访问 Domain Repository 或绕过 Authority。
+可信、轻量官方 Adapter 可以实现 Python Family Port。进程内实现仍必须通过相同 Contract Test，不能直接访问 Canonical Repository 或绕过 Authority。
+
+Runtime 基础 Port 只有 `describe`、`execute`、`events`。其他 Family 使用自己的最小方法集合。
 
 ### 6.2 进程外
 
-第一种隔离 Transport 使用 JSON-RPC-style Envelope over stdio，支持：
+第一种隔离 Transport 使用 JSON-RPC-style Message Envelope over stdio。
 
-- initialize / negotiate；
-- describe capabilities；
+所有 Adapter 支持：
+
+- initialize / version negotiation；
+- describe；
 - health；
-- execute；
-- progress notification；
-- cancel；
-- checkpoint；
-- resume；
-- reconcile；
 - shutdown。
 
-Transport 只承载版本化消息。Artifact、日志和大文件通过 ArtifactRef 传递，不嵌入 RPC Payload。
+Runtime Family 基础消息：
 
-以后增加 HTTP、WebSocket、gRPC 或远程 Transport 时，应复用相同领域消息和 Capability 语义。
+- execute；
+- events。
+
+可选消息按 Capability Negotiation 启用：
+
+- progress；
+- usage；
+- cancel；
+- checkpoint；
+- native resume；
+- semantic handoff；
+- artifact；
+- reconcile。
+
+Adapter 不得因为 Transport 存在某个方法，就声称实现该 Capability。Artifact、日志和大文件通过 ArtifactRef 传递，不嵌入 RPC Payload。
+
+以后增加 HTTP、WebSocket、gRPC 或远程 Transport 时，复用 Message Envelope 与 Family Capability，不冻结成同一万能 RPC 接口。
 
 ## 7. Store Profile
 
@@ -231,39 +262,54 @@ Web Client：
 
 ### 9.1 Deterministic Test Adapter
 
-用于确定性验证：
+注册为测试用 namespaced target kind，用于验证：
 
-- success；
-- structured failure；
-- timeout；
-- retry；
+- success / structured failure；
+- timeout / retry；
 - progress；
-- cancellation；
+- supported cancellation；
+- unsupported cancellation；
 - cancellation_unknown；
-- malformed output；
-- version incompatibility。
+- malformed typed payload；
+- version incompatibility；
+- capability declaration honesty。
 
-它是 Contract Test 的必要组成，而不是面向用户的智能能力。
+它是 Contract Test 组件，不是面向用户的智能能力。
 
 ### 9.2 OpenAI Model Adapter
 
-作为第一种 Direct Model 参考实现，用于验证：
+注册 `shadow.model-worker`，用于验证：
 
 - structured input / output；
 - streaming；
 - usage；
 - model data boundary；
-- tool or capability proposal；
+- typed Proposal；
 - provider failure；
 - retention configuration。
 
-OpenAI SDK Object 不得泄漏进 Shadow Contract。更换 Provider 时不改变 Run、Binding 或 Result 的稳定语义。
+OpenAI SDK Object 与 Provider Skill ID 不得进入 Kernel Contract。OpenAI Skills API 的目录或 zip、版本和 default version 可以成为 Provider Projection，但不是 Canonical SkillAsset。
 
 ### 9.3 Process Runtime Adapter
 
-用于接入 Codex 类 Runtime、DeepSeek Harness 或未来其他 Agent Framework。它负责把外部进程的 session、progress、checkpoint、result 和 cancellation 映射为 Agent Runtime Port。
+注册 `shadow.agent-runtime`，用于接入 Codex 类 Runtime、DeepSeek Harness 或未来 Agent Framework。
 
-具体 Runtime 的 Session ID 只能作为 external_ref 或 Runtime Checkpoint Reference，不能代替 Shadow Run ID 或 Durable Task ID。
+基础映射只要求 describe、execute 和 events。只有外部进程真实支持时才声明 cancel、checkpoint、native resume 或 semantic handoff。
+
+具体 Runtime Session ID 只能作为 external_ref 或 Runtime Checkpoint Reference，不能代替 Shadow Run ID 或 Durable Task ID。
+
+### 9.4 Agent Skills Fixture
+
+参考实现提供标准 Agent Skills Bundle fixture：
+
+- 必需 `SKILL.md`；
+- 可选 `scripts/`、`references/`、`assets/`；
+- bundle digest / immutable snapshot；
+- Shadow SkillAsset sidecar metadata；
+- Runtime Projection rebuild test；
+- permission enforcement independent of `allowed-tools`。
+
+Fixture 验证 Bundle 可以离开 Shadow 被标准客户端读取，且 Shadow 治理元数据不修改原 Bundle。
 
 ## 10. 测试与发布门槛
 
@@ -283,13 +329,16 @@ OpenAI SDK Object 不得泄漏进 Shadow Contract。更换 Provider 时不改变
 
 ## 11. 不变量
 
-1. Python 是参考 Core 语言，不是 Adapter 生态的语言限制。
-2. FastAPI 不能成为 Domain 或 Canonical Schema 的事实源。
-3. Pydantic Model 不能取代 checked-in JSON Schema。
-4. React Client 不能直接写 Store。
-5. SQLAlchemy Entity 不能越过 Store Adapter。
-6. SQLite 是默认 Store Profile，不是唯一允许的 Durable Store。
-7. JSON-RPC-style stdio 是第一种隔离 Transport，不是永久唯一 Transport。
-8. OpenAI Model Adapter 是参考实现，不是 Shadow 的模型依赖。
-9. Codex、DeepSeek 或其他 Runtime 只能通过 Agent Runtime Port 接入。
-10. 任何实现选择的替换都不得改变用户 Canonical Asset 的身份和语义。
+1. Python 是参考 Kernel 语言，不是 Adapter 生态的语言限制。
+2. FastAPI、Pydantic 和 SQLAlchemy 不能成为 Domain / Profile Schema 的事实源。
+3. React Client 不能直接写 Canonical Repository。
+4. Memory、State、Skill 等 Profile 不得反向扩张 Kernel 依赖。
+5. SQLite 只实现已声明 Store Capability，不被当成唯一 Store。
+6. JSON-RPC-style stdio 是第一种隔离 Transport，不是永久唯一 Transport。
+7. Adapter 只承诺已声明 Capability，不能伪造 cancel、checkpoint 或 resume。
+8. namespaced target kind 不是封闭 enum。
+9. OpenAI Model Adapter 是参考实现，不是 Shadow 模型依赖。
+10. Codex、DeepSeek 或其他 Runtime 通过 Runtime Family Port 接入。
+11. Agent Skills Bundle 保持标准格式；Provider Skill Object 只是 Projection。
+12. 任何实现替换不得改变 Canonical ID、Owner、Proposal / Commit 或可移植语义。
+
