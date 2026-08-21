@@ -106,6 +106,66 @@ Asset identity/version/checksum、Binding、Envelope reference、Attempt、Usage
 - Sandbox、依赖和语言运行时不进入 Core；
 - 输出不会绕过 Authority 成为 Canonical State。
 
+## UC-004A 外部 Workflow Target 执行
+
+### 目标
+
+Shadow 将具有明确步骤、等待和补偿语义的工作绑定到外部 Workflow Target，而不在 Core 中实现通用 Workflow Engine。
+
+### Actor
+
+User、Shadow Core、Workflow Adapter、External Workflow Engine。
+
+### Trigger
+
+用户请求、Schedule、Event 或已批准的 Durable Task 需要执行已登记 Workflow。
+
+### Preconditions
+
+- Workflow Target 已登记并声明 Contract Version 与 Capability；
+- Workflow definition 或 definition reference 具有稳定身份和版本；
+- Shadow 已建立 Execution Requirements、Binding 和 Capability Envelope；
+- Workflow 所需数据、工具和副作用均在授权范围内。
+
+### Main Flow
+
+1. 输入经过 Admission，并创建或关联 Root Run。
+2. Shadow 选择静态 Binding，或校验 Router 返回的 Workflow Binding Proposal。
+3. Shadow 创建 Execution Attempt，并将版本化 Workflow Request 发送给 Workflow Adapter。
+4. External Workflow Engine 管理步骤、等待、补偿和私有节点状态。
+5. Workflow Adapter 返回 Progress、Checkpoint Reference、Result、Proposal、Usage 或结构化 Failure。
+6. 需要跨 Session、重启或长期等待时，Shadow 创建或关联 Durable Task；Workflow 的私有实例 ID 只保存为 external_ref。
+7. 涉及现实副作用的步骤必须返回 Action Proposal，并经过 Action Authority。
+8. Workflow 完成后，Shadow 根据 Result 或 Completion Proposal 提交 Attempt、Run 和可选 Durable Task 状态。
+
+### Failure Flow
+
+- Workflow Engine 不兼容时，在创建 Attempt 前拒绝 Binding；
+- Workflow 启动超时或失败时，Attempt 进入 failed 或 timed_out；
+- 取消未被外部引擎确认时，状态保持 cancellation_unknown；
+- Workflow 返回未知字段时按版本策略处理，未知关键 Capability 必须拒绝；
+- Engine 结果不明确或外部副作用未知时进入 reconciliation，不能伪造完成；
+- Workflow Engine 删除后，Shadow 仍保留 Run、Task、Binding、Checkpoint Reference 和结果记录。
+
+### Durable State Changes
+
+Request、Run、Execution Binding、Attempt、Workflow definition reference、external instance reference、Checkpoint Reference、Usage、Result / Proposal reference，以及可选 Durable Task。
+
+外部 Workflow Engine 的私有节点图、调度队列和内部历史不是 Shadow Canonical State。
+
+### External Side Effects
+
+由 Workflow 中经过 Shadow Action Authority 的 Capability Provider 调用产生。Workflow Engine 本身不能绕过 Action Authority执行现实副作用。
+
+### Acceptance Criteria
+
+- Workflow 与其他 Execution Mode 使用相同 Run / Binding / Attempt 模型；
+- Shadow Core 不实现通用 Workflow Engine；
+- Workflow 私有实例 ID 不代替 Shadow Run ID 或 Durable Task ID；
+- Workflow 只能返回允许的 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage；
+- 更换 Workflow Engine 不改变 Canonical Asset identity；
+- Workflow 不直接写 Canonical Memory、World State、Task 或 Action。
+
 ## UC-005 Run 晋升为 Durable Task
 
 ### 目标
