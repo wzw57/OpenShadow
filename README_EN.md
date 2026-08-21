@@ -2,230 +2,136 @@
 
 [中文版](README.md) | **English**
 
-> **Shadow owns the continuity.**  
-> Models, runtimes, and external ecosystems are replaceable; durable user state, experience, capabilities, and governance should not disappear with them.
+> **Shadow is a personal AI designed to persist and evolve over time.**
 
-OpenShadow is a **local-first, runtime-neutral Personal AI Continuity & Control Layer**.
+OpenShadow is a local-first, runtime-independent platform for personal AI assets and capabilities. The user interacts with one continuous Shadow while runtimes, memory intelligence, databases, search engines, skill systems, providers, voice systems, and other implementations remain replaceable.
 
-It is not another all-in-one agent. It does not reimplement reasoning, planning, skill activation, or tool orchestration that strong runtimes already provide. Shadow owns durable personal assets, task continuity, and governance boundaries so that Hermes, DSH, Claude, Codex, and future runtimes can remain replaceable execution engines.
+The goal is not to rebuild AI infrastructure. OpenShadow keeps a minimal stable core and composes strong external projects through versioned adapters.
 
-## Core principles
+## Product model
 
-> **State and contracts that must remain consistent across models, runtimes, devices, sessions, or years belong to Shadow. Everything else should reuse mature external systems whenever possible.**
+~~~text
+Shadow
+├─ Shadow Core
+│  ├─ Domain Contracts
+│  ├─ Authority & State Transition
+│  ├─ Task Continuity
+│  ├─ Extension / Integration Registry
+│  └─ Portability & Upgrade
+│
+├─ Replaceable Components
+│  ├─ Runtime
+│  ├─ Memory Intelligence
+│  ├─ Durable Store
+│  ├─ Search / Index
+│  ├─ Skill System
+│  ├─ Capability Providers
+│  └─ Voice / User Interfaces
+│
+└─ User-owned Assets
+   ├─ Tasks / Runs / Checkpoints
+   ├─ Canonical Memories
+   ├─ Skills
+   ├─ Extensions / Integrations
+   ├─ Asset Catalog
+   ├─ Artifacts
+   └─ Policies / Action History
+~~~
 
-> **Shadow owns durable work; Runtime owns execution decomposition.**
+Shadow is the complete product. Shadow Core is only the smallest part that must remain stable.
 
-> **Shadow supervises execution; it does not plan execution.**
+## Confirmed principles
 
-> **Shadow controls availability; Runtime controls Skill activation.**
+### Every request goes through Shadow
 
-> **Memory is available by default, not injected by default.**
+Every request creates at least a minimal Run record. Full prompts, outputs, and tool traces are retained according to user policy and durable value. Work that must survive sessions, runtimes, waiting conditions, or long periods becomes a Durable Task.
 
-> **Intelligence may be outsourced; authority may not.**
+### Shadow owns assets, continuity, and authority
 
-A Runtime may become smarter over time, but it must not become the sole source of truth for the user's durable state, permissions, or task continuity.
+A runtime, memory engine, database-specific format, or provider must not become the irreplaceable owner of the user's long-term assets.
 
-## Five logical domains
+### Replaceable components own intelligence and execution
 
-OpenShadow keeps only five top-level logical domains:
+Reasoning, planning, memory extraction and consolidation, retrieval, embeddings, graphs, speech processing, device protocols, and provider execution should use replaceable implementations.
 
-```text
-                 User / Apps / Event Sources
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────┐
-│                    SHADOW CORE                      │
-│                                                     │
-│  1. Task & Continuity                              │
-│  2. Memory & Personal Assets                       │
-│  3. Control & Governance                           │
-│  4. World State & Scheduler                        │
-│  5. Integration & Runtime Bridge                   │
-└───────────────────────┬─────────────────────────────┘
-                        │
-          ┌─────────────┼──────────────┐
-          ▼             ▼              ▼
-       Runtime        Engines       Providers
-     Hermes / DSH   Mem0/LangMem   Gmail/GitHub
-     Claude/Codex   Graphiti/...   Home/Server/...
-```
+### Adapters are first-class architecture
 
-These are **responsibility and code boundaries, not five microservices**.
+OpenShadow defines Port Contracts, the Adapter SDK, manifests, permissions, version negotiation, health contracts, and contract tests. Concrete adapters and implementations can evolve independently.
 
-### 1. Task & Continuity
+## Memory boundary
 
-Owns continuity for durable work:
+Canonical Memory created during long-term use belongs to Shadow and must survive replacement of memory intelligence.
 
-```text
-Durable Task
-Task Supervisor
-Semantic Checkpoint
-Runtime Checkpoint Ref
-Runtime Binding
-Handoff / Recovery
-```
+~~~text
+Conversation / Task / External Source
+                 ↓
+       Replaceable Memory Intelligence
+                 ↓
+          Memory Candidate
+                 ↓
+       Shadow validates and commits
+                 ↓
+      Primary Durable Store Adapter
+                 ↓
+       Replaceable Database Engine
+~~~
 
-Runtime-internal subtasks, subagents, workflows, and planners remain inside the Runtime by default.
+Shadow owns stable memory identity, provenance, scope, versions, and commit semantics. External components provide extraction, consolidation, retrieval, reranking, embeddings, graphs, and other fast-moving intelligence.
 
-### 2. Memory & Personal Assets
+The database engine is also replaceable. Shadow defines the Durable Store Port, canonical records, migrations, exports, and integrity checks.
 
-Owns the user's accumulated long-lived assets:
+## External information assets
 
-```text
-Raw Evidence
-Canonical Memory
-Task Working Memory
-Canonical Skill
-Version / Provenance / Trust
-```
+Shadow does not copy and permanently manage all of the user's external information.
 
-Memory Engines and Runtime-native Skill Engines are replaceable; Canonical Assets do not migrate with them.
+For sources such as Notion, Obsidian, Drive, email, and file systems, the Asset Catalog records what exists, where it is, how to access it, and whether it is available. Shadow reads external content on demand for a task, recall, or background memory consolidation.
 
-### 3. Control & Governance
+The source system remains responsible for the original content. Canonical Memory produced from that content becomes a Shadow-owned asset.
 
-Owns Shadow's authoritative control:
+## Capability assets
 
-```text
-Policy
-Capability
-Approval
-Idempotency
-Execution Ledger
-```
+Users accumulate capabilities as well as information:
 
-LLMs may assist semantic judgment, but they cannot directly commit authoritative Shadow state.
+~~~text
+Capability Assets
+├─ Skills
+├─ Extensions
+├─ Integrations
+├─ MCP connections
+├─ Provider bindings
+├─ Runtime profiles
+└─ Configuration / permission metadata
+~~~
 
-### 4. World State & Scheduler
+These assets need stable identities, versions, provenance, configuration, permissions, compatibility, and migration metadata so that they remain reusable when runtimes and devices change.
 
-Owns continuous operation:
+## Current boundary
 
-```text
-Event
-World State
-Scheduler
-Condition
-Background Jobs
-```
+OpenShadow does not build database engines, general agent loops, memory intelligence, vector or graph databases, foundation models, speech engines, browser agents, coding agents, or device protocol stacks.
 
-Shadow can create or resume Tasks from events, schedules, and conditions even without a chat prompt.
+OpenShadow must implement:
 
-### 5. Integration & Runtime Bridge
+- Shadow Domain Contracts;
+- the authoritative state commit boundary;
+- Task and Run continuity;
+- the Adapter SDK and Extension Registry;
+- Integration and Capability Binding;
+- the policy enforcement point;
+- portable data formats;
+- compatibility, migration, and integrity verification;
+- user control APIs.
 
-Owns the boundary to replaceable implementations:
-
-```text
-SRI / Runtime Adapter
-Memory Engine Adapter
-Provider Adapter
-Model Adapter
-Context / Hydration
-```
-
-Unified pattern:
-
-```text
-Shadow Contract
-      ↓
-Adapter
-      ↓
-Replaceable Implementation
-```
-
-## Task boundary
-
-A Shadow Task is **Durable Work** that must survive beyond a Runtime Session or Planner. It is not a Runtime-internal task node.
-
-A Runtime may freely create subtasks, invoke subagents, or build workflows. Internal work is promoted to a new Shadow Task only when it crosses a durability boundary, such as long waits, independent scheduling, cross-runtime survival, or user-level management.
-
-Checkpoints have two layers:
-
-- **Runtime Checkpoint** — runtime-specific and possibly opaque, for high-fidelity resume within the same Runtime;
-- **Semantic Checkpoint** — runtime-neutral, for Runtime handoff, long pauses, or loss of native Runtime state.
-
-A Runtime may propose progress or completion, but Shadow commits the durable Task state.
-
-## Memory and Skill boundaries
-
-Memory:
-
-```text
-Raw Evidence
-    ↓
-Canonical Memory
-    ↓
-Rebuildable Index / Summary / Graph
-```
-
-Shadow owns memory truth and access boundaries; Mem0, LangMem, Graphiti, MemOS, and similar systems provide replaceable Memory Intelligence.
-
-Skill:
-
-```text
-Raw Skill Source
-      ↓
-Canonical Skill
-      ↓
-Runtime Projection
-      ↓
-Runtime-native execution
-```
-
-Shadow controls Skill availability; the Runtime controls discovery, activation, composition, and execution.
-
-## Lightweight implementation principle
-
-OpenShadow's complexity should live primarily in **semantic boundaries**, not runtime topology.
-
-Recommended V0.1 physical shape:
-
-```text
-1 Shadow process
-1 PostgreSQL
-1 artifact directory
-1 background worker
-1 primary Runtime
-several adapters
-```
-
-Internal communication defaults to ordinary function/service calls; PostgreSQL stores durable state; one worker handles background work. V0.1 does not require Kafka, RabbitMQ, Kubernetes, or a microservice architecture.
-
-A possible code layout:
-
-```text
-openshadow/
-├─ task/
-├─ assets/
-├─ control/
-├─ world/
-├─ integrations/
-├─ storage/
-├─ api/
-└─ worker/
-```
-
-## What v0.1 must prove
-
-The first release does not try to become a complete personal AI platform. It only needs to prove that:
-
-1. Durable Tasks and personal assets survive the loss of a Runtime;
-2. Runtime A can hand durable work to Runtime B through a Semantic Checkpoint;
-3. Runtimes retain freedom over their own planners, subtasks, and Skill execution;
-4. Memory Engines, Runtimes, and Providers can be replaced without migrating Canonical Assets;
-5. Events and Scheduler can advance durable work without chat prompts;
-6. Shadow can govern actions that cross into its authority domain and record external side effects;
-7. Task / Control / Event / Runtime remain meaningful even when Memory is disabled.
-
-V0.1 explicitly does not require a custom Agent Loop, synchronization of Runtime-internal subtask graphs, a full Workflow Engine, a custom Skill Resolver, a complex Intelligence Gateway, a multi-model routing platform, microservices, or multiple authoritative databases.
+Near-term implementation focuses on a single-user path without making future multi-user or multi-device support impossible.
 
 ## Documentation
 
-- [Requirements Baseline](docs/requirements.md)
-- [Architecture Overview](docs/architecture.md)
+- [Requirements](docs/requirements.md)
+- [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
 ## Status
 
-**Early design alignment / pre-MVP.**
+**Requirements refinement and Core / External responsibility design.**
 
-The current priority is to freeze a small number of critical contracts, not to keep adding top-level modules.
+The current priority is to freeze complete requirements and the irreducible core before selecting concrete external projects.

@@ -1,28 +1,18 @@
-# Architecture Decision Records (ADR)
+# Architecture Decision Records
 
-OpenShadow is intended to live for years while models, Agent runtimes, memory engines and provider ecosystems change. Important architectural decisions therefore need a durable record of **what was decided, why, what alternatives were rejected, and what would justify revisiting the decision**.
+OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、模型、Provider 和交互技术会持续变化。任何改变 Shadow Core 与可替换组件边界的决定，都必须记录其原因、后果和重新评估条件。
 
-This directory stores Architecture Decision Records.
+## ADR 格式
 
-## ADR format
+文件命名：
 
-Create files using:
-
-```text
+~~~text
 NNNN-short-title.md
-```
+~~~
 
-Example:
+模板：
 
-```text
-0001-shadow-owns-durable-state.md
-0002-postgresql-as-v0-1-source-of-truth.md
-0003-runtime-handoff-uses-semantic-checkpoints.md
-```
-
-Recommended template:
-
-```md
+~~~md
 # ADR-NNNN: Title
 
 - Status: Proposed | Accepted | Superseded | Deprecated
@@ -31,46 +21,62 @@ Recommended template:
 
 ## Context
 
-What problem forced this decision?
+什么问题迫使我们作出这个决定？
 
 ## Decision
 
-What are we doing?
+决定采用什么边界或行为？
 
 ## Rationale
 
-Why this option?
+为什么采用这个方案？
 
 ## Alternatives considered
 
-What else was considered and why was it rejected?
+考虑过哪些方案，为什么没有采用？
 
 ## Consequences
 
-Positive and negative consequences.
+正面和负面后果是什么？
 
 ## Revisit triggers
 
-What future evidence or technology change should cause this decision to be reconsidered?
-```
+什么证据或技术变化会触发重新评估？
+~~~
 
-## Initial decisions to record
+## 已确认、需要正式记录的决策
 
-The following decisions are currently part of the v0.3 implementation baseline and should receive dedicated ADRs as implementation begins:
+后续应为以下共识创建独立 ADR：
 
-1. **Shadow owns durable continuity; Runtime does not.**
-2. **Task belongs to Shadow and Runtime only executes it.**
-3. **Runtime handoff uses Semantic Checkpoint rather than hidden/internal reasoning state migration.**
-4. **Raw Evidence is the durable evidence layer; Canonical Memory is a revisable interpretation.**
-5. **Derived indexes are disposable and rebuildable.**
-6. **Memory retrieval is task-aware and MemoryNeed-driven rather than default vector top-k.**
-7. **All meaningful side effects pass through Capability Gateway and Execution Ledger.**
-8. **PostgreSQL is the V0.1 source of truth.**
-9. **V0.1 uses a modular monolith rather than microservices.**
-10. **Existing Agent / Memory / Home / Coding systems are reused unless continuity requires Shadow ownership.**
+1. **Shadow 是完整 Agent，Runtime 是 Shadow 内部可替换组件。**
+2. **所有请求经过 Shadow，并至少产生最小 Run 记录。**
+3. **Shadow Core 只持有 Domain Contract、Authority、Continuity、Extension Control 和 Portability。**
+4. **Runtime 持有执行分解，Shadow 持有 Durable Task。**
+5. **Runtime Handoff 使用 Semantic Checkpoint，不迁移隐藏推理状态。**
+6. **Canonical Memory 属于 Shadow，Memory Intelligence 可以替换。**
+7. **数据库引擎通过 Durable Store Port 接入，不定义 Shadow Domain Semantics。**
+8. **派生索引、Embedding、Graph、Projection 和 Engine State 可以删除重建。**
+9. **外部信息资产默认只登记和按需访问，Shadow 不负责复制和长期存储其原始内容。**
+10. **Skill、Extension、Integration 和 MCP Connection 是用户长期能力资产。**
+11. **External Component 只能提出 Proposal 或返回 Result，不能绕过 Shadow 提交权威状态。**
+12. **具体基础技术优先复用外部项目，通过 Adapter 组合。**
+13. **近期实现单用户场景，但稳定 Contract 不封死未来多用户可能。**
 
-## Core philosophy
+## 何时必须新增 ADR
 
-> **Shadow owns the continuity.**
+以下变化必须新增或更新 ADR：
 
-An ADR should be added whenever a decision changes the stable boundary between Shadow and a replaceable Runtime, Memory Engine, Capability Provider, interaction client, or storage component.
+- 把某项能力移入或移出 Shadow Core；
+- 改变 Canonical Asset 的事实所有权；
+- 改变所有请求经过 Shadow 的原则；
+- 改变 Runtime、Memory 或 Store 的替换边界；
+- 引入不可重建的外部私有状态；
+- 改变 Adapter Contract 的兼容性策略；
+- 改变用户资产导出和迁移承诺；
+- 引入新的权威状态提交者。
+
+## 核心原则
+
+> **Shadow owns the user relationship, assets, continuity and authority.**
+
+> **Replaceable components own intelligence, storage implementation and execution.**
