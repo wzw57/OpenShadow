@@ -27,10 +27,10 @@ Shadow Core 不以自行实现更多功能为目标。它只保留无法外包�
 最小 Core 包含：
 
 1. **Domain Contracts**  
-   定义 Run、Task、Checkpoint、Memory、Observation、World State、Executable Asset、Skill、Extension、Integration、Capability、Action 等长期语义。
+   定义 Run、Task、Checkpoint、Memory、Observation、World State、Executable Asset、Owner、Space、Routing Rule、Capability Envelope、Retention、Erasure、Skill、Extension、Integration、Capability、Action 等长期语义。
 
 2. **Authority & State Transition**  
-   校验 Proposal，执行权限边界，提交 Canonical Memory、World State、Task 和 Action 等权威状态。
+   校验 Proposal，执行 Owner / Space、数据分级、Retention、Erasure 和 Capability Envelope 等权限边界，提交 Canonical Memory、World State、Task 和 Action 等权威状态。
 
 3. **Task Continuity**  
    管理 Request Admission、Run、Durable Task、Checkpoint、Execution Binding 和 Handoff。
@@ -39,7 +39,7 @@ Shadow Core 不以自行实现更多功能为目标。它只保留无法外包�
    根据已确认的 Binding 将执行交给 Agent Runtime、Model Worker、Deterministic Runner 或 Capability Provider，并统一记录 Status 与 Result。高级路由策略不属于 Core。
 
 5. **Asset & Capability Catalog**  
-   管理用户长期资产、外部资产引用、Executable Asset、Skill、Extension、Integration 和 Capability Binding。
+   管理用户长期资产、Owner / Space、外部资产引用、Executable Asset、Routing Rule、Skill、Extension、Integration 和 Capability Binding。
 
 6. **Extension Control Plane**  
    管理 Adapter Contract、Manifest、版本、权限、健康和兼容性。
@@ -283,6 +283,16 @@ Core 负责准入、显式规则、Binding 校验、预算与权限执行、记�
 
 Shadow 管理其身份、授权、Binding 和执行记录；依赖解析、语言运行时、资源限制、隔离与实际执行由可替换 Runner 负责。
 
+### 5.4 Capability Envelope 与跨边界调用
+
+Capability Envelope 是 Policy Authority 对一次 Run 或 Durable Task 的授权结果，不是新的权限引擎。它至少包含 Target Binding、允许的 Capability、数据和资源范围、副作用等级、预算、有效期、撤销状态和 Policy Version。
+
+普通 Run 使用短期 Envelope；Durable Task 可以使用可撤销、可过期的长期 Envelope。任务恢复时必须重新验证有效期、策略、组件身份和版本兼容性。
+
+Runtime 可以在 Envelope 内管理自己的 Planner、Subtask、模型和脚本调用。Shadow 不保存 Runtime 私有推理，但跨 Adapter、预算或副作用边界的调用必须产生最小 Usage Record 或 Action Record。越界时由预设策略批准、拒绝或降级；没有匹配策略时询问用户。
+
+Router 无法安全决定 Target 时同样询问用户。用户可以仅批准当前 Binding，也可以保存为可迁移的 Routing Rule。
+
 ## 6. Task Continuity
 
 Shadow Core 持有：
@@ -327,7 +337,9 @@ flowchart LR
     CORE -->|"validate and commit"| STORE_PORT --> DB
 ~~~
 
-Shadow 自己定义 Memory Record、Stable ID、Provenance、Scope、Validity、Version 和状态变更语义。数据库引擎和 Memory Intelligence 都可以替换。
+Shadow 自己定义 Memory Record、Stable ID、Provenance、Scope、Validity、Version、source_dependency 和状态变更语义。数据库引擎和 Memory Intelligence 都可以替换。
+
+外部原始资产删除后，independent Memory 可以继续存在；dependent Memory 必须失效或删除；unknown 按策略等待确认。Canonical Memory 默认先逻辑删除，之后允许物理清除。纠正产生版本与 supersede 关系，但用户可以彻底擦除敏感历史。
 
 ### 7.3 派生状态与自动整理
 
@@ -357,14 +369,21 @@ flowchart LR
 
 Core 只保留通用且可迁移的当前状态语义：
 
-- subject、property、value 和关系；
+- subject、property、value、schema_ref 和关系；
 - source、observed_at、received_at；
 - TTL / expires_at；
 - fresh、stale、unknown；
-- scope、version 和 provenance；
-- 冲突 Observation 的保留与最终接受结果。
+- owner_ref、space_id、scope、version 和 provenance；
+- accepted projection、冲突候选与证据引用；
+- Retention Policy、source availability 和删除状态。
 
-日历、天气、设备、位置等采集与协议外置；复杂融合、预测和领域模型也外置。外部 Source 只能提交 Observation Proposal，不能直接改写 World State。
+Accepted World State 属于 Canonical State。Shadow 重启后必须能够恢复最后接受的状态、过期时间和当前不可信的原因。Observation 按类型保留：高频状态可以短期保存或压缩，关键变化可以长期保存。
+
+用户明确陈述具有最高来源优先级，但不会永久冻结状态；更新、更可靠的 Observation 可以替换它。Core 处理 TTL、来源禁用、用户明确规则等确定性逻辑；复杂冲突由可替换 State Resolver 通过 Execution Plane 返回 WorldState Proposal。Resolver 不拥有特权提交路径。
+
+删除 Integration 后，最后状态标记 source unavailable，并按 TTL 进入 stale 或 unknown；用户仍可主动删除相关状态和 Observation。
+
+日历、天气、设备、位置等采集与协议外置；领域 Schema 由 Integration 或 Extension 声明；复杂融合、预测和领域模型也外置。外部 Source 只能提交 Observation Proposal，不能直接改写 World State。
 
 World State 不是完整数字孪生，不要求 Shadow 实时访问所有外部系统。需要时刷新、按 TTL 失效，并明确表达 unknown，比伪造“实时”更重要。
 
@@ -413,9 +432,19 @@ Shadow 自己维护 Port Contract、Adapter SDK、Extension Manifest、Capabilit
 
 Shadow 不开发数据库引擎。
 
-Core 定义 Canonical Record、Stable ID、Schema Version、concurrency requirement、Migration、Export / Import 和 Integrity Verification。Store Adapter 将这些语义映射到具体数据库。
+Core 定义 Canonical Record、Stable ID、Schema Version、concurrency requirement、Migration、Export / Import 和 Integrity Verification。Store Adapter 将这些语义映射到具体数据库，并声明 transaction、encryption、backup、outbox、availability 和 migration 等 Capability。
 
 任何时刻必须存在一个可用的 Primary Durable Store，Shadow 才能承诺长期状态持久化。更换数据库时，通过版本化导出、迁移和完整性验证完成切换。
+
+Primary Store 不可用时，Shadow 进入受限模式：
+
+- 只读和临时交互可以继续，并明确提示不承诺保存；
+- 需要 Canonical Commit 的操作暂停；
+- 现实副作用默认禁止；
+- 明确配置的紧急 Capability 可以先写入可靠的本地持久 Outbox，再执行；
+- Store 恢复后执行幂等提交、去重和 reconciliation。
+
+Core 不实现数据库、物理备份或消息队列。
 
 ## 14. Capability 与现实动作
 
@@ -439,15 +468,54 @@ Action Ledger / Reconciliation
 
 Core 持有 Capability 语义、Authorization Point、Action ID 和结果状态；Provider 与协议实现外置。
 
-## 15. 运行与部署
+## 15. Owner、Space 与 Canonical Envelope
+
+Owner 是资产的长期控制主体，可以是 User 或 Space。Space 是归属、上下文与未来共享的稳定边界。created_by 与 owner_ref 分开记录。
+
+第一版创建正式的 Personal Space 和隐式 Home Space Record，但不实现成员、角色、邀请和共享。个人 Memory 可以归 User；公共房间和家庭设备状态归 Home Space。
+
+所有 Canonical Record 使用共同的治理信封，但保留各自业务 Schema：
+
+~~~text
+CanonicalEnvelope
+├─ record_id / record_type / schema_ref
+├─ owner_ref / space_id / created_by
+├─ data_classification
+├─ provenance / version
+├─ retention_policy / lifecycle_state
+└─ typed payload
+~~~
+
+## 16. 数据分级、Model Binding 与 Secret
+
+Core 只定义 public、personal、sensitive、restricted 四级稳定语义。用户、来源和可替换分类器可以提出标签；无法判断时默认 sensitive。分类器可以提高等级，降低等级必须由用户或确定性策略确认。
+
+每个 Model Binding 必须声明 local / remote、可处理的数据等级、是否允许 Memory、World State 和外部资产内容，以及 retention、training、地域或组织限制。Shadow 在执行前根据 Binding 和 Capability Envelope 裁剪最小上下文。
+
+Secret 是用户长期能力资产，但凭据与普通 Canonical Asset 分离。Integration 保存 Secret Reference。标准导出不包含 Secret 内容；完整备份只有在独立授权和加密后才能包含。
+
+“本地优先”约束的是用户控制、可迁移和可验证，而不是固定物理位置。Durable Store 可以本地或远程绑定，默认配置优先提供本地实现。
+
+## 17. Retention、Erasure、导出与备份
+
+Core 管理 Retention Policy、Logical Delete、Restore、Physical Erasure Intent、Tombstone 和组件清除状态。Adapter 负责清除 Memory Engine、Index、Cache、Backup 和其他派生副本。
+
+无法确认清除的组件必须显示 pending 或 unreachable，不能谎报完成。Tombstone 只保留防止错误复活所需的最小元数据，不包含被删除的敏感内容。
+
+Shadow 提供两种不同产物：
+
+1. **标准可移植导出**：Canonical Assets、Owner / Space、Integration、Binding、Schema 和迁移元数据；不包含 Secret 内容和可重建状态；
+2. **完整设备备份**：可以包含加密 Secret、Checkpoint 和部分派生状态，但必须独立加密和授权，且不能作为跨实现兼容性的基础。
+
+## 18. 运行与部署
 
 逻辑边界不等于进程边界。
 
 早期实现优先采用模块化单体和少量外部组件。Adapter 可以运行在进程内或进程外，只要不绕过 Contract 和权限边界。
 
-具体数据库、Runtime、Model、Router、Runner、Memory Intelligence、Scheduler、Search、Secret Store、Voice 和部署平台不在当前架构中冻结。
+具体数据库、Runtime、Model、Router、Runner、Memory Intelligence、State Resolver、Scheduler、Search、Secret Store、Voice 和部署平台不在当前架构中冻结。
 
-## 16. 架构不变量
+## 19. 架构不变量
 
 1. 所有请求由 Shadow 准入，并至少产生最小 Run 记录；
 2. 所有执行由 Shadow 绑定和治理，但并非所有执行都经过 Agent Runtime；
@@ -460,4 +528,11 @@ Core 持有 Capability 语义、Authorization Point、Action ID 和结果状态�
 9. 删除派生组件不丢失 Canonical Asset；
 10. Skill、Executable Asset、Extension 和 Integration 是用户长期能力资产；
 11. 系统健康、超时和恢复不依赖 Semantic Pulse 或任何 LLM；
-12. 组件替换必须经过兼容性、迁移或重建流程。
+12. 每个 Canonical Asset 都具有显式 Owner 和 Space；
+13. 家庭公共状态可以归 Home Space，而不被固定到某个用户；
+14. 外部分类器不能自行降低数据保护等级；
+15. Model Binding 不能接收超出声明边界的上下文；
+16. 逻辑删除和审计不能取消用户最终物理删除权；
+17. Store 故障时，未记录的现实副作用不能继续执行；
+18. 标准可移植导出不依赖 Secret、派生状态或具体组件私有格式；
+19. 组件替换必须经过兼容性、迁移或重建流程。
