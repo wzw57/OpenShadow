@@ -158,10 +158,12 @@ Execution
 
 本阶段采用反过度设计约束：
 
-- MVP-1 只覆盖 Local Web → Run → One Target → Memory → Primary Store；
-- MVP-2 增加 Durable Task、World State、Integration 和多端；
-- Action、复杂 Erasure、Full Backup、Outbox、Router 和 Pulse 标记为 Later；
-- 未来兼容对象可以 Contract-only，不要求第一版实现；
+- Phase 0–1 覆盖工程基础与个人 Shadow 对话执行闭环；
+- Phase 2 实现 Canonical Memory 与能力资产；
+- Phase 3 实现 Durable Task、World State 和长期连续性；
+- Phase 4 实现受治理 Action、Router、Pulse、Outbox 和跨组件 Erasure；
+- Phase 5 实现多端与多用户演进；
+- 未来兼容对象可以 Contract-only，不要求在首次实现时创建空模块；
 - 不为每个 Record 创建 Aggregate、Repository、Service 或状态机。
 
 优先顺序：
@@ -188,8 +190,8 @@ Execution
 - 状态转换具有明确提交者和失败语义；
 - World State 明确 fresh、stale 和 unknown，而不假设实时一致；
 - Aggregate 数量经过收紧，不把分析候选直接变成实现模块；
-- MVP-1 可以在不实现 Router、Pulse、Action、World State 或多用户的情况下闭环；
-- Later 与 Contract-only 能力不阻塞 Stage 4。
+- Phase 0–1 可以在不实现 Router、Pulse、Action、World State 或多用户的情况下闭环；
+- 后续 Phase 与 Contract-only 能力不阻塞首批实现，也不从完整架构中删除。
 
 ## Stage 4：完整技术架构与 Adapter Contract（进行中）
 
@@ -197,6 +199,7 @@ Execution
 
 - [完整技术架构](technical-architecture.md)
 - [分阶段实现计划](implementation-stages.md)
+- [参考实现 Profile](implementation-profile.md)
 
 本阶段不再把 MVP 当作设计边界。先定义完整 Shadow 的长期逻辑架构，再按 Phase 0–5 逐步实现。完整架构包含：
 
@@ -222,13 +225,13 @@ Execution
 - 跨 Adapter 流程通过幂等、状态机和 reconciliation 恢复；
 - 完整目标架构先冻结，实现阶段不得创建冲突旁路。
 
-后续在本阶段继续确定：
+参考实现已经确定 Python、FastAPI、React + TypeScript + Vite、REST / OpenAPI、SSE、JSON Schema、进程内 Python Port、进程外 JSON-RPC-style stdio Transport、SQLite WAL、SQLAlchemy、Alembic、PostgreSQL Profile，以及三类 Reference Execution Adapter。
 
-- 首选实现 Profile；
+后续在本阶段只需继续冻结：
+
 - Port 的字段级请求、响应与错误 Schema；
-- Adapter SDK 首种语言与 Transport；
-- Primary Store 与首个真实 Execution Adapter；
-- API、迁移、测试和本地打包方案。
+- Adapter Manifest 与版本协商精确字段；
+- API、Migration 和 Contract Test 的可执行验收样例。
 
 退出条件：
 
@@ -237,213 +240,59 @@ Execution
 - 每类长期数据都能归类为 Canonical、Derived 或 External；
 - Adapter 的共同生命周期与 Capability Negotiation 明确；
 - Phase 0–5 的实施顺序不会改变 Canonical 身份和核心契约；
-- 选定首个实现 Profile 后可以直接进入编码。
+- 字段级 Contract 通过样例和 Fake Adapter 验证后可以直接进入编码。
 
-## Stage 5：最小纵向闭环
+## Stage 5：实现启动与分阶段交付
 
-实现第一个端到端闭环：
+Stage 5 不再为每项能力建立一套新的设计阶段。全部实现按照 [分阶段实现计划](implementation-stages.md) 在同一目标架构上推进：
+
+1. Phase 0：工程基础；
+2. Phase 1：个人 Shadow 基本闭环；
+3. Phase 2：Memory 与能力资产；
+4. Phase 3：任务连续性与 World State；
+5. Phase 4：受治理动作与主动能力；
+6. Phase 5：多端与多用户演进。
+
+首批开发从 Phase 0–1 开始：
 
 ~~~text
-Request
+Web
    ↓
-Minimal Run
+Admission / Conversation / Message
    ↓
-Static Execution Binding
+Request / Root Run / Execution Attempt
    ↓
-Replaceable Agent Runtime
+Static Execution Binding + Capability Envelope
    ↓
-Result / Memory Candidate
+Deterministic Test Adapter / Real Execution Adapter
    ↓
-Shadow Authority
+Result / Assistant Message
    ↓
-Replaceable Durable Store
+SQLite Durable Store Adapter
 ~~~
 
-同时验证：
+首批开发同时建立完整架构需要的基础身份和边界：
 
-- Core 重启恢复；
-- Runtime 删除后 Canonical State 仍存在；
-- Memory Component 删除后 Canonical Memory 仍存在；
-- 用户可以查看和导出长期资产；
-- 所有 Canonical Asset 都有显式 owner_ref 和 space_id；
-- 默认 Personal Space 与 Home Space 可以恢复。
+- stable_id、schema_version、owner_ref 和 space_id；
+- checked-in JSON Schema / OpenAPI；
+- Adapter Manifest 与 Capability Negotiation；
+- Store Migration 和 Integrity；
+- Fake Adapter 与 Contract Test；
+- Domain 不依赖 FastAPI、SQLAlchemy、React 或具体 Runtime SDK。
 
-退出条件：
+后续 Phase 只增加实现，不替换 Phase 0–1 的 Canonical Identity、Authority、Binding 或 Adapter 边界。每个 Phase 的详细范围、非目标和退出条件以 [分阶段实现计划](implementation-stages.md) 为唯一事实源。
 
-- 闭环中至少包含一个真实 Runtime Adapter；
-- Durable Store 和 Memory Intelligence 都通过 Port 接入；
-- 没有外部组件直接写 Shadow 权威状态。
+Stage 5 的总体退出条件：
 
-## Stage 6：Execution Plane 与 Task Continuity
+- Phase 0–1 可以安装、启动、升级、回滚和恢复；
+- 至少一个真实 Execution Adapter 与 Deterministic Test Adapter 通过相同 Contract；
+- Primary Store、Runtime 和 Model 实现可以替换；
+- 后续 Phase 不需要建立绕过 Admission、Authority 或 Port 的新路径；
+- 用户资产可以通过标准格式导出并验证完整性。
 
-实现：
+## 延后实现与重新评估
 
-- Execution Requirements / Binding；
-- Model Worker 直接执行；
-- Executable Asset 与 Runner 执行；
-- 静态路由规则；
-- Durable Task lifecycle；
-- Runtime Checkpoint Reference；
-- Semantic Checkpoint；
-- Capability Envelope；
-- Runtime 跨边界 Usage / Action Record；
-- deterministic health / lease / timeout；
-- pause / resume / cancel；
-- failure recovery；
-- cross-runtime handoff。
-
-退出条件：
-
-- 分类或脚本任务不需要启动 Agent Runtime；
-- 每次 Target Binding 与版本可追踪；
-- Runtime A 中断后，Runtime B 能根据 Shadow 状态继续长期工作；
-- 不需要同步 Runtime 内部 Planner 或 Subtask Graph；
-- 模型不可用不会破坏健康检查和恢复机制。
-
-## Stage 7：Memory 生命周期
-
-实现：
-
-- Canonical Memory；
-- Evidence Reference；
-- Memory Candidate；
-- Candidate commit；
-- user correction / delete / supersede；
-- periodic consolidation trigger；
-- Recall permission boundary；
-- derived state rebuild。
-
-退出条件：
-
-- 更换 Memory Intelligence 不迁移或丢失 Canonical Memory；
-- 外部资料只在需要时通过 Connector 读取；
-- Memory 整理失败不破坏已有 Memory。
-
-多 Memory Component 的动态组合、路由和结果融合不在本阶段实现。
-
-## Stage 8：Observation 与 World State
-
-实现：
-
-- Observation Proposal；
-- subject / property / value 和关系；
-- provenance、observed_at、received_at；
-- TTL / expires_at；
-- fresh / stale / unknown；
-- conflict preservation 与 accepted projection；
-- Canonical World State 恢复；
-- type-specific Observation Retention；
-- State Resolver Proposal；
-- source unavailable；
-- State Source Adapter；
-- World State 条件触发；
-- 用户查看、纠正和使状态失效。
-
-退出条件：
-
-- 移除 State Source 不会伪造当前状态；
-- 过期数据自动变为 stale 或 unknown；
-- 外部 Source 不能绕过 Shadow 提交 World State；
-- 领域采集、复杂融合与预测不进入 Core。
-
-## Stage 9：归属、隐私、保留与删除
-
-实现：
-
-- User / Space Owner Reference；
-- Personal Space / Home Space Record；
-- created_by 与 owner_ref 分离；
-- public / personal / sensitive / restricted；
-- Model Binding 数据边界与上下文裁剪；
-- 分类器只升不降规则；
-- logical delete / restore / physical erase；
-- source_dependency；
-- Erasure Request 与组件完成状态；
-- Secret Reference。
-
-退出条件：
-
-- 家庭公共状态可以归 Home Space；
-- 未知数据默认 sensitive；
-- 超出 Model Binding 的上下文不会发送；
-- 删除请求能够传播到受管派生组件；
-- pending / unreachable 不会被报告为删除成功。
-
-## Stage 10：能力资产与外部动作
-
-实现：
-
-- Skill Asset；
-- Executable Asset 管理；
-- Extension Registry；
-- Integration Registry；
-- MCP Connection；
-- Capability Registry；
-- Provider Binding；
-- Policy Enforcement；
-- Approval；
-- Action Ledger；
-- Unknown Outcome / Reconciliation。
-
-退出条件：
-
-- 用户可以查看和迁移已配置的能力资产；
-- 外部副作用不会绕过 Shadow 治理路径。
-
-## Stage 11：升级、可移植性与 Store 故障
-
-实现：
-
-- Schema Version；
-- Export / Import；
-- Migration；
-- Integrity Verification；
-- component compatibility check；
-- Durable Store replacement；
-- standard portable export；
-- separately encrypted full-device backup；
-- Store availability state；
-- restricted mode；
-- persistent Outbox 和 reconciliation；
-- backup metadata。
-
-退出条件：
-
-- 可以在新环境恢复 Shadow Canonical Assets；
-- 数据库实现替换后 Stable ID、关系和历史保持一致；
-- 派生数据可以重建；
-- Secret 不进入标准导出；
-- Store 故障时未记录的现实副作用被阻止；
-- 紧急 Outbox 操作可以幂等恢复和 reconciliation。
-
-## Stage 12：使用便利性
-
-在 Core 和 Adapter Contract 稳定后，提供统一用户体验：
-
-- Reference Shell；
-- 管理界面；
-- Approval Inbox；
-- Integration 配置；
-- Memory、World State、Skill 和 Executable Asset 管理；
-- Voice / Device Endpoint 接入。
-
-具体 Voice、STT、TTS、设备协议和 UI 技术继续由可替换组件提供。
-
-## Stage 13：可选主动智能
-
-只有基础正确性和成本边界可观测后，再评估：
-
-- Semantic Pulse；
-- 多模型智能路由；
-- Target 质量、成本和延迟评估；
-- 主动 Recall 与建议；
-- 多 Memory Component 组合与融合。
-
-退出条件由真实使用数据另行定义。这些能力全部可以关闭或替换，且不得成为系统健康、状态过期、权限执行或任务恢复的依赖。
-
-## 延后设计
-
-以下内容保留兼容可能，但在基础闭环完成前不设计：
+以下内容已经保留架构边界，但在相应 Phase 前不冻结内部实现细节：
 
 - 多 Memory Component 自动组合；
 - 高级动态 Capability / Model Router；
