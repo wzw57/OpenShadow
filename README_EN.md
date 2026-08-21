@@ -192,4 +192,4 @@ Near-term implementation focuses on a single-user path without making future mul
 
 **The Stage 2 key-use-case draft is complete and ready for consolidated review.**
 
-Eighteen use cases now cover admission, multi-device Web interaction, execution, continuity, Memory, World State, external actions, Store failure, migration, erasure, Integrations, on-demand asset access, and Semantic Pulse. After review, Stage 3 will freeze domain objects, relationships, aggregates, and state machines.
+Nineteen use cases now cover admission, multi-device Web interaction, execution, continuity, Memory, World State, external actions, Store failure, migration, erasure, Integrations, on-demand asset access, and Semantic Pulse. After review, Stage 3 will freeze domain objects, relationships, aggregates, and state machines.
