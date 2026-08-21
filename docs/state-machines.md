@@ -7,7 +7,7 @@
 ## 1. 原则
 
 1. 只有 Shadow Authority 提交 Canonical State Transition。
-2. External Component 返回 Proposal、Result、Acknowledgement 或 Evidence。
+2. External Component 只返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage；Provider acknowledgement 和 reconciliation evidence 作为 Result / Progress 的结构化证据携带。
 3. Command 携带 command_id、expected_version 和 actor。
 4. unknown、stale 和 cancellation_unknown 是有效业务状态，不用 failed 或 null 代替。
 5. Runtime 私有 planning、tooling 和 subtask 不进入 Canonical 状态机。
@@ -23,7 +23,7 @@
 | Memory | Phase 2 | 长期资产、纠正和删除 |
 | DurableTask | Phase 3 | 跨时间连续性 |
 | WorldState Freshness | Phase 3 | 当前状态的时效诚实性 |
-| Action | Later | 现实副作用与 unknown outcome |
+| Action | Phase 4 | 现实副作用与 unknown outcome |
 
 InteractionEndpoint、Integration、Store、OperationJob 和 Erasure 的生命周期先使用简单枚举与 Command 校验，不在其首个实现 Phase 建立完整状态机。
 
@@ -199,7 +199,7 @@ Observation committed
 
 ## 8. Action
 
-Later。ActionProposal 通过校验后才创建 Action：
+Phase 4。ActionProposal 通过校验后才创建 Action：
 
 ~~~mermaid
 stateDiagram-v2
@@ -235,9 +235,9 @@ Provider 调用只能发生在持久 pending 后。unknown 不得盲目 Retry。
 | InteractionEndpoint | active / revoked | Phase 5 扩展 trust |
 | Integration | configured / active / degraded / disabled / deleted | Phase 2 |
 | StoreBinding | available / unavailable / recovering | Phase 1 health check |
-| OperationJob | planned / running / completed / failed | Contract-only |
-| ComponentEraseStatus | pending / scheduled / completed / failed / unreachable | Later |
-| RoutingRule | active / disabled | Later |
+| OperationJob | planned / running / completed / failed | Phase 3–4 |
+| ComponentEraseStatus | pending / scheduled / completed / failed / unreachable | Phase 4 |
+| RoutingRule | active / disabled | Phase 4 |
 | Schedule | enabled / disabled | Phase 3 |
 
 如果未来需要更复杂转换，应由真实失败用例和并发需求证明，而不是提前扩展。
@@ -277,7 +277,7 @@ Stage 3 只需正式冻结：
 2. ExecutionAttempt 状态机；
 3. Memory Root 生命周期与不可变版本语义；
 4. DurableTask 和 WorldState 的 Phase 3 Contract；
-5. Action 的 Later Contract；
+5. Action 的 Phase 4 Contract；
 6. 简单 Record 的最小生命周期枚举；
 7. Domain Event Envelope。
 
