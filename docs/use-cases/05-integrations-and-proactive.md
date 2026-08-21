@@ -48,6 +48,14 @@ User；Trusted Web Endpoint；Extension / Integration Registry；Secret Store；
 - 外部账户中的原始数据不由 Shadow 自动删除；
 - Extension 更新改变高风险代码或权限时重新批准。
 
+### Durable State Changes
+
+Extension / Integration Stable ID、Manifest version、Owner / Space、permissions、Secret Reference、Capability Binding、health、lifecycle 和 source availability。
+
+### External Side Effects
+
+写入或撤销 Secret Store 凭据、执行连接测试、调用外部账户；删除 Shadow Integration 不自动删除外部原始数据。
+
 ### Acceptance Criteria
 
 - Secret 不进入普通 Canonical Asset 或标准导出；
@@ -93,6 +101,14 @@ Task、Recall、用户请求或后台 Memory 整理提出 Resource Request。
 - Model Binding 不允许相应等级时询问用户或选择合规 Target；
 - 大范围读取超过预算时请求缩小范围或批准；
 - 外部内容变化不自动覆盖已提交 Canonical Memory。
+
+### Durable State Changes
+
+Asset access provenance、Usage summary、Source availability，以及可选 Artifact / Memory Candidate reference；原始内容默认不成为 Canonical Asset。
+
+### External Side Effects
+
+按需读取外部来源的必要片段，可能产生外部 API 用量；不修改来源内容。
 
 ### Acceptance Criteria
 
@@ -146,6 +162,14 @@ Scheduler；Semantic Pulse Worker；Shadow Core；User。
 - stronger Target 超出数据或费用边界时拒绝或询问用户；
 - Store 不可用时不创建 Canonical Proposal decision；普通 Pulse 默认暂停；
 - 删除 Pulse 组件不需要迁移 Canonical State。
+
+### Durable State Changes
+
+Pulse Schedule、bounded Run / Attempt、Usage、Proposal、Policy Decision 和可选后续 Run / Task Proposal reference。
+
+### External Side Effects
+
+调用小模型、规则 Worker 或只读 Source；Pulse 本身不执行现实 Action。
 
 ### Acceptance Criteria
 
