@@ -529,7 +529,7 @@ Shadow 提供两种不同产物：
 
 ## 19. 架构不变量
 
-1. 所有请求由 Shadow 准入，并至少产生最小 Run 记录；
+1. 所有输入由 Shadow 准入；被接受的 Request 创建一个 Root Run，拒绝项只产生最小 Admission Record；
 2. 所有执行由 Shadow 绑定和治理，但并非所有执行都经过 Agent Runtime；
 3. Runtime 不拥有 Durable Task；
 4. Memory Intelligence 不拥有 Canonical Memory；
