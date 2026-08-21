@@ -24,7 +24,7 @@ OpenShadow 的目标架构需要覆盖长期记忆、任务连续性、World Sta
 | Foundation | 从第一条 Canonical Record 起就必须正确 |
 | Implemented | 当前阶段有可用实现 |
 | Contract-only | 稳定边界已定义，但尚无生产实现 |
-| Later | 方向明确，内部协议暂不冻结 |
+| Deferred | 方向明确，内部协议暂不冻结，等待对应 Phase 的真实用例 |
 | Replaceable | 具体实现必须通过 Adapter 接入 |
 
 Contract-only 不意味着创建空数据库表、空 Service 或空微服务，只意味着当前实现不能堵死该边界。
@@ -289,7 +289,7 @@ Web
 | Memory Intelligence | Replaceable | Fake / none | One adapter | Replaceable | Optional composition | Extended |
 | World State | Contract-only | Contract-only | Source references | Implemented | Trigger integration | Extended |
 | Action Governance | Contract-only | Contract-only | Capability registry | Proposal boundary | Implemented | Extended |
-| Semantic Pulse | Later | Later | Later | Contract-only | Optional | Optional |
+| Semantic Pulse | Deferred | Deferred | Deferred | Contract-only | Optional | Optional |
 | Integration Registry | Foundation | Minimal target profile | Implemented | Extended sources | Extended providers | Extended endpoints |
 | Export / Migration | Foundation | Basic export | Capability assets | Store migration | Full workflow | Multi-user scope |
 | Erasure | Foundation semantics | Basic record deletion | Memory deletion | Source cleanup | Cross-adapter tracking | Multi-user scope |
