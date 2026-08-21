@@ -1,338 +1,368 @@
 # OpenShadow 分阶段实现计划
 
-- 状态：Stage 4 实现演进基线
-- 依赖：[完整技术架构](technical-architecture.md)
-- 原则：阶段决定交付顺序，不改变目标架构
+- 状态：Stage 4 完整目标架构的实现顺序
+- 目标：分阶段交付 Tiny Kernel、官方 Profile 与可替换 Extension
+- 原则：Phase 是同一架构的真子集，不是独立 MVP 架构
 
-## 1. 为什么分阶段
+## 1. 分阶段原则
 
-OpenShadow 的目标架构需要覆盖长期记忆、任务连续性、World State、多种执行方式、外部动作、多端入口和组件升级，但不应一次实现所有能力。
+OpenShadow 的完整目标覆盖长期记忆、任务连续性、State、能力资产、现实动作、多端入口和组件升级，但不应一次实现所有能力。
 
-分阶段的目的不是建立一个独立的“简化版 Shadow”，而是逐步填充同一套架构：
+阶段化遵循：
 
-- 第一阶段建立稳定骨架和可运行纵向闭环；
-- 后续阶段增加新的模块实现和 Adapter；
-- 已落地的 Canonical ID、Owner / Space、Run、Binding、Adapter Manifest 和 Schema Version 不被推翻；
-- 尚未实现的能力保留 Contract 或字段，不伪造空壳服务。
+1. 先实现 Kernel 原语，再增加 Profile；
+2. 未实现能力保留必要 Contract，不预建空服务或表；
+3. Profile 属于兼容承诺，但不通过硬编码类型分支扩张 Kernel；
+4. namespaced target kind 与 Capability 允许后续增加执行方式；
+5. 每阶段必须能独立运行和验证；
+6. 任何临时实现不得绕过 Proposal / Commit；
+7. 不以“以后可能需要”为理由建设插件操作系统、通用 Workflow、Event Bus 或 Policy Language。
 
 ## 2. 成熟度标记
 
-每项架构能力使用以下状态：
-
-| 状态 | 含义 |
+| 标记 | 含义 |
 |---|---|
-| Foundation | 从第一条 Canonical Record 起就必须正确 |
-| Implemented | 当前阶段有可用实现 |
-| Contract-only | 稳定边界已定义，但尚无生产实现 |
-| Deferred | 方向明确，内部协议暂不冻结，等待对应 Phase 的真实用例 |
-| Replaceable | 具体实现必须通过 Adapter 接入 |
+| KERNEL | 当前实现且长期稳定 |
+| CONTRACT-ONLY | 冻结最小边界，不实现完整能力 |
+| PROFILE | 实现官方 typed Profile |
+| ADAPTER | 接入可替换实现 |
+| DERIVED | 可以删除重建 |
+| LATER | 延后到有真实用例的 Phase |
 
-Contract-only 不意味着创建空数据库表、空 Service 或空微服务，只意味着当前实现不能堵死该边界。
+## 3. 第一版不可省略的基础
 
-## 3. 从第一版就不能省略的基础字段
+- Stable ID；
+- owner_ref / space_id / created_by；
+- schema_ref / profile_id；
+- version / expected_version；
+- Canonical Envelope；
+- Proposal / Commit identity；
+- work-bearing Admission；
+- Request / Run / Attempt；
+- namespaced target_kind；
+- Binding / minimal Capability Envelope；
+- minimal AdapterDescriptor；
+- Canonical Repository Capability；
+- Secret Reference 与普通配置分离；
+- correlation_id / causation_id；
+- structured error；
+- Migration version。
 
-所有 Canonical Record 从第一次迁移起应具有或可追踪：
+不要求第一版实现：
 
-- stable_id；
-- schema_version；
-- owner_ref；
-- space_id；
-- created_by；
-- created_at / updated_at；
-- data_classification；
-- retention_policy_ref；
-- lifecycle state；
-- correlation_id / causation reference；
-- provenance 或 source reference；
-- optimistic version 或等价并发控制信息。
-
-允许字段初期只有默认值，例如单用户阶段使用固定 User、默认 Personal Space 和隐式 Home Space；不允许用“当前用户”这种无法迁移的隐式假设代替正式身份。
+- 所有官方 Profile；
+- 智能 Router；
+- State Resolver；
+- 现实 Action；
+- Semantic Pulse；
+- 复杂 ACL；
+- Backup / Outbox；
+- 通用消息队列或微服务。
 
 ## 4. 阶段总览
 
 ~~~mermaid
 flowchart LR
-    P0["Phase 0<br/>Engineering Foundation"]
+    P0["Phase 0<br/>Kernel Foundation"]
     P1["Phase 1<br/>Personal Shadow Loop"]
-    P2["Phase 2<br/>Memory & Capability Assets"]
-    P3["Phase 3<br/>Continuity & World State"]
-    P4["Phase 4<br/>Governed Actions & Proactivity"]
-    P5["Phase 5<br/>Multi-endpoint & Multi-user Evolution"]
+    P2["Phase 2<br/>Memory & Capability Profiles"]
+    P3["Phase 3<br/>Continuity & State Profile"]
+    P4["Phase 4<br/>Action & Proactivity"]
+    P5["Phase 5<br/>Multi-endpoint & Multi-user"]
 
     P0 --> P1 --> P2 --> P3 --> P4 --> P5
-    P2 -->|"capability foundation"| P4
-    P3 -->|"state triggers"| P4
 ~~~
 
-阶段编号是实现阶段，不替代需求和设计阶段编号。
-
-## 5. Phase 0：工程基础
-
-目标：建立可以长期演进的代码和数据骨架。
+## 5. Phase 0：Kernel Foundation
 
 ### 实现
 
-- 模块化单体目录与依赖规则；
-- Domain Core 与 Port Contract 独立于具体 Framework；
-- Schema Migration 机制；
-- Stable ID、Owner、Personal Space 和隐式 Home Space；
-- Canonical Record 基础信封；
-- Adapter Manifest、Binding 和最小 Capability Negotiation；
-- 配置与 Secret Reference 分离；
-- 结构化错误、日志关联 ID 和健康检查；
-- Fake Store、Fake Execution Adapter 和 Contract Test Harness；
-- 本地开发、测试、升级和回滚命令。
+- Python / FastAPI 工程骨架；
+- checked-in JSON Schema / OpenAPI；
+- CanonicalEnvelope；
+- Principal / Personal Space；
+- Schema / Profile Registry；
+- ProposalEnvelope / Canonical Commit；
+- ExpectedVersion；
+- AdmissionRecord / Request / Run / Attempt skeleton；
+- ExecutionBinding / minimal CapabilityEnvelope；
+- minimal AdapterDescriptor；
+- Family Port interfaces；
+- Canonical Repository Capability；
+- SQLite WAL / SQLAlchemy / Alembic；
+- Deterministic Test Adapter；
+- Contract Test harness；
+- health / readiness；
+- structured logging and correlation。
 
 ### 暂不实现
 
+- Conversation / Memory 完整 Profile；
 - 智能 Router；
-- Memory 整理算法；
-- World State Resolver；
-- 现实动作；
-- Semantic Pulse；
-- 多用户认证；
-- 外部消息队列。
+- Runtime checkpoint；
+- State / Action；
+- Skill installation；
+- Portable Export UI；
+- Queue / Outbox；
+- 多用户。
 
 ### 退出条件
 
-- Domain 模块不依赖 Web、ORM、模型 SDK 或数据库驱动；
-- Fake Adapter 可以通过版本协商和 Contract Test；
-- 空数据和已有数据都可重复执行迁移；
-- 固定单用户仍通过正式 owner_ref 和 space_id 表达。
+- Canonical Commit 可以原子创建新版本；
+- expected-version conflict 被拒绝；
+- Adapter 不能直接访问 Repository；
+- Descriptor 和 Capability 可独立验证；
+- unknown target kind 可按 Descriptor 处理，而不是 enum crash；
+- Kernel package 不依赖 Profile payload、FastAPI DTO 或 SQLAlchemy Entity；
+- Store 只承诺 Canonical Repository Capability。
 
-## 6. Phase 1：个人 Shadow 基本闭环
-
-目标：用户可以通过 Web 使用同一个可持久化 Shadow。
-
-~~~text
-Web
-  -> Admission
-  -> Conversation / immutable Message
-  -> Request / Root Run
-  -> static Execution Binding
-  -> Execution Attempt
-  -> one real Execution Adapter
-  -> Result / assistant Message
-  -> Primary Durable Store
-~~~
+## 6. Phase 1：Personal Shadow Loop
 
 ### 实现
 
-- Web Client 和稳定 Shadow API；
-- Conversation、Message、Admission、Request、Run、Attempt；
+- Local Web；
+- Conversation / Message Profile；
+- work-bearing chat Admission；
+- Request → Root Run → Attempt；
 - static Binding；
-- Capability Envelope 最小数据边界；
-- Direct Model 或 Agent Runtime 的一个真实 Adapter；
-- Primary Durable Store 的一个 Adapter；
-- 流式响应；
-- Run 失败、超时、取消和重启后状态恢复；
-- 对话、Run 和结果的基础查看；
-- 标准化导出骨架。
+- `shadow.model-worker` 或 `shadow.agent-runtime` 之一；
+- Runtime base Port：describe / execute / events；
+- SSE Run stream；
+- Result Commit；
+- Memory Profile 最小 Candidate / Commit；
+- restart recovery；
+- explicit ephemeral interaction when Store unavailable。
 
 ### 保留但不提前实现
 
-- execution_mode 枚举包含完整五类 Target；
-- Binding 可以指向不同 Adapter 和版本；
-- Run 可以关联未来 Durable Task；
-- Message 可以引用 Artifact；
-- API 使用 Endpoint Context，但只启用 Web Endpoint；
-- Adapter Transport 不限定进程位置。
+- `target_kind` 是 namespaced string，不预建所有 Target 实现；
+- optional cancel / checkpoint / resume 只在 Adapter 声明后启用；
+- Durable Task 只有 reference / contract；
+- State / Action / Skill 只有 Profile registration ability；
+- 复杂 Policy Engine 不实现。
 
 ### 退出条件
 
-- 删除真实 Runtime 后，Conversation、Message 和 Run 仍可读取；
-- Shadow 重启后可以恢复已提交状态；
-- 同一 client_request_id 不产生重复 Root Run；
-- Adapter SDK 对具体 Runtime 没有反向依赖；
-- 更换一个测试 Target 不需要改变 Domain Schema。
+- 用户可以通过 Web 完成对话；
+- 每个 Accepted Request 只有一个 Root Run；
+- Retry 追加 Attempt；
+- 只读 control-plane query 与 SSE subscription 不创建 Run；
+- 更换 Model / Runtime Adapter 不改变 Run / Message ID；
+- 普通 Result 不自动成为 Memory；
+- Memory Candidate 必须经过 Commit；
+- Store 不可用时不伪造持久成功；
+- 没有声明 cancel 的 Adapter 返回 unsupported。
 
-## 7. Phase 2：Memory 与能力资产
-
-目标：用户开始积累不会随智能组件替换而丢失的记忆和能力。
+## 7. Phase 2：Memory 与 Capability Profiles
 
 ### 实现
 
-- Memory、MemoryVersion、MemoryCandidate；
-- Memory Authority；
-- 一个可替换 Memory Intelligence Adapter；
-- 周期性和按需 Memory Maintenance Job；
-- Recall 的 Scope 与数据边界；
-- Integration、Extension、Skill、Executable Asset 和 MCP Connection 的统一 Registry；
-- Asset Catalog 与外部资产按需读取；
-- Adapter 安装、禁用、健康、版本和 Secret Reference；
-- 派生 Index 的删除与重建；
-- Memory 查看、纠正、逻辑删除和恢复。
+- MemoryVersion / correction / supersede；
+- source_dependency；
+- logical delete / physical erase；
+- anti-resurrection Tombstone；
+- Memory Maintenance Adapter；
+- Recall Adapter；
+- Integration Profile；
+- SkillAsset Profile；
+- Agent Skills Bundle validation；
+- immutable snapshot / pinned revision / digest；
+- Shadow sidecar governance metadata；
+- Runtime Projection rebuild；
+- Executable Asset / Runner；
+- Asset Catalog 与按需读取；
+- 基础 Portable Export / Import；
+- derived index rebuild。
 
 ### 保留但不提前实现
 
-- 多 Memory Engine 组合；
-- 高级 Graph、Embedding 和 Reranking 策略；
-- 自动 Adapter 市场；
-- 复杂 Erasure 跨系统工作流。
+- 多 Memory Engine composition；
+- 自动 Router；
+- 复杂 Skill marketplace；
+- 自定义 Shadow Skill 内容格式；
+- 领域知识图谱；
+- 完整跨组件 Erasure orchestrator。
 
 ### 退出条件
 
-- 删除 Memory Intelligence 后 Canonical Memory 仍存在；
-- 新 Memory Engine 可以读取 Canonical Memory 或重建派生状态；
-- 外部笔记不被默认复制进 Shadow；
-- Integration 的配置元数据可以导出，Secret 内容不会进入标准导出；
-- Memory Correction 产生新的不可变版本，不覆盖历史。
+- Memory Intelligence 替换不丢失 Canonical Memory；
+- Profile major migration 有显式测试；
+- Skill Bundle 可以被标准 Agent Skills 客户端读取；
+- Shadow metadata 不修改原 Bundle；
+- `allowed-tools` 不会绕过 CapabilityEnvelope；
+- Provider Skill ID 仅为 External Reference；
+- 删除 index 后可以重建；
+- 外部资产仍按需读取，不复制为默认长期库。
 
-## 8. Phase 3：任务连续性与 World State
-
-目标：Shadow 可以跨时间继续工作，并诚实表达当前现实状态。
+## 8. Phase 3：Continuity 与 State Profile
 
 ### 实现
 
-- Durable Task、Task Proposal 和 Task Completion Proposal；
-- Runtime Checkpoint Reference 与 Semantic Checkpoint；
-- waiting、pause、resume、deadline、trigger 和 handoff；
-- Schedule / Clock Port；
-- Observation、WorldStateProjection、TTL、fresh / stale / unknown；
+- Durable Task Profile；
+- task / Run / checkpoint / artifact refs；
+- waiting / pause / resume / deadline / trigger；
+- Semantic Checkpoint / handoff；
+- Schedule / Clock Adapter；
+- State Profile；
+- Observation / StateProposal；
+- state_key / typed value / Evidence；
+- observed_at / expires_at；
+- fresh / stale / unknown；
+- source unavailable；
 - State Source Adapter；
-- 确定性 Projection 规则；
-- 可选 State Resolver Adapter；
-- Integration 删除后的 source unavailable；
-- World State Condition 重新进入 Admission；
-- OperationJob 用于迁移、整理和长操作。
+- optional State Resolver；
+- Migration / Integrity Store Capabilities；
+- 受限 OperationJob：export / import / migration。
 
 ### 保留但不提前实现
 
-- 完整数字孪生；
-- 实时同步所有来源；
-- 复杂预测和异常检测；
-- 多 Runtime 自动 Handoff 优化；
-- 分布式 Scheduler 集群。
+- 复杂 Task Graph；
+- 通用 Workflow Engine；
+- 领域本体；
+- 预测 / anomaly detection；
+- 持续实时数字孪生；
+- 完整家庭设备系统。
 
 ### 退出条件
 
-- Runtime 崩溃后 Task 可以从 Canonical State 和 Checkpoint Reference 恢复；
-- Runtime 不可用时可以使用 Semantic Checkpoint 切换实现；
-- Shadow 重启后知道最后 World State、来源和过期原因；
-- 删除 Source Integration 不会把旧状态继续伪装成 fresh；
-- World State 不能直接触发未准入的现实动作。
+- Runtime 崩溃后 Task 可以从 Canonical refs 恢复；
+- 没有 native resume 时不会伪装原 Session 恢复；
+- Run success 不自动完成 Task；
+- State Resolver 只能 Proposal；
+- 重启后知道最后 accepted state 与 expires_at；
+- 过期状态不能保持 fresh；
+- 删除 Integration 后状态进入 source unavailable / stale / unknown；
+- State condition 重新进入 Admission。
 
-## 9. Phase 4：受治理动作与主动能力
-
-目标：Shadow 可以安全地改变外部世界，并提供可选主动智能。
+## 9. Phase 4：Action 与 Proactivity
 
 ### 实现
 
-- Capability Declaration 和 Provider Binding；
-- ActionProposal、Approval、Action 和 Action Ledger；
-- Action idempotency、unknown outcome 和 reconciliation；
-- Provider Adapter；
-- Primary Store restricted mode；
-- 可靠 Outbox Capability；
-- Routing Adapter 和 Route Proposal；
-- 用户可查看、保存和删除的 Routing Rule；
-- 确定性 System Health Heartbeat；
-- 可选 Semantic Pulse；
-- Pulse Proposal 的预算、数据和副作用限制；
-- 完整 Erasure Request 状态跟踪。
+- Action Profile；
+- ActionProposal / approval；
+- pending-before-provider-call；
+- idempotency key；
+- succeeded / failed / unknown；
+- reconciliation；
+- deterministic Policy primitives；
+- optional Policy Engine Adapter；
+- Router Adapter；
+- Semantic Pulse；
+- Durable Outbox Capability；
+- 跨组件 Erasure；
+- 完整标准 Export 与 encrypted device backup metadata。
 
 ### 保留但不提前实现
 
-- 自动进行高风险动作；
-- 无确认的权限扩大；
-- 由模型决定系统健康；
-- Shadow 自研通用 Router、Workflow Engine 或消息队列。
+- 通用 Policy Language；
+- 自动执行高风险现实 Action；
+- 多主 Memory writing；
+- 通用 Event Bus；
+- 通用后台 Job Platform。
 
 ### 退出条件
 
-- 每个现实动作在执行前存在持久 Action ID 和授权；
-- Provider 超时不会被错误标记为未执行；
-- Store 不可用时普通副作用停止；
-- 删除 Router 后静态 Binding 仍可工作；
-- 删除 Semantic Pulse 后健康、调度、TTL 和任务恢复仍然正确。
+- 未持久化 Action 不能执行；
+- unknown outcome 不盲目 retry；
+- Policy Engine 不能直接签发权限；
+- Pulse 只能 Proposal；
+- Store 故障时现实副作用默认暂停；
+- Outbox 只用于可靠副作用；
+- OperationJob 仍限定在 portability / erasure。
 
-## 10. Phase 5：多端与多用户演进
-
-目标：在不改变 Canonical Asset 身份的前提下扩展交互范围。
+## 10. Phase 5：Multi-endpoint 与 Multi-user
 
 ### 实现候选
 
-- Voice / Audio Endpoint；
-- 多设备 Endpoint Registry；
-- 本地网络或远程安全访问；
-- 用户认证与会话；
-- Space Membership、Role、Invitation 和 Sharing；
-- Home Space 多成员访问；
-- Endpoint 级权限和隐私；
-- 音频路由、STT、TTS 和 Wake Word Adapter；
-- 多端通知与 Presence。
+- endpoint pairing；
+- 多 Web / Mobile client；
+- Voice endpoint；
+- STT / TTS / wake word adapters；
+- Space membership / role / invitation；
+- Home Space shared state；
+- device trust；
+- remote Store / synchronization profile；
+- distributed audio。
 
 ### 约束
 
-- 单用户历史资产无需迁移为无主数据；
-- 已存在的 Personal Space 和 Home Space ID 保持稳定；
-- 设备状态属于 Home Space，而不是绑定到第一个用户；
-- 语音识别结果仍通过 Admission；
-- Speaker Recognition 只能提供身份 Proposal，不能自行取得用户权限。
+- 不改变现有 owner_ref / space_id；
+- 不把个人 Memory 自动转成共享资产；
+- 每个 Endpoint 仍经过 Admission；
+- 家庭设备与音频协议外置；
+- 多用户不能绕过现有 Proposal / Commit 和 data boundary。
 
 ### 退出条件
 
-将在开始该阶段前根据真实使用场景重新确认，不在当前阶段冻结完整家庭权限模型。
+- 同一 Shadow 可从多个 Endpoint 继续；
+- 共享 State 归正确 Space；
+- 用户资产可以导出并迁移；
+- 单用户部署仍然简单。
 
 ## 11. 架构能力矩阵
 
-| 能力 | Phase 0 | Phase 1 | Phase 2 | Phase 3 | Phase 4 | Phase 5 |
+| Capability | P0 | P1 | P2 | P3 | P4 | P5 |
 |---|---|---|---|---|---|---|
-| Owner / Space identity | Foundation | Implemented | Implemented | Implemented | Implemented | Extended |
-| Conversation / Message | Contract | Implemented | Implemented | Implemented | Implemented | Extended |
-| Run / Attempt | Contract | Implemented | Implemented | Implemented | Implemented | Implemented |
-| Durable Task | Contract-only | Reference only | Reference only | Implemented | Implemented | Implemented |
-| Execution Binding | Foundation | Static | Multiple profiles | Dynamic-capable | Router proposals | Extended |
-| Agent / Model Target | Contract | One real adapter | Replaceable | Handoff-capable | Routed | Extended |
-| Program / Workflow Target | Contract-only | Contract-only | Executable registry | Optional | Optional | Optional |
-| Canonical Memory | Contract | Reference only | Implemented | Implemented | Implemented | Extended scope |
-| Memory Intelligence | Replaceable | Fake / none | One adapter | Replaceable | Optional composition | Extended |
-| World State | Contract-only | Contract-only | Source references | Implemented | Trigger integration | Extended |
-| Action Governance | Contract-only | Contract-only | Capability registry | Proposal boundary | Implemented | Extended |
+| Tiny Kernel | Implement | Stable | Stable | Stable | Stable | Stable |
+| Canonical Envelope / Commit | Implement | Use | Use | Use | Use | Use |
+| Profile Registry | Skeleton | Conversation / Memory min | Memory / Skill / Integration | Task / State | Action | ACL extensions |
+| Run / Attempt | Skeleton | Implement | Stable | Task-linked | Action-linked | Endpoint-linked |
+| target_kind | namespaced contract | one implementation | Runner added | Workflow compatible | Router selects | extended |
+| Runtime optional capabilities | contract | negotiated subset | extended | checkpoint / handoff | reconcile | endpoint-aware |
+| Canonical Repository | SQLite | Stable | Stable | Integrity / Migration | Outbox optional | remote profile |
+| Memory Intelligence | Deferred | none / test | Adapter | Replaceable | optional composition | extended |
+| State | Profile contract | Deferred | source refs | Implement | trigger integration | shared spaces |
+| Skill | Standard contract | Deferred | Agent Skills Profile | Stable | provider projections | shared governance |
+| Action | Safety contract | Deferred | registry refs | Proposal-only | Implement | multi-user approval |
 | Semantic Pulse | Deferred | Deferred | Deferred | Contract-only | Optional | Optional |
-| Integration Registry | Foundation | Minimal target profile | Implemented | Extended sources | Extended providers | Extended endpoints |
-| Export / Migration | Foundation | Basic export | Capability assets | Store migration | Full workflow | Multi-user scope |
-| Erasure | Foundation semantics | Basic record deletion | Memory deletion | Source cleanup | Cross-adapter tracking | Multi-user scope |
-| Multi-user authorization | Contract-only | Default owner | Default owner | Space-safe | Space-safe | Implemented |
-
-“Contract”表示设计中存在稳定入口；“Reference only”表示记录可以引用未来对象，但不需要创建空实现。
+| Multi-user ACL | Owner / Space fields | Deferred | Deferred | Deferred | Contract-only | Implement |
 
 ## 12. 每阶段共同工程规则
 
-每次增加能力都必须：
-
-1. 先补充或确认用例与验收条件；
-2. 判断其状态属于 Canonical、Derived 还是 External；
-3. 明确 Authority、Intelligence 和 Execution；
-4. 定义或扩展 Port Capability；
-5. 使用 Fake Adapter 编写 Contract Test；
-6. 编写迁移和回滚方案；
-7. 验证关闭或替换外部组件后的行为；
-8. 验证 Owner、Space、数据等级和 Erasure；
-9. 验证失败、超时、取消和重复请求；
-10. 更新 ADR、架构矩阵和用户可见控制。
+1. 所有 Canonical writes 经过 Commit；
+2. 所有 Profile payload 有 schema_ref；
+3. Profile Validator 不直接写 Repository；
+4. Adapter 只声明真实 Capability；
+5. unknown required Capability 拒绝 Binding；
+6.未知 target kind 按 Descriptor / Capability 判断；
+7. Secret 不进入普通记录或日志；
+8. Derived State 可以删除重建；
+9.每个 Phase 有 export / migration regression fixture；
+10. failure / timeout / restart paths 必须测试；
+11.用户可见状态不得把 unknown 显示为成功；
+12.不引入没有真实使用者的基础设施抽象。
 
 ## 13. 禁止的阶段性捷径
 
-为了快速交付，仍不得：
-
-- 让 Web Client 直接写数据库；
-- 让 Runtime 直接写 Memory 或 World State；
-- 用具体 SDK Session ID 代替 Run 或 Task ID；
-- 把模型返回当作已授权 Action；
-- 把 Embedding Store 当作 Canonical Memory；
-- 把外部资产全文默认复制到 Shadow；
-- 在单用户阶段省略 owner_ref 和 space_id；
-- 把 Secret 写进普通配置或导出；
-- 用进程内函数签名代替版本化 Adapter Contract；
-- 因当前没有 Router 而把模型选择硬编码进 Domain；
-- 因当前没有多服务而让 Domain 依赖 Framework；
-- 因未来可能需要而提前实现微服务、队列或复杂多主一致性。
+- Web Client 直接写数据库；
+- Runtime 直接写 Memory、State 或 Task；
+- 用 SDK Session ID 代替 Run / Task ID；
+- 把所有 Profile 写成 Kernel enum / switch；
+- 把五个 well-known target kinds 冻结成全集；
+- 让所有 Port 返回一个万能 Result union；
+- 要求所有 Adapter 支持 cancel / checkpoint / migration；
+- 把 Durable Store Port 做成数据库产品抽象；
+- 修改 Agent Skills Bundle 写入 Shadow 私有元数据；
+- 用 `allowed-tools` 授予实际权限；
+- 把 Domain Event 当作事实源；
+- 把 OperationJob 做成通用 Workflow；
+- 为未来多用户提前实现完整 ACL；
+- 以短期交付为理由绕过 Owner / Space / Version。
 
 ## 14. 已接受的参考实现
 
-Stage 4 已经接受 [参考实现 Profile](implementation-profile.md)：Python Core、FastAPI、React + TypeScript + Vite、REST / OpenAPI、SSE、checked-in JSON Schema、进程内 Python Port、进程外 JSON-RPC-style stdio Transport、SQLite WAL、SQLAlchemy、Alembic、PostgreSQL Store Profile，以及 Deterministic Test、OpenAI Model、Process Runtime 三类 Reference Adapter。
+参考实现采用：
 
-这些是实现选择，不改变本文件或完整技术架构定义的长期边界。具体依赖按 Release 锁定并通过 Contract Test 与 Migration 验证；任何具体项目未来都可以由兼容 Adapter 替换。
+- Python Kernel；
+- FastAPI；
+- React + TypeScript + Vite；
+- REST / JSON / OpenAPI 3.1；
+- SSE；
+- checked-in JSON Schema；
+- in-process Python Family Port；
+- isolated JSON-RPC-style Message Envelope over stdio；
+- SQLite WAL、SQLAlchemy、Alembic；
+- PostgreSQL 作为第二 Store Profile；
+- Deterministic Test、OpenAI Model 与 Process Runtime Adapters。
 
-开始 Phase 0–1 编码前剩余工作只有字段级 Port Schema、可执行 Contract Example、项目脚手架和本地开发命令。
+这些是可替换 Profile，不进入 Canonical Domain 或 Stable ID。
