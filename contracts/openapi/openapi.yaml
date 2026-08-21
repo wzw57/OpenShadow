@@ -1,0 +1,629 @@
+openapi: 3.1.0
+info:
+  title: OpenShadow Phase 0-1 API
+  version: 0.1.0-stage4
+  description: Proposed Stage 4 API contract. This is not a Stage 5 implementation.
+servers:
+  - url: http://127.0.0.1:8080
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: Process health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /readyz:
+    get:
+      operationId: readiness
+      security: []
+      responses:
+        "200":
+          description: Ready for durable work
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/conversations:
+    post:
+      operationId: createConversation
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationCommand"
+      responses:
+        "201":
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    get:
+      operationId: listConversations
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Conversation page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+  /v1/conversations/{conversation_id}:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    get:
+      operationId: getConversation
+      responses:
+        "200":
+          description: Conversation snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/conversations/{conversation_id}/messages:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    get:
+      operationId: listConversationMessages
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Ordered Message page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/conversations/{conversation_id}/turns:
+    parameters:
+      - $ref: "#/components/parameters/ConversationId"
+    post:
+      operationId: submitConversationTurn
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ExpectedVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConversationTurnSubmission"
+      responses:
+        "202":
+          description: Accepted durable work
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkAcceptedNew"
+        "200":
+          description: Exact idempotent replay of an existing result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkAcceptedReplay"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admissions/{admission_id}:
+    parameters:
+      - $ref: "#/components/parameters/AdmissionId"
+    get:
+      operationId: getAdmission
+      responses:
+        "200":
+          description: Admission record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/requests/{request_id}:
+    parameters:
+      - $ref: "#/components/parameters/RequestId"
+    get:
+      operationId: getRequest
+      responses:
+        "200":
+          description: Immutable accepted Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/runs/{run_id}:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+    get:
+      operationId: getRun
+      responses:
+        "200":
+          description: Canonical Run snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/runs/{run_id}/events:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+    get:
+      operationId: streamRunEvents
+      parameters:
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema:
+            type: string
+            maxLength: 1000
+      responses:
+        "200":
+          description: Recoverable SSE projection. Disconnecting does not cancel the Run.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Cursor expired; retrieve the current Run snapshot and reconnect.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ShadowError"
+  /v1/runs/{run_id}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+    post:
+      operationId: requestRunCancellation
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ExpectedVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelRunCommand"
+      responses:
+        "202":
+          description: Cancellation requested; this is not cancellation confirmation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/memories:
+    get:
+      operationId: listMemories
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Active Memory page by default
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+    post:
+      operationId: createMemory
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryCommand"
+      responses:
+        "201":
+          description: User-authored Memory committed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /v1/memories/{memory_id}:
+    parameters:
+      - $ref: "#/components/parameters/MemoryId"
+    get:
+      operationId: getMemory
+      responses:
+        "200":
+          description: Current Memory Head
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: logicallyDeleteMemory
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ExpectedVersion"
+      responses:
+        "202":
+          description: Logical deletion committed or erasure workflow accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/memories/{memory_id}/corrections:
+    parameters:
+      - $ref: "#/components/parameters/MemoryId"
+    post:
+      operationId: correctMemory
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ExpectedVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemoryCommand"
+      responses:
+        "200":
+          description: New immutable Memory version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/proposals:
+    get:
+      operationId: listProposals
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Pending reviewable proposals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+  /v1/proposals/{proposal_id}:
+    parameters:
+      - $ref: "#/components/parameters/ProposalId"
+    get:
+      operationId: getProposal
+      responses:
+        "200":
+          description: Restricted Proposal control record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/proposals/{proposal_id}/accept:
+    parameters:
+      - $ref: "#/components/parameters/ProposalId"
+    post:
+      operationId: acceptProposal
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ExpectedVersion"
+      responses:
+        "200":
+          description: Proposal decision and resulting record references
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalDecisionResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /v1/proposals/{proposal_id}/reject:
+    parameters:
+      - $ref: "#/components/parameters/ProposalId"
+    post:
+      operationId: rejectProposal
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ExpectedVersion"
+      responses:
+        "200":
+          description: Proposal rejected without creating a domain asset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProposalDecisionResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    ExpectedVersion:
+      name: If-Match
+      in: header
+      required: true
+      description: Quoted positive Canonical version, for example "3".
+      schema:
+        type: string
+        pattern: '^"[1-9][0-9]*"$'
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 2000
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    ConversationId:
+      name: conversation_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
+    AdmissionId:
+      name: admission_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
+    RequestId:
+      name: request_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
+    RunId:
+      name: run_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
+    MemoryId:
+      name: memory_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
+    ProposalId:
+      name: proposal_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
+  schemas:
+    StableId:
+      $ref: "../schemas/common/1.0.0/schema.json#/$defs/StableId"
+    StableRecordRef:
+      $ref: "../schemas/common/1.0.0/schema.json#/$defs/StableRecordRef"
+    RecordVersionRef:
+      $ref: "../schemas/common/1.0.0/schema.json#/$defs/RecordVersionRef"
+    CanonicalEnvelope:
+      $ref: "../schemas/kernel/1.0.0/schema.json#/$defs/CanonicalEnvelope"
+    ShadowError:
+      $ref: "../schemas/execution/1.0.0/schema.json#/$defs/ShadowError"
+    HealthResponse:
+      type: object
+      required: [status, durable]
+      properties:
+        status:
+          enum: [healthy, degraded, unavailable]
+        durable:
+          type: boolean
+      unevaluatedProperties: false
+    CreateConversationCommand:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+      unevaluatedProperties: false
+    ConversationTurnSubmission:
+      type: object
+      required: [submission_id, message_type, content_blocks, turn_mode]
+      properties:
+        submission_id:
+          $ref: "#/components/schemas/StableId"
+        message_type:
+          type: string
+          const: shadow.message.user
+        content_blocks:
+          type: array
+          minItems: 1
+          items:
+            $ref: "../schemas/profiles/1.0.0/schema.json#/$defs/ContentBlock"
+        turn_mode:
+          enum: [new, queue-next, cancel-and-replace]
+      unevaluatedProperties: false
+    CancelRunCommand:
+      type: object
+      required: [reason_code]
+      properties:
+        reason_code:
+          type: string
+          pattern: "^(shadow|[a-z0-9]+(?:[.-][a-z0-9]+)+)\\.[a-z0-9][a-z0-9._-]*$"
+      unevaluatedProperties: false
+    MemoryCommand:
+      type: object
+      required: [memory_kind, content_schema_ref, typed_content, applicability_scope, source_dependency]
+      properties:
+        memory_kind:
+          type: string
+        content_schema_ref:
+          type: string
+          format: uri
+        typed_content: {}
+        applicability_scope:
+          type: object
+        evidence_refs:
+          type: array
+          items:
+            $ref: "../schemas/profiles/1.0.0/schema.json#/$defs/EvidenceReference"
+        source_dependency:
+          enum: [independent, dependent, review_required]
+      unevaluatedProperties: false
+    CanonicalRecordResponse:
+      type: object
+      required: [record]
+      properties:
+        record:
+          $ref: "#/components/schemas/CanonicalEnvelope"
+      unevaluatedProperties: false
+    RecordPage:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/CanonicalEnvelope"
+        next_cursor:
+          type: string
+          maxLength: 2000
+      unevaluatedProperties: false
+    WorkAccepted:
+      type: object
+      required: [admission_ref, message_ref, request_ref, root_run_ref, replayed, durable]
+      properties:
+        admission_ref:
+          $ref: "#/components/schemas/RecordVersionRef"
+        message_ref:
+          $ref: "#/components/schemas/RecordVersionRef"
+        request_ref:
+          $ref: "#/components/schemas/RecordVersionRef"
+        root_run_ref:
+          $ref: "#/components/schemas/RecordVersionRef"
+        replayed:
+          type: boolean
+        durable:
+          const: true
+      unevaluatedProperties: false
+    WorkAcceptedReplay:
+      allOf:
+        - $ref: "#/components/schemas/WorkAccepted"
+        - type: object
+          required: [replayed]
+          properties:
+            replayed:
+              const: true
+    WorkAcceptedNew:
+      allOf:
+        - $ref: "#/components/schemas/WorkAccepted"
+        - type: object
+          required: [replayed]
+          properties:
+            replayed:
+              const: false
+    ProposalDecisionResponse:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          $ref: "../schemas/kernel/1.0.0/schema.json#/$defs/CommitDecision"
+        resulting_record_refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecordVersionRef"
+      unevaluatedProperties: false
+  responses:
+    ValidationError:
+      description: Input or Profile validation failed
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"
+    Conflict:
+      description: Expected Version or idempotency conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"
+    Forbidden:
+      description: Policy or authority denied the operation
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"
+    NotFound:
+      description: Resource is absent or not visible to the caller
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"
+    RateLimited:
+      description: Admission rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"
+    Unavailable:
+      description: Durable Store or required capability unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"

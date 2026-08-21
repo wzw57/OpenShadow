@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/common/1.0.0",
+  "title": "OpenShadow Common Contract Types",
+  "$defs": {
+    "StableId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "NamespacedIdentifier": {
+      "type": "string",
+      "pattern": "^(shadow|[a-z0-9]+(?:[.-][a-z0-9]+)+)\\.[a-z0-9][a-z0-9._-]*$",
+      "maxLength": 200
+    },
+    "SchemaRef": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "SemVer": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "VersionRange": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "Version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "DataClassification": {
+      "enum": ["public", "personal", "sensitive", "restricted"]
+    },
+    "StableRecordRef": {
+      "type": "object",
+      "required": ["record_id"],
+      "properties": {
+        "record_id": { "$ref": "#/$defs/StableId" }
+      },
+      "unevaluatedProperties": false
+    },
+    "RecordVersionRef": {
+      "type": "object",
+      "required": ["record_id", "version"],
+      "properties": {
+        "record_id": { "$ref": "#/$defs/StableId" },
+        "version": { "$ref": "#/$defs/Version" }
+      },
+      "unevaluatedProperties": false
+    },
+    "Quantity": {
+      "type": "object",
+      "required": ["value", "unit"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "unit": { "$ref": "#/$defs/NamespacedIdentifier" }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExtensionMap": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/NamespacedIdentifier" },
+      "additionalProperties": true
+    },
+    "Provenance": {
+      "type": "object",
+      "required": ["origin_type", "origin_ref"],
+      "properties": {
+        "origin_type": { "$ref": "#/$defs/NamespacedIdentifier" },
+        "origin_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "source_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/StableRecordRef" },
+          "uniqueItems": true
+        },
+        "extensions": { "$ref": "#/$defs/ExtensionMap" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

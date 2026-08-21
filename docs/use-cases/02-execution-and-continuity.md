@@ -1,5 +1,7 @@
 # 执行与连续性用例
 
+> 用例中的五个 Target 是首批 well-known target kinds，不是封闭枚举；Binding 以 namespaced target_kind、Descriptor 和 Capability 为准。
+
 ## UC-003 直接 Model Worker 执行
 
 ### 目标
@@ -8,7 +10,7 @@ Shadow 对分类、提取、摘要等受限任务直接调用 Model Worker，不
 
 ### Actor
 
-User 或内部受授权流程；Shadow Core；Router；Model Adapter。
+User 或内部受授权流程；Tiny Kernel；Router；Model Adapter。
 
 ### Trigger
 
@@ -35,7 +37,7 @@ Accepted Request 的 Execution Requirements 可以由一次受限推理满足。
 - transient timeout 在同一 Run 下创建新 Attempt；
 - 输出不符合 Schema 时可在预算内重试一次修复，或返回 structured-output failure；
 - 无合规 Model 时询问用户，不自动发送给权限更宽的远程模型；
-- Model 返回的 Memory、State 或 Task 内容只能作为 Proposal。
+- Model 返回的 Memory、State 或 Task 内容只能作为对应 Profile 的 typed Proposal。
 
 ### Durable State Changes
 
@@ -48,7 +50,7 @@ Request、Run、Binding、Attempt summary、Usage 和 Result reference。模型 
 ### Acceptance Criteria
 
 - 不启动 Agent Runtime；
-- Model 无权直接提交 Memory、World State 或 Task；
+- Model 无权直接提交 Memory、Accepted State 或 Task；
 - 不合规模型不能接收超出 Binding 的数据；
 - 重试和费用可以追踪。
 
@@ -60,7 +62,7 @@ Shadow 执行一个已登记脚本、函数或固定程序，并保持身份、�
 
 ### Actor
 
-User、Schedule、Runtime 或 Semantic Pulse；Shadow Core；Runner Adapter。
+User、Schedule、Runtime 或 Semantic Pulse；Tiny Kernel；Runner Adapter。
 
 ### Trigger
 
@@ -105,6 +107,66 @@ Asset identity/version/checksum、Binding、Envelope reference、Attempt、Usage
 - Runner 可替换且不改变 Asset identity；
 - Sandbox、依赖和语言运行时不进入 Core；
 - 输出不会绕过 Authority 成为 Canonical State。
+
+## UC-004A 外部 Workflow Target 执行
+
+### 目标
+
+Shadow 将具有明确步骤、等待和补偿语义的工作绑定到外部 Workflow Target，而不在 Core 中实现通用 Workflow Engine。
+
+### Actor
+
+User、Tiny Kernel、Workflow Adapter、External Workflow Engine。
+
+### Trigger
+
+用户请求、Schedule、Event 或已批准的 Durable Task 需要执行已登记 Workflow。
+
+### Preconditions
+
+- Workflow Target 已登记并声明 Contract Version 与 Capability；
+- Workflow definition 或 definition reference 具有稳定身份和版本；
+- Shadow 已建立 Execution Requirements、Binding 和 Capability Envelope；
+- Workflow 所需数据、工具和副作用均在授权范围内。
+
+### Main Flow
+
+1. 输入经过 Admission，并创建或关联 Root Run。
+2. Shadow 选择静态 Binding，或校验 Router 返回的 Workflow Binding Proposal。
+3. Shadow 创建 Execution Attempt，并将版本化 Workflow Request 发送给 Workflow Adapter。
+4. External Workflow Engine 管理步骤、等待、补偿和私有节点状态。
+5. Workflow Adapter 返回 Progress、Checkpoint Reference、Result、Proposal、Usage 或结构化 Failure。
+6. 需要跨 Session、重启或长期等待时，Shadow 创建或关联 Durable Task；Workflow 的私有实例 ID 只保存为 external_ref。
+7. 涉及现实副作用的步骤必须返回 Action Proposal，并经过 Action Authority。
+8. Workflow 完成后，Shadow 根据 Result 或 Completion Proposal 提交 Attempt、Run 和可选 Durable Task 状态。
+
+### Failure Flow
+
+- Workflow Engine 不兼容时，在创建 Attempt 前拒绝 Binding；
+- Workflow 启动超时且无法确认是否已执行时，Attempt 进入 outcome_unknown；只有能确认未开始或已失败时才进入 rejected / failed；
+- 取消未被外部引擎确认时，状态保持 cancellation_unknown；
+- Workflow 返回未知字段时按版本策略处理，未知关键 Capability 必须拒绝；
+- Engine 结果不明确或外部副作用未知时进入 reconciliation，不能伪造完成；
+- Workflow Engine 删除后，Shadow 仍保留 Run、Task、Binding、Checkpoint Reference 和结果记录。
+
+### Durable State Changes
+
+Request、Run、Execution Binding、Attempt、Workflow definition reference、external instance reference、Checkpoint Reference、Usage、Result / Proposal reference，以及可选 Durable Task。
+
+外部 Workflow Engine 的私有节点图、调度队列和内部历史不是 Shadow Canonical State。
+
+### External Side Effects
+
+由 Workflow 中经过 Shadow Action Authority 的 Capability Provider 调用产生。Workflow Engine 本身不能绕过 Action Authority执行现实副作用。
+
+### Acceptance Criteria
+
+- Workflow 与其他 Execution Mode 使用相同 Run / Binding / Attempt 模型；
+- Tiny Kernel 不实现通用 Workflow Engine；
+- Workflow 私有实例 ID 不代替 Shadow Run ID 或 Durable Task ID；
+- Workflow 使用 Execution Family 的 typed Result / Proposal / Progress / Failure；
+- 更换 Workflow Engine 不改变 Canonical Asset identity；
+- Workflow 不直接写 Memory、State、Task 或 Action Profile Record。
 
 ## UC-005 Run 晋升为 Durable Task
 

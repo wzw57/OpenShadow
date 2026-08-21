@@ -1,0 +1,14 @@
+{
+  "outcome": "committed",
+  "commit_id": "commit-1",
+  "repository_revision": "revision-42",
+  "committed_at": "2026-08-22T00:00:00Z",
+  "operation_results": [
+    {
+      "operation_id": "operation-1",
+      "record_id": "memory-1",
+      "previous_version": 1,
+      "resulting_version": 2
+    }
+  ]
+}

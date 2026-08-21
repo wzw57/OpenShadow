@@ -1,0 +1,10 @@
+{
+  "digest_format": "shadow.skill-bundle-digest.v1",
+  "files": [
+    {
+      "relative_path": "../outside.txt",
+      "byte_length": 7,
+      "sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    }
+  ]
+}

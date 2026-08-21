@@ -1,284 +1,336 @@
 # OpenShadow 状态机基线
 
-- 状态：Stage 3 收紧版
-- 目标：定义真正需要跨组件共享的最小生命周期
-- 非目标：不为每个 Record、Adapter 或未来能力创建状态机
+- 状态：Stage 3 基线 / Stage 4 Profile 修订
+- 目标：冻结必须跨组件一致的状态转换
+- 非目标：不把每个 Profile 的未来状态全部固化进 Tiny Kernel
 
 ## 1. 原则
 
-1. 只有 Shadow Authority 提交 Canonical State Transition。
-2. External Component 返回 Proposal、Result、Acknowledgement 或 Evidence。
-3. Command 携带 command_id、expected_version 和 actor。
-4. unknown、stale 和 cancellation_unknown 是有效业务状态，不用 failed 或 null 代替。
-5. Runtime 私有 planning、tooling 和 subtask 不进入 Canonical 状态机。
-6. 第一版只实现 MVP-1 状态机；其余状态先作为 Contract 和测试场景。
-7. 新状态只有在改变用户可观察行为、恢复语义或权限边界时才加入。
+1. 只有 Shadow Authority 可以提交 Canonical State Transition；
+2. External Component 返回 typed Proposal、Result 或 family-specific acknowledgement；
+3. Command / Proposal 携带 command_id、expected_version 和 actor / proposer；
+4. Profile Validator 校验领域不变量，但不能直接 Commit；
+5. unknown、stale 和 cancellation_unknown 是有效状态，不用 failed 或 null 代替；
+6. 状态机属于 Kernel Contract 或 Profile Version，不能由数据库状态隐式决定；
+7. Profile major change 必须提供语义 Migration；
+8. Domain Event 只通知已发生的 Commit，不是事实源。
 
-## 2. 实现优先级
+## 2. 状态机归属
 
-| 状态机 | 层级 | 原因 |
-|---|---|---|
-| Run | MVP-1 | 所有执行的统一生命周期 |
-| ExecutionAttempt | MVP-1 | Retry、费用和失败证据 |
-| Memory | MVP-1 | 长期资产、纠正和删除 |
-| DurableTask | MVP-2 | 跨时间连续性 |
-| WorldState Freshness | MVP-2 | 当前状态的时效诚实性 |
-| Action | Later | 现实副作用与 unknown outcome |
+| 状态机 | 归属 |
+|---|---|
+| Admission / Run / Attempt | KERNEL |
+| Adapter lifecycle / health | KERNEL minimum |
+| Durable Task | CONTRACT-ONLY + Task Profile |
+| Memory | Memory Profile |
+| State freshness | State Profile + generic expiry |
+| Action | Action safety Contract + Action Profile |
+| Integration / Skill install | 对应 Profile |
+| OperationJob | portability / erasure implementation |
 
-InteractionEndpoint、Integration、Store、OperationJob 和 Erasure 的生命周期先使用简单枚举与 Command 校验，不在 MVP-1 建立完整状态机。
+Tiny Kernel 不为每种 Profile 建立永久 enum switch。Profile Descriptor 声明 lifecycle contract，Kernel 调用对应 Validator。
 
 ## 3. Run
 
 ~~~mermaid
 stateDiagram-v2
     [*] --> created
-    created --> queued: binding accepted
-    queued --> running: attempt started
-    running --> waiting: external wait
-    waiting --> running: condition met
-    running --> paused: pause confirmed
-    paused --> queued: resume
-    running --> completed: result committed
-    running --> failed: terminal failure
-    running --> cancelling: cancel requested
-    waiting --> cancelling: cancel requested
-    paused --> cancelling: cancel requested
-    cancelling --> cancelled: target confirms
-    cancelling --> cancellation_unknown: cannot confirm
-    created --> cancelled: cancel before start
-    queued --> cancelled: cancel before start
+    created --> queued
+    created --> waiting
+    queued --> running
+    queued --> waiting
+    running --> waiting
+    waiting --> running
+    waiting --> queued
+    running --> paused
+    paused --> queued
+    running --> completed
+    running --> failed
+    running --> cancelling
+    waiting --> cancelling
+    paused --> cancelling
+    cancelling --> cancelled
+    cancelling --> cancellation_unknown
+    cancellation_unknown --> cancelled: reconciled
+    cancellation_unknown --> completed: reconciled
+    cancellation_unknown --> failed: reconciled
+    cancellation_unknown --> cancelled: reconciled
+    cancellation_unknown --> completed: reconciled
+    cancellation_unknown --> failed: reconciled
     completed --> [*]
     failed --> [*]
     cancelled --> [*]
-    cancellation_unknown --> [*]
 ~~~
 
-MVP-1 可以先不实现 waiting 和 paused 的用户操作，但必须保留枚举兼容性。
+规则：
 
-不变量：
-
-- Retry 不创建第二个 Root Run；
-- completed、failed、cancelled 和 cancellation_unknown 是终态；
-- cancel requested 不等于 cancelled；
-- Run completed 不自动完成 DurableTask；
-- Ephemeral Run 不进入该 Canonical 状态机。
+- 一个 Accepted Request 创建一个 Root Run；
+- Retry 不回退 Run Version，而是追加 Attempt；
+- cancel request 只进入 cancelling；
+- Target acknowledgement 后才能进入 cancelled；
+- 无法确认时进入 cancellation_unknown；
+- cancellation_unknown 不是永久终态，后续 reconciliation 可以提交 cancelled、completed 或 failed；
+- 没有 cancel Capability 的 Adapter 返回 unsupported，Core 决定是否等待、隔离或标记 unknown；
+- completed 不自动完成 Durable Task；
+- ephemeral interaction 不是 Canonical Run。
 
 ## 4. ExecutionAttempt
 
 ~~~mermaid
 stateDiagram-v2
-    [*] --> pending
-    pending --> executing
-    executing --> succeeded
-    executing --> failed
-    executing --> timed_out
-    executing --> outcome_unknown
-    pending --> cancelled
-    executing --> cancelling
-    cancelling --> cancelled
-    cancelling --> outcome_unknown
+    [*] --> created
+    created --> dispatching
+    dispatching --> running
+    dispatching --> rejected
+    running --> succeeded
+    running --> failed
+    running --> outcome_unknown: timeout or lost response
+    running --> cancellation_requested
+    cancellation_requested --> cancelled
+    cancellation_requested --> outcome_unknown
+    created --> incompatible
+    outcome_unknown --> succeeded: reconciled
+    outcome_unknown --> failed: reconciled
+    outcome_unknown --> cancelled: reconciled
+    rejected --> [*]
     succeeded --> [*]
     failed --> [*]
-    timed_out --> [*]
-    outcome_unknown --> [*]
     cancelled --> [*]
+    incompatible --> [*]
 ~~~
 
-Attempt 是 Run 聚合内的追加式 Entity：
+规则：
 
-- 新 Retry 创建新 attempt_id；
-- 已结束 Attempt 不可覆盖；
-- transient Attempt failure 不必使 Run failed；
-- permanent failure、预算耗尽或无可用 Target 才终止 Run；
-- MVP-1 至少实现 pending、executing、succeeded、failed、timed_out。
+- Attempt 绑定一个不可变 ExecutionBinding snapshot / reference；
+- incompatible 包括 required Capability 或 Contract Version 不满足；
+- 未知 target kind 不自动 incompatible，先验证 Descriptor / Capability；
+- 终态 Attempt 不可覆盖；
+- Retry 创建新 Attempt；
+- deadline 超过但无法证明 Target 已停止时进入 outcome_unknown，不能把 timeout 当成已失败；
+- outcome_unknown 可以通过 reconciliation 转为 succeeded、failed 或 cancelled；
+- 外部 progress 不等于 Canonical lifecycle commit。
 
-outcome_unknown 在 MVP-1 主要用于无法确认 Target 结果；涉及现实副作用时由 Later Action 状态机处理。
-
-## 5. Memory
-
-Memory 使用稳定 Root 和不可变 MemoryVersion。状态机只管理 Root 生命周期：
+## 5. Memory Profile
 
 ~~~mermaid
 stateDiagram-v2
     [*] --> active
-    active --> invalid: dependent source lost
-    invalid --> active: evidence restored
-    active --> logically_deleted: user delete
-    invalid --> logically_deleted: user delete
-    logically_deleted --> active: restore in window
-    logically_deleted --> erasure_pending: erase requested
-    erasure_pending --> erased: required copies cleared
-    erased --> [*]
+    active --> superseded
+    active --> invalidated
+    invalidated --> active: accepted correction
+    superseded --> [*]
 ~~~
 
-版本变化不作为 Root 状态：
+Memory 直接使用 Canonical Envelope 的不可变版本，不建立平行的 MemoryVersion 或 Root current_version_ref。Correction 创建同一 Memory ID 的新 Version；merge 原子创建新 Memory 并为输入 Memory 提交 superseded Version。logical delete 与 erased 属于 Envelope `record_state`，不与 Profile `memory_state` 混用。
 
-~~~text
-Memory.current_version_id
-    v1
-     ↓ correction
-    v2 supersedes v1
-     ↓ correction
-    v3 supersedes v2
-~~~
+规则：
 
-MVP-1 必须实现 active 和新版本 correction。logical delete 可以先实现；跨组件 erasure_pending / erased 在 Later 完整实现。
-
-约束：
-
-- superseded Version 默认不参与 Recall；
+- MemoryCandidate 在 accepted 前不是 Memory；
+- source_dependency 为 dependent 且来源失效时，Profile 决定 invalid / delete / confirmation；
+- logical delete 可恢复；
 - erased 内容不可恢复；
-- dependent 来源失效进入 invalid；
-- unknown source dependency 进入 review flag，而不是新生命周期状态；
-- Index / Embedding / Graph 不影响 Root 生命周期。
+- 最小 Tombstone 防止旧 Candidate 复活；
+- 敏感内容可以擦除旧 Version payload；
+- Memory Intelligence 不提交状态。
 
-## 6. DurableTask
-
-MVP-2：
+## 6. Durable Task Profile
 
 ~~~mermaid
 stateDiagram-v2
-    [*] --> queued
-    queued --> running: run started
-    running --> waiting: condition registered
-    waiting --> queued: condition met
-    running --> paused: pause committed
-    waiting --> paused: pause committed
-    paused --> queued: resume
-    running --> completion_pending: completion proposal
-    completion_pending --> completed: criteria verified
-    completion_pending --> running: criteria not met
-    running --> failed: terminal failure
-    queued --> cancelling: cancel requested
-    running --> cancelling: cancel requested
-    waiting --> cancelling: cancel requested
-    paused --> cancelling: cancel requested
-    cancelling --> cancelled: active work resolved
-    cancelling --> cancellation_unknown: cannot confirm
+    [*] --> proposed
+    proposed --> active: Shadow accepts
+    proposed --> rejected
+    active --> waiting
+    waiting --> active
+    active --> paused
+    paused --> active
+    active --> completion_pending
+    completion_pending --> completed: Shadow commits
+    completion_pending --> active: rejected
+    active --> cancelling
+    waiting --> cancelling
+    paused --> cancelling
+    cancelling --> cancelled
+    cancelling --> cancellation_unknown
+    active --> failed
+    rejected --> [*]
     completed --> [*]
-    failed --> [*]
     cancelled --> [*]
-    cancellation_unknown --> [*]
+    failed --> [*]
 ~~~
 
-不增加 blocked。无法继续时使用 waiting + structured reason。
+规则：
 
-TaskProposal 在 accepted 前不是 Task。Runtime 只能提出 CompletionProposal。
+- proposed 可以是短期 Proposal，不一定长期保存；
+- accepted 后才产生 Canonical Task Record；
+- Runtime 只能提交 CompletionProposal；
+- Task 可以关联多个 Run；
+- Task 完成条件由 Profile 定义；
+- unknown Action 未 reconciliation 时不能自动 completed；
+- Workflow 私有节点不进入 Task State；
+- Kernel 只保证 stable identity、refs 和 completion commit。
 
-## 7. World State Freshness
-
-MVP-2。Freshness 与删除生命周期分离：
+## 7. State Profile Freshness
 
 ~~~mermaid
 stateDiagram-v2
     [*] --> unknown
-    unknown --> fresh: observation applied
-    fresh --> fresh: newer observation
+    unknown --> fresh: accepted state proposal
+    fresh --> fresh: newer accepted version
     fresh --> stale: expires_at reached
-    stale --> fresh: refresh applied
-    stale --> unknown: max staleness or source unavailable
-    unknown --> fresh: reliable observation
+    fresh --> stale: source unavailable
+    stale --> fresh: accepted refresh
+    stale --> unknown: no usable evidence
+    unknown --> fresh: accepted observation
+    fresh --> deleted: user erase
+    stale --> deleted: user erase
+    unknown --> deleted: user erase
+    deleted --> [*]
 ~~~
 
-Observation 与 Projection 使用可恢复流程：
+规则：
 
-~~~text
-Observation committed
-    → pending_resolution
-    → Projection updated
-    → Observation applied
-~~~
-
-约束：
-
-- Projection 不引用未提交 Observation；
-- Resolver 只提出 Proposal；
+- Freshness 是 State Profile 语义，不是所有 Canonical Record 的生命周期；
+- Kernel 可以提供 generic expires_at scheduler / validation；
 - expires_at 后不得保持 fresh；
-- stale / unknown 保留最后值、时间和原因；
-- 删除 Projection 使用 OperationJob / Erasure，不加入 Freshness 状态机。
+- null 不代替 unknown；
+- 用户陈述优先级属于 Profile source policy，不进入 Kernel；
+- Resolver 只提交 StateProposal；
+- 删除 Integration 后 source unavailable，按 Profile 进入 stale / unknown；
+- Accepted State 可恢复和迁移，但允许过期。
 
-## 8. Action
-
-Later。ActionProposal 通过校验后才创建 Action：
+## 8. Action Profile
 
 ~~~mermaid
 stateDiagram-v2
-    [*] --> approval_pending
-    [*] --> pending
-    approval_pending --> pending: approved and committed
-    approval_pending --> denied: rejected
-    approval_pending --> expired: approval expired
-    pending --> executing: provider called
-    executing --> succeeded: confirmed
-    executing --> failed: confirmed failure
-    executing --> unknown: uncertain delivery
-    executing --> cancelling: cancel requested
-    cancelling --> cancelled: provider confirms
-    cancelling --> unknown: cannot confirm
+    [*] --> proposed
+    proposed --> approval_pending
+    proposed --> pending: deterministic approval
+    approval_pending --> pending: approved and persisted
+    approval_pending --> rejected
+    pending --> executing
+    executing --> succeeded
+    executing --> failed
+    executing --> unknown
     unknown --> succeeded: reconciliation
-    unknown --> failed: confirmed not executed
-    denied --> [*]
-    expired --> [*]
+    unknown --> failed: reconciliation
+    unknown --> unknown: still unresolved
+    rejected --> [*]
     succeeded --> [*]
     failed --> [*]
-    cancelled --> [*]
 ~~~
 
-Provider 调用只能发生在持久 pending 后。unknown 不得盲目 Retry。
+规则：
 
-## 9. 简单生命周期枚举
+- ActionProposal 与 Action 分离；
+- Provider 调用前必须持久化 pending；
+- approval_pending 不允许调用 Provider；
+- 使用 idempotency key；
+- timeout 或 connection loss 不自动等于 failed；
+- unknown 不盲目 Retry；
+- reconciliation 可以由 Provider Capability 执行；
+- Store 不可用且没有可靠 Outbox 时不能进入 executing。
 
-以下对象第一版不需要完整状态机：
+## 9. Adapter 与 Binding 生命周期
 
-| Record | 最小枚举 | 实现层级 |
-|---|---|---|
-| InteractionEndpoint | active / revoked | MVP-2 扩展 trust |
-| Integration | configured / active / degraded / disabled / deleted | MVP-2 |
-| StoreBinding | available / unavailable / recovering | MVP-1 health check |
-| OperationJob | planned / running / completed / failed | Contract-only |
-| ComponentEraseStatus | pending / scheduled / completed / failed / unreachable | Later |
-| RoutingRule | active / disabled | Later |
-| Schedule | enabled / disabled | MVP-2 |
+Adapter lifecycle：
 
-如果未来需要更复杂转换，应由真实失败用例和并发需求证明，而不是提前扩展。
+~~~text
+discovered → installed → enabled
+                        ├─ disabled
+                        ├─ incompatible
+                        └─ removed
+~~~
 
-## 10. Domain Event
+Health 独立：
 
-状态转换产生最小 Domain Event：
+~~~text
+unknown ↔ healthy ↔ degraded ↔ unavailable
+~~~
+
+规则：
+
+- health 变化不直接删除 Adapter；
+- Binding 使用明确 Adapter / version / capability snapshot；
+- 升级需要 compatibility、Contract Test、可选 migration 和 canary；
+- Adapter 不得宣称未实现 Capability；
+- removed Adapter 的历史 Binding ref 继续可审计。
+
+## 10. SkillAsset Profile
+
+安装生命周期：
+
+~~~text
+discovered → validated → installed → enabled
+                  └────→ rejected
+enabled ↔ disabled
+installed → update_available → validated
+installed / disabled → removed
+~~~
+
+规则：
+
+- validated 检查 Agent Skills Bundle 和 digest；
+- Shadow governance metadata 保存在 sidecar Canonical Record；
+- Bundle 不被修改；
+- 高风险权限绑定 digest / revision；
+- Provider upload 是 Projection，不改变 Canonical install state；
+- `allowed-tools` 不直接产生 CapabilityEnvelope。
+
+## 11. OperationJob
+
+只允许 kind：
+
+- export；
+- import；
+- migration；
+- backup；
+- erasure。
+
+~~~text
+planned → running → waiting | completed | failed
+running / waiting → cancelling → cancelled | cancellation_unknown
+cancellation_unknown → cancelled | completed | failed: reconciled
+~~~
+
+OperationJob 不用于普通 Memory Maintenance、Workflow、Pulse 或通用后台任务。
+
+## 12. Domain Event
+
+最小 Event Envelope：
 
 ~~~text
 event_id
 event_type
-aggregate_ref
-aggregate_version
+record_ref
+record_version
 occurred_at
 actor_ref
 correlation_id
 causation_id
 payload_schema_ref
-payload
+typed_payload
 ~~~
 
-MVP-1 使用模块化单体内的提交后分发，不要求 Event Sourcing、Broker 或分布式事务。
+Event 只能描述已经 Commit 的事实或明确的通知状态。Canonical Record 是事实源；普通 Event 可以按 Policy 删除或重建，不要求 Event Sourcing。
 
-要求：
+## 13. 冻结范围
 
-- UI Event Stream 消费事件投影；
-- Adapter 不直接伪造 Aggregate Version；
-- Handler 幂等；
-- 重要长期事件按 Policy 持久化；
-- Canonical Aggregate 仍是事实源。
+Stage 4 冻结：
 
-## 11. Stage 3 冻结范围
+- Run / Attempt 核心状态；
+- reconcilable cancellation_unknown / outcome_unknown；
+- Memory correction / delete / erase 基础语义；
+- Task CompletionProposal / Commit；
+- State fresh / stale / unknown；
+- Action pending-before-call / unknown / reconciliation；
+- Adapter capability honesty；
+- Skill Bundle / sidecar 分离；
+- OperationJob 窄用途。
 
-Stage 3 只需正式冻结：
+后续 Profile 可以增加状态，但：
 
-1. Run 状态机；
-2. ExecutionAttempt 状态机；
-3. Memory Root 生命周期与不可变版本语义；
-4. DurableTask 和 WorldState 的 MVP-2 Contract；
-5. Action 的 Later Contract；
-6. 简单 Record 的最小生命周期枚举；
-7. Domain Event Envelope。
-
-Endpoint 配对、Integration 恢复、Store 抖动、Erasure 例外、Schedule catch-up 和 Artifact 生命周期留到相应实现阶段，不阻塞 Stage 4。
+- 不得改变已发布状态的含义；
+- 必须提供兼容与 Migration；
+- 不得绕过 Authority；
+- 不得把外部私有状态变成唯一事实源。

@@ -1,0 +1,15 @@
+{
+  "memory_kind": "shadow.memory.preference",
+  "content_schema_ref": "https://schemas.openshadow.dev/content/text/1.0.0",
+  "typed_content": { "text": "The user prefers concise status updates." },
+  "applicability_scope": {
+    "scope_kind": "shadow.scope.personal",
+    "scope_refs": [{ "record_id": "space-personal-001" }]
+  },
+  "evidence_refs": [],
+  "source_refs": ["conversation:conversation-001"],
+  "source_dependency": "independent",
+  "memory_state": "active",
+  "supersedes_memory_refs": [],
+  "created_from_ref": { "record_id": "proposal-memory-001" }
+}

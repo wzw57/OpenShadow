@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/kernel/1.0.0",
+  "title": "OpenShadow Tiny Kernel Contracts",
+  "$defs": {
+    "CanonicalEnvelope": {
+      "type": "object",
+      "required": [
+        "record_id", "record_type", "schema_ref", "owner_ref", "space_id",
+        "created_by", "data_classification", "provenance", "version",
+        "retention_policy_ref", "record_state", "created_at", "committed_at",
+        "typed_payload"
+      ],
+      "properties": {
+        "record_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "record_type": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+        "owner_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "space_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "created_by": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "data_classification": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/DataClassification" },
+        "provenance": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Provenance" },
+        "version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "retention_policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "record_state": { "enum": ["active", "logically_deleted", "erased"] },
+        "created_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "committed_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "typed_payload": {},
+        "extensions": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/ExtensionMap" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "record_state": { "const": "erased" } }, "required": ["record_state"] },
+          "then": {
+            "properties": {
+              "typed_payload": { "$ref": "#/$defs/TombstonePayload" }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "TombstonePayload": {
+      "type": "object",
+      "required": ["erased", "erasure_ref"],
+      "properties": {
+        "erased": { "const": true },
+        "erasure_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "non_sensitive_relation_refs": {
+          "type": "array",
+          "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+          "uniqueItems": true
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "MutationInputEnvelope": {
+      "type": "object",
+      "required": [
+        "input_id", "input_kind", "input_type", "input_schema_ref", "operation",
+        "submitted_by", "target_record_type", "target_schema_ref", "idempotency_key",
+        "submitted_at", "typed_payload"
+      ],
+      "properties": {
+        "input_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "input_kind": { "enum": ["command", "proposal"] },
+        "input_type": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "input_schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+        "operation": { "enum": ["create", "update", "transition", "logical_delete", "erase"] },
+        "submitted_by": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "target_record_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "target_record_type": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "target_schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+        "expected_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "correlation_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "causation_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "valid_until": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "submitted_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "typed_payload": {},
+        "extensions": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/ExtensionMap" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "operation": { "const": "create" } }, "required": ["operation"] },
+          "then": { "not": { "anyOf": [{ "required": ["target_record_id"] }, { "required": ["expected_version"] }] } },
+          "else": { "required": ["target_record_id", "expected_version"] }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "CommitDecision": {
+      "type": "object",
+      "required": ["commit_id", "input_id", "decision", "target_record_id", "decided_at"],
+      "properties": {
+        "commit_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "input_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "decision": { "enum": ["accepted", "rejected", "conflict"] },
+        "target_record_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "previous_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "resulting_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "reason_code": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "reason_detail": { "type": "string", "maxLength": 2000 },
+        "decided_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "correlation_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "notification_event_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "decision": { "const": "accepted" } }, "required": ["decision"] },
+          "then": { "required": ["resulting_version"] },
+          "else": {
+            "allOf": [
+              { "required": ["reason_code"] },
+              { "not": { "required": ["resulting_version"] } }
+            ]
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "AdmissionRecordPayload": {
+      "type": "object",
+      "required": ["admission_id", "submission_id", "input_type", "request_digest", "decision", "decided_at", "retention_policy_ref"],
+      "properties": {
+        "admission_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "submission_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "input_type": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "principal_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "endpoint_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "space_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "request_digest": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Digest" },
+        "decision": { "enum": ["accepted", "rejected", "approval_required"] },
+        "public_reason_code": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "restricted_detail_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "request_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "root_run_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "approval_request_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "decided_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "retention_policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "decision": { "const": "accepted" } }, "required": ["decision"] },
+          "then": {
+            "allOf": [
+              { "required": ["request_ref", "root_run_ref"] },
+              { "not": { "required": ["approval_request_ref"] } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "approval_required" } }, "required": ["decision"] },
+          "then": {
+            "allOf": [
+              { "required": ["public_reason_code", "approval_request_ref"] },
+              { "not": { "anyOf": [{ "required": ["request_ref"] }, { "required": ["root_run_ref"] }] } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "rejected" } }, "required": ["decision"] },
+          "then": {
+            "allOf": [
+              { "required": ["public_reason_code"] },
+              { "not": { "anyOf": [{ "required": ["request_ref"] }, { "required": ["root_run_ref"] }, { "required": ["approval_request_ref"] }] } }
+            ]
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "RequestPayload": {
+      "type": "object",
+      "required": ["admission_ref", "request_type", "work_input", "requirements_ref", "principal_ref", "endpoint_ref", "accepted_at", "correlation_id"],
+      "properties": {
+        "admission_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "request_type": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "work_input": {
+          "oneOf": [
+            { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+            {
+              "type": "object",
+              "required": ["schema_ref", "typed_input"],
+              "properties": {
+                "schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+                "typed_input": {}
+              },
+              "unevaluatedProperties": false
+            }
+          ]
+        },
+        "requirements_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "principal_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "endpoint_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "accepted_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "deadline": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "correlation_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExecutionRequirementsPayload": {
+      "type": "object",
+      "required": ["requirements_id", "required_capabilities", "acceptable_target_kinds", "allowed_side_effects", "streaming_required", "checkpoint_required", "created_from"],
+      "properties": {
+        "requirements_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "required_capabilities": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }, "uniqueItems": true },
+        "acceptable_target_kinds": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }, "minItems": 1, "uniqueItems": true },
+        "data_requirements": { "type": "object" },
+        "resource_requirements": { "type": "object" },
+        "allowed_side_effects": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }, "uniqueItems": true },
+        "budget_ceiling": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Quantity" } },
+        "deadline": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "streaming_required": { "type": "boolean" },
+        "checkpoint_required": { "type": "boolean" },
+        "created_from": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" }
+      },
+      "unevaluatedProperties": false
+    },
+    "RunPayload": {
+      "type": "object",
+      "required": ["request_ref", "lifecycle", "requirements_ref", "binding_refs", "attempt_refs"],
+      "properties": {
+        "request_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "task_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "lifecycle": { "enum": ["created", "queued", "running", "waiting", "paused", "cancelling", "cancellation_unknown", "completed", "failed", "cancelled"] },
+        "requirements_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "binding_refs": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" } },
+        "attempt_refs": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" } },
+        "active_attempt_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "wait_reason": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "result_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "failure_summary": { "type": "object" },
+        "usage_summary": { "type": "object" },
+        "cancellation_request_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "started_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "terminal_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "last_event_cursor": { "type": "string", "maxLength": 1000 }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExecutionAttemptPayload": {
+      "type": "object",
+      "required": ["run_ref", "binding_ref", "lifecycle", "attempt_number"],
+      "properties": {
+        "run_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "binding_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "lifecycle": { "enum": ["created", "dispatching", "running", "cancellation_requested", "succeeded", "failed", "cancelled", "rejected", "incompatible", "outcome_unknown"] },
+        "attempt_number": { "type": "integer", "minimum": 1 },
+        "execution_ref": { "type": "string", "maxLength": 1000 },
+        "result_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "failure_summary": { "type": "object" },
+        "started_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "finished_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "digest_format": "shadow.skill-bundle-digest.v1",
+  "files": [
+    {
+      "relative_path": "assets/template.txt",
+      "byte_length": 15,
+      "sha256": "sha256:d7c5968312162ad740ce6c7294b48137eadab81d5f86155d7a1a470866d91ab3"
+    },
+    {
+      "relative_path": "references/REFERENCE.md",
+      "byte_length": 62,
+      "sha256": "sha256:fdba5894c5ff5ed53e830e7cebde0142e997b544cc0bb6bf7c2ac0025ca79195"
+    },
+    {
+      "relative_path": "scripts/example.py",
+      "byte_length": 24,
+      "sha256": "sha256:184e808ba71642f8aaa27467ca39b90074f8ef36fa2a9b08b0fb8cc4f033073e"
+    },
+    {
+      "relative_path": "SKILL.md",
+      "byte_length": 489,
+      "sha256": "sha256:4730c454c57b00af7ab6857003aafbd8dbdaceeb93edda37be888969f751a49a"
+    }
+  ]
+}

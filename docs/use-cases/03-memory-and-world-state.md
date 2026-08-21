@@ -1,5 +1,7 @@
 # Memory 与 World State 用例
 
+> Memory 与 State 是官方 typed Profile；Shadow Tiny Kernel 提供 Envelope、Proposal / Commit、Authority 和通用时间有效性，不硬编码其领域 payload。
+
 ## UC-007 Memory Candidate 提交与周期整理
 
 ### 目标
@@ -8,7 +10,7 @@ Shadow 从对话、Task 或按需读取的外部资产中形成长期 Memory，�
 
 ### Actor
 
-User、Scheduler、Runtime；Memory Intelligence；Shadow Memory Authority；Source Connector。
+User、Scheduler、Runtime；Memory Intelligence；Shadow Commit Authority 与 Memory Profile Validator；Source Connector。
 
 ### Trigger
 
@@ -30,11 +32,11 @@ User、Scheduler、Runtime；Memory Intelligence；Shadow Memory Authority；Sou
 1. Core 创建受限 Memory Processing Run。
 2. Core 根据 Policy 裁剪 Conversation、Task、World State 或外部资产内容。
 3. Memory Intelligence 执行提取、去重或整理。
-4. 组件返回 Memory Candidate，不直接写 Canonical Store。
+4. 组件返回 Memory Candidate，不直接写 Canonical Repository。
 5. Candidate 包含 Claim / content、provenance、Evidence refs、scope、classification、source_dependency 和建议操作。
 6. Core 校验来源、权限、冲突、版本和用户规则。
 7. Core 创建、合并、替代或拒绝 Candidate。
-8. Canonical Memory 提交到 Primary Store。
+8. Canonical Memory Profile Record 提交到 Canonical Repository。
 9. Embedding、Index、Graph 和 Projection 异步重建或更新。
 10. 用户可以查看提交结果和来源。
 
@@ -71,7 +73,7 @@ Memory Candidate decision、Canonical Memory、Evidence refs、source_dependency
 
 ### Actor
 
-User；Shadow Memory Authority；Source Connector；Memory / Index / Backup Adapters。
+User；Shadow Commit Authority 与 Memory Profile Validator；Source Connector；Memory / Index / Backup Adapters。
 
 ### Trigger
 
@@ -84,8 +86,8 @@ Memory 存在且用户有权管理其 Owner / Space。
 ### Main Flow：纠正
 
 1. 用户提交新值和可选原因。
-2. Core 创建新 Memory Version。
-3. 旧版本标记 superseded，并建立关系。
+2. Kernel 为同一 Memory ID 创建新的 Canonical Envelope Version，并保存 supersedes_version。
+3. 旧版本保持不可变；跨 Memory merge 才为输入 Memory 提交 superseded 状态并建立关系。
 4. Recall 默认排除旧版本。
 5. 派生组件收到 invalidation / rebuild。
 6. 敏感内容需要彻底擦除时进入 Erasure Flow。
@@ -177,7 +179,7 @@ User、State Source Connector；Shadow State Authority；可选 State Resolver�
 
 ### Durable State Changes
 
-Observation、accepted World State Projection、conflicts、Evidence refs、freshness、expires_at、owner_ref / space_id、source status。
+Observation、accepted State Profile Record、conflicts、Evidence refs、freshness、expires_at、owner_ref / space_id、source status。
 
 ### External Side Effects
 
@@ -186,7 +188,7 @@ Observation、accepted World State Projection、conflicts、Evidence refs、fres
 ### Acceptance Criteria
 
 - Source 不能直接修改 Projection；
-- Accepted World State 重启后可恢复；
+- Accepted State 重启后可恢复；
 - Resolver 删除后 TTL、stale 和 unknown 仍正常；
 - 不确定状态不会伪装成确定事实；
 - Observation 不默认创建 Run。
@@ -207,7 +209,7 @@ Scheduler / Clock、User、State Source、State Resolver、Shadow State Authorit
 
 ### Preconditions
 
-存在 World State Projection 或相关 Observation。
+存在 State Profile Record 或相关 Observation。
 
 ### Main Flow：过期
 
@@ -219,7 +221,7 @@ Scheduler / Clock、User、State Source、State Resolver、Shadow State Authorit
 
 ### Main Flow：冲突
 
-1. Core 保存所有符合 Retention 的冲突 Observation。
+1. State Profile 按 Retention 保存需要的冲突 Observation / Evidence；Core 只提交验证后的记录。
 2. 确定性规则先处理明确优先级。
 3. 其余冲突交给可替换 Resolver。
 4. Core 提交 accepted projection，保留候选与 Evidence refs。

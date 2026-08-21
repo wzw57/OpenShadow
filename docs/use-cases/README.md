@@ -33,6 +33,7 @@
 
 - [UC-003 直接 Model Worker 执行](02-execution-and-continuity.md#uc-003-直接-model-worker-执行)
 - [UC-004 Executable Asset 与 Runner](02-execution-and-continuity.md#uc-004-executable-asset-与-runner)
+- [UC-004A 外部 Workflow Target 执行](02-execution-and-continuity.md#uc-004a-外部-workflow-target-执行)
 - [UC-005 Run 晋升为 Durable Task](02-execution-and-continuity.md#uc-005-run-晋升为-durable-task)
 - [UC-006 Runtime 故障恢复与 Handoff](02-execution-and-continuity.md#uc-006-runtime-故障恢复与-handoff)
 
@@ -61,22 +62,29 @@
 
 所有用例继续满足：
 
-1. 所有输入经过 Shadow Admission；
-2. 被接受的 Request 创建一个 Root Run；
-3. 重试是同一 Run 下的新 Execution Attempt；
-4. External Component 只能返回 Proposal、Result、Usage 或 Checkpoint Reference；
-5. 只有 Shadow Authority 提交 Canonical State；
-6. Execution Target 受 Binding 和 Capability Envelope 约束；
-7. 未知数据默认 sensitive；
-8. 用户保留最终物理删除权；
-9. Primary Store 故障时不产生未记录现实副作用；
-10. Runtime、Memory、Model、Runner、Resolver、Store 和 Provider 均可替换。
+1. 所有承载工作的输入经过 Shadow Admission；
+2. 一个 Accepted Request 创建且只创建一个 Root Run；
+3. Health、只读 Query、已有 Run 订阅和内部恢复步骤不创建新 Run；
+4. 重试是同一 Run 下的新 Execution Attempt；
+5. External Component 只能提交 typed Proposal 或 family-specific Result；
+6. 只有 Shadow Authority 可以 Canonical Commit；
+7. Memory、State、Task、Action、Skill 等通过 typed Profile 演进；
+8. Execution Binding 使用 namespaced target_kind 与 Capability；
+9. 未知数据默认 sensitive；
+10. 用户保留最终物理删除权；
+11. Primary Repository 故障时不产生未记录现实副作用；
+12. Runtime、Memory、Model、Runner、Resolver、Store 和 Provider 均可替换；
+13. Agent Skills Bundle 保持标准格式；
+14. Domain Event、Outbox 和 OperationJob 保持窄用途。
 
 ## 4. Stage 2 退出条件
 
-- 入口、准入、执行、连续性、Memory、World State、外部动作、故障、删除和迁移均有正常与失败流程；
-- 每个用例明确 Canonical State Changes；
+- 入口、准入、执行、连续性、Memory、State、外部动作、故障、删除和迁移均有正常与失败流程；
+- 每个用例明确 Canonical State Changes 或 Profile Commit；
 - 每个现实副作用都有授权、幂等和 unknown outcome 语义；
 - 用例不依赖具体数据库、模型、Runtime 或 Provider；
-- 用例足以提取 Stage 3 领域对象、关系和状态机；
-- 未决项只保留真正影响产品行为或 Core 边界的问题。
+- 用例不要求 Profile 进入 Tiny Kernel；
+- Stage 4 增补 Workflow Target 用例，不改变 Authority 边界；
+- 新 Adapter / Target 可以通过 Descriptor 和 Capability 接入；
+- 未决项只保留真正影响产品行为、Kernel 或 Profile Compatibility 的问题。
+

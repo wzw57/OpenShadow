@@ -1,0 +1,13 @@
+{
+  "proposed_operation": "merge",
+  "targets": [
+    { "memory_ref": { "record_id": "memory-1" }, "expected_version": 2 }
+  ],
+  "memory_kind": "shadow.memory.fact",
+  "content_schema_ref": "https://schemas.openshadow.dev/profiles/memory/fact/1.0.0",
+  "proposed_content": { "text": "Ambiguous merge" },
+  "applicability_scope": { "scope_kind": "shadow.scope.global", "scope_refs": [] },
+  "evidence_refs": [],
+  "source_refs": ["memory-1"],
+  "source_dependency": "independent"
+}

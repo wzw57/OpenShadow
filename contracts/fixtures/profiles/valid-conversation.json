@@ -1,0 +1,8 @@
+{
+  "conversation_state": "open",
+  "message_refs": [
+    { "record_id": "message-001", "version": 1 }
+  ],
+  "foreground_run_ref": { "record_id": "run-001" },
+  "queued_run_refs": []
+}

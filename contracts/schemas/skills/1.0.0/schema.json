@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/skills/1.0.0",
+  "title": "OpenShadow Agent Skills Governance Contracts",
+  "$defs": {
+    "SkillBundleFile": {
+      "type": "object",
+      "required": ["relative_path", "byte_length", "sha256"],
+      "properties": {
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "byte_length": { "type": "integer", "minimum": 0 },
+        "sha256": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Digest" }
+      },
+      "unevaluatedProperties": false
+    },
+    "SkillBundleManifest": {
+      "type": "object",
+      "required": ["digest_format", "files"],
+      "properties": {
+        "digest_format": { "const": "shadow.skill-bundle-digest.v1" },
+        "files": { "type": "array", "items": { "$ref": "#/$defs/SkillBundleFile" }, "minItems": 1 }
+      },
+      "unevaluatedProperties": false
+    },
+    "SkillAssetPayload": {
+      "type": "object",
+      "required": ["skill_id", "format", "source_ref", "bundle_digest", "trust", "permission_policy_ref", "data_classification", "install_state", "runtime_projection_refs", "provider_external_refs"],
+      "properties": {
+        "skill_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "format": { "const": "agent-skills" },
+        "source_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "pinned_revision": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "snapshot_artifact_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "bundle_digest": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Digest" },
+        "trust": { "enum": ["untrusted", "reviewed", "trusted"] },
+        "permission_policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "data_classification": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/DataClassification" },
+        "install_state": { "enum": ["discovered", "installed", "disabled", "invalid"] },
+        "runtime_projection_refs": { "type": "array", "items": { "type": "string", "maxLength": 1000 }, "uniqueItems": true },
+        "provider_external_refs": { "type": "array", "items": { "type": "string", "maxLength": 1000 }, "uniqueItems": true }
+      },
+      "anyOf": [{ "required": ["pinned_revision"] }, { "required": ["snapshot_artifact_ref"] }],
+      "unevaluatedProperties": false
+    }
+  }
+}

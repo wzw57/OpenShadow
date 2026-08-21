@@ -1,0 +1,29 @@
+{
+  "commit_request_id": "commit-request-invalid",
+  "idempotency_scope": "scope",
+  "idempotency_key": "key",
+  "request_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "actor_ref": "principal-user-001",
+  "operations": [
+    {
+      "operation_id": "operation-invalid",
+      "operation": "create",
+      "record_id": "record-001",
+      "record_type": "shadow.profile.message",
+      "target_schema_ref": "https://schemas.openshadow.dev/contracts/profiles/1.0.0#/$defs/MessagePayload",
+      "expected_version": 2,
+      "owner_ref": "principal-user-001",
+      "space_id": "space-personal-001",
+      "created_by": "principal-user-001",
+      "data_classification": "personal",
+      "provenance": {
+        "origin_type": "shadow.origin.user-command",
+        "origin_ref": "invalid"
+      },
+      "retention_policy_ref": { "record_id": "retention-default-001" },
+      "record_state": "active",
+      "typed_payload": {}
+    }
+  ],
+  "prepared_at": "not-a-time"
+}

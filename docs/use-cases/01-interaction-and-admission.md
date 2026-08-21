@@ -1,5 +1,7 @@
 # 交互与准入用例
 
+> 本文中的 Request 均指 work-bearing Request。Health、只读控制面 Query、已有 Run 事件订阅和内部恢复步骤不创建 Root Run。
+
 ## UC-001 普通请求闭环
 
 ### 目标
@@ -9,7 +11,7 @@
 ### Actor
 
 - Primary：当前 User；
-- Supporting：Web Client、Interaction API、Shadow Core、Router、Execution Target、Durable Store。
+- Supporting：Web Client、Interaction API、Tiny Kernel、Router、Execution Target、Durable Store。
 
 ### Trigger
 
@@ -27,7 +29,7 @@
 
 1. Web Client 为提交生成 idempotency key，并发送 Conversation version、message 和客户端上下文。
 2. Interaction API 完成身份、Endpoint、Space、数据等级和格式检查。
-3. Shadow 创建 Accepted Request 和唯一 Root Run。
+3. Shadow 将其识别为承载工作的输入，创建 Accepted Request 和唯一 Root Run。
 4. Core 建立 Execution Requirements。
 5. 低风险且可逆的轻微歧义可以按上下文解析；影响任务本质、费用、隐私或副作用时返回 Clarification Request。
 6. Router 或静态规则返回 Route Proposal。
@@ -46,7 +48,7 @@
 - Target 失败后，只有存在用户预设路由规则，且不改变数据、费用和任务语义边界时自动换 Target；否则询问用户。
 - 无安全 Binding 时返回 Binding Decision Request。
 - 用户取消时进入 cancelling；Target 确认后为 cancelled，无法确认时为 cancellation_unknown。
-- 用户在运行中发送内容时，必须明确选择补充当前请求、取消并替换或排为下一条消息。
+- 用户在运行中发送内容时，Phase 0–1 必须明确选择取消并替换或排为下一条消息；两者都创建新的不可变 Request 与 Root Run。修改当前 Request 的 live input 延后到具备显式 Runtime Capability 与 ADR 后。
 
 ### Durable State Changes
 
@@ -75,7 +77,7 @@ Prompt、Response 和 Tool Trace 是否持久化由 Retention Policy 决定。Ru
 
 ### Acceptance Criteria
 
-- 一个 Accepted Request 恰好创建一个 Root Run；
+- 一个 Accepted work-bearing Request 恰好创建一个 Root Run；
 - 自动重试不创建第二个 Root Run；
 - transient 与 permanent failure 行为可区分；
 - Target 切换不突破数据、费用和语义边界；
@@ -116,7 +118,7 @@ Shadow 在认证、格式、权限、重复、限流或 Store 故障情况下保
 - 没有 idempotency key 时，即使内容相同也视为新意图。
 - 超过限流时返回 rate-limited 和 retry-after；只有符合 Queue Policy 的请求才排队。
 - hard deny 不可由用户覆盖；approval required 可以由符合条件的 User 和 Device 批准。
-- Primary Store 不可用时，可以明确进入 Ephemeral Run：
+- Primary Store 不可用时，可以明确进入 EphemeralExecution：
   - 只存在于当前进程；
   - 不承诺恢复；
   - 不产生 Memory、Task、Artifact 或现实动作；
@@ -138,7 +140,7 @@ Store 故障期间无法承诺任何 Canonical Commit。
 
 ### External Side Effects
 
-无。Ephemeral Run 禁止现实副作用。
+无。EphemeralExecution 禁止现实副作用。
 
 ### Policy / Privacy
 
@@ -153,7 +155,7 @@ Store 故障期间无法承诺任何 Canonical Commit。
 - 相同 idempotency key 不重复执行；
 - 相同文本但不同提交可创建不同 Request；
 - hard deny 与 approval required 可区分；
-- Ephemeral Run 不产生长期状态或副作用；
+- EphemeralExecution 没有 Canonical Run ID，不产生长期状态或副作用；
 - Voice partial transcript 不创建 Request；
 - revoked Integration 不会恢复或启动 Run。
 
@@ -166,7 +168,7 @@ Store 故障期间无法承诺任何 Canonical Commit。
 ### Actor
 
 - Primary：当前 User；
-- Supporting：Web Client、Interaction API、Endpoint Registry、Event Stream、Shadow Core。
+- Supporting：Web Client、Interaction API、Endpoint Registry、Event Stream、Tiny Kernel。
 
 ### Trigger
 
@@ -195,7 +197,7 @@ Store 故障期间无法承诺任何 Canonical Commit。
 ### Alternative / Failure Flow
 
 - Standard Device 可以聊天和查看允许的数据，但高风险 Approval、restricted 数据、完整备份和敏感删除需要 Trusted Device。
-- Run 进行中追加内容时，Web 提供补充、取消并替换、排为下一条三种明确操作。
+- Run 进行中追加内容时，Phase 0–1 Web 只提供取消并替换与排为下一条；修改当前 Request 的 live input 明确延后。
 - Endpoint 被撤销后，服务端立即拒绝新请求并要求重新配对。
 - 可连接的撤销设备清除受管 Session、凭据和缓存；无法连接时状态保持 pending / unreachable。
 - 离线时只允许打开缓存 UI 和查看授权的有限内容，不创建待执行请求。
@@ -213,7 +215,7 @@ Store 故障期间无法承诺任何 Canonical Commit。
 - user UI preference；
 - last acknowledged event cursor when policy requires。
 
-Conversation 是独立可保留对象，不等于 Run、Memory 或 Durable Task。
+Conversation 是官方 typed Profile，不等于 Run、Memory Profile 或 Durable Task Profile。
 
 ### External Side Effects
 

@@ -1,0 +1,40 @@
+{
+  "manifest_version": "shadow.contract-registry.v1",
+  "schemas": [
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/adapters/1.0.0",
+      "path": "schemas/adapters/1.0.0/schema.json",
+      "sha256": "8717167fb986e2e78992e8b8ae0afa2bd868c4e1c47624787efe97e0966fd2c3"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/common/1.0.0",
+      "path": "schemas/common/1.0.0/schema.json",
+      "sha256": "a768b56e455b69e2095764b50ec0f000a34fdd11000f1761ca3b6302369839ec"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/execution/1.0.0",
+      "path": "schemas/execution/1.0.0/schema.json",
+      "sha256": "b09665d57d6082081e052ccacefb17aae7c50fe1b3339b014fb885d1392f4c12"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/kernel/1.0.0",
+      "path": "schemas/kernel/1.0.0/schema.json",
+      "sha256": "5f84a6760940fb4232841c37a124d8834520d323d1fca1b368fca783dcc08359"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/profiles/1.0.0",
+      "path": "schemas/profiles/1.0.0/schema.json",
+      "sha256": "808c19847f95b0ebfde24c0afdb1d1303c2f7a4180f18fe11ae8170da42e23ef"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/repository/1.0.0",
+      "path": "schemas/repository/1.0.0/schema.json",
+      "sha256": "f7b00086ecef3fae9f87af0940f21a5eb81ba456529fae7f3c1a9d9f0a3da704"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/skills/1.0.0",
+      "path": "schemas/skills/1.0.0/schema.json",
+      "sha256": "ba2be5721ecf600d9e5b83cfafe65ee8ed7b6b30d2997abdbcdd3cf24b3f0da9"
+    }
+  ]
+}

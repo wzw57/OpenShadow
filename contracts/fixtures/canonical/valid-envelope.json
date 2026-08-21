@@ -1,0 +1,24 @@
+{
+  "record_id": "rec-conversation-001",
+  "record_type": "shadow.profile.conversation",
+  "schema_ref": "https://schemas.openshadow.dev/contracts/profiles/1.0.0#/$defs/ConversationPayload",
+  "owner_ref": "principal-user-001",
+  "space_id": "space-personal-001",
+  "created_by": "principal-user-001",
+  "data_classification": "personal",
+  "provenance": {
+    "origin_type": "shadow.origin.user-command",
+    "origin_ref": "input-create-conversation-001",
+    "source_refs": []
+  },
+  "version": 1,
+  "retention_policy_ref": { "record_id": "retention-default-001" },
+  "record_state": "active",
+  "created_at": "2026-08-21T12:00:00Z",
+  "committed_at": "2026-08-21T12:00:00Z",
+  "typed_payload": {
+    "conversation_state": "open",
+    "message_refs": [],
+    "queued_run_refs": []
+  }
+}

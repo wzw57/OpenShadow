@@ -1,6 +1,6 @@
 # OpenShadow 需求基线
 
-- 状态：需求收紧 / Core 与 External 边界设计前
+- 状态：需求基线 / Stage 4 Core Diet 已确认
 - 目标：描述已经确认的产品行为和长期约束
 - 非目标：本文件不选择具体 Runtime、Memory 项目、数据库或其他实现
 
@@ -8,7 +8,7 @@
 
 OpenShadow 是一个本地优先、Runtime 无关的个人 AI 资产与能力平台。
 
-用户面对的是统一的 Shadow Agent。Runtime、Memory Intelligence、数据库、搜索、Skill System、Provider、语音和交互界面都是 Shadow 的组成部分，但不必属于 Shadow Core。
+用户面对的是统一的 Shadow Agent。Runtime、Memory Intelligence、数据库、搜索、Skill System、Provider、语音和交互界面都是 Shadow 的组成部分，但不必属于 Tiny Kernel。
 
 Shadow 需要让用户在长期使用中持续积累和复用：
 
@@ -28,9 +28,11 @@ Shadow 需要让用户在长期使用中持续积累和复用：
 
 用户使用的完整 Agent 产品，包括 Core 和全部可替换组件。
 
-### 2.2 Shadow Core
+### 2.2 Tiny Kernel
 
-Shadow 中必须长期稳定的最小部分，负责 Domain Contract、权威状态、任务连续性、扩展管理和可移植性。
+Shadow 中必须长期稳定的 Tiny Kernel。它负责 Identity / Ownership、Canonical Envelope 与生命周期、Proposal / Validate / Commit、工作准入与最小连续性、Extension Contract / Binding，以及 Portability / Erasure Intent。
+
+Memory、World State、Skill、Task 等业务概念通过官方 typed Profile 表达。Profile 属于 Shadow 产品与兼容性承诺，但不要求 Tiny Kernel 为每一种类型建立永久硬编码模块。
 
 ### 2.3 Runtime
 
@@ -38,13 +40,19 @@ Shadow 内部负责推理、规划、Subtask、Subagent、Tool Loop 和具体执
 
 ### 2.4 External Component
 
-通过 Adapter 接入 Shadow 的数据库、Memory Intelligence、Search、Provider、Model、Voice、Storage 或其他实现。
+通过 Adapter 接入 Shadow 的 Runtime、Model、Runner、Router、Memory Intelligence、State Resolver、Store、Search、Provider、Voice 或其他实现。
 
-“External”表示实现边界，不表示它在 Shadow 产品之外或用户需要单独使用。
+“External”表示实现边界，不表示它在 Shadow 产品之外。Execution / Intelligence Adapter 通过类型化 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage 交互；Store、Secret、Interaction 等基础设施 Port 使用各自的 family-specific Result。所有 Port 共享版本化 Message Envelope、Correlation、结构化错误和 Capability Negotiation，但不强行共享一个万能 Payload。
 
-### 2.5 Canonical Asset
+External Component 不能直接提交 Canonical State。
 
-由 Shadow 持有稳定身份、语义、来源、Scope、版本和生命周期的用户长期资产。
+### 2.5 Canonical Record、Canonical Asset 与 Profile
+
+Canonical Record 是带 Stable ID、Owner / Space、Schema Reference、Version、Provenance、Lifecycle 和 typed payload 的可迁移记录。
+
+Canonical Asset 是用户长期拥有或控制的 Canonical Record。不是所有控制面记录都属于用户资产，例如 AdmissionRecord 和 ExecutionAttempt 是 Shadow 连续性事实。
+
+Profile 为一类 Canonical Record 定义类型化 Schema、合法状态转换、迁移与导出语义。Memory、State、Task、Action、Skill 和 Integration 可以使用官方 Profile 演进，而不被写死成 Tiny Kernel 的永久模块。
 
 ### 2.6 Derived State
 
@@ -52,19 +60,25 @@ Shadow 内部负责推理、规划、Subtask、Subagent、Tool Loop 和具体执
 
 ### 2.7 Observation
 
-外部来源对现实状态的一次带来源和时间信息的报告。Observation 是 Proposal，不等于 Shadow 已接受的当前状态。
+外部来源对现实状态的一次带来源、时间和证据的信息。Observation 是 State Profile 接受的一类 typed Proposal / Evidence Record，不等于 Shadow 已接受的当前状态，也不是 Tiny Kernel 的通用实体要求。
 
 ### 2.8 World State
 
-Shadow 当前认为与判断和行动相关的现实状态投影。World State 具有来源、时效和过期语义，不试图复制整个外部世界。
+Shadow 当前认为与判断和行动相关的现实状态投影。它由官方 State Profile 定义 state key、source、observed_at、expires_at、fresh / stale / unknown、Evidence 与迁移规则。
+
+Tiny Kernel 只提供 Canonical Envelope、通用时间有效性、Proposal / Commit 和权限机制；来源采集、冲突融合、预测、领域本体与查询全部外置。
 
 ### 2.9 Execution Target
 
-能够执行 Shadow Run 的可替换目标，包括 Agent Runtime、Model Worker、Deterministic Runner 和 Capability Provider。
+能够处理 Shadow Run 的可替换目标。Binding 使用可扩展、带命名空间的 `target_kind` 和 Capability Declaration，不使用永久封闭枚举。
 
-### 2.10 Executable Asset
+首批 well-known kinds 为 `shadow.agent-runtime`、`shadow.model-worker`、`shadow.deterministic-runner`、`shadow.workflow-target` 和 `shadow.capability-provider`。新增 Target Kind 不应要求修改 Core 主流程。
 
-可以被 Shadow 长期登记、版本化和授权执行的脚本、函数或固定程序。
+### 2.10 Executable Asset 与 SkillAsset
+
+Executable Asset 是可被 Shadow 长期登记、版本化和授权执行的脚本、函数或固定程序。
+
+SkillAsset 是对标准 Skill Bundle 的治理包装，不是 Shadow 自创的 Skill 内容格式。默认兼容 Agent Skills 的 `SKILL.md`、`scripts/`、`references/`、`assets/`；Shadow 只保存稳定身份、来源、固定 revision、digest、trust、权限、安装状态和 Runtime Projection。
 
 ### 2.11 Owner 与 Space
 
@@ -78,13 +92,19 @@ Shadow 为一次 Run 或 Durable Task 签发的受限授权，描述 Target、�
 
 Shadow 用于执行数据边界的少量稳定敏感度等级：public、personal、sensitive、restricted。标签可以由用户、来源或可替换分类器提出，最终约束由 Core 执行。
 
+### 2.14 Proposal 与 Canonical Commit
+
+外部智能、Runtime、Router、Resolver 和 Provider 只能提交类型化 Proposal 或执行结果。Shadow 依据 Schema、Expected Version、Authority、Policy 和当前状态接受或拒绝，并由 Commit 产生新的 Canonical Version。
+
+Proposal 未被接受前不是 Canonical State；被拒绝或过期 Proposal 是否保留由 Retention / Audit Policy 决定。
+
 ## 3. 已确认的设计原则
 
-### R-001 所有请求经过 Shadow
+### R-001 所有承载工作的输入经过 Shadow
 
-Chat、CLI、API、Voice、Event 和 Schedule 产生的请求统一由 Shadow 准入、绑定和调度。
+Chat、CLI、API Command、Voice、Event、Schedule、Condition 和 Semantic Pulse Proposal 等承载工作的输入统一经过 Shadow Admission、Binding 和治理。
 
-每个被接受的 Request 创建一个 Root Run；准入失败只保存最小 Admission Record。完整内容是否长期保留，由用户策略和是否产生 Memory、Artifact、Action 或 Durable Task 决定。
+每个被接受的工作 Request 创建一个 Root Run；准入失败只保存最小 Admission Record。健康检查、静态资源、只读控制面查询、已有 Run 的事件订阅和内部恢复步骤不创建新 Run，但仍受身份、权限和审计约束。
 
 ### R-002 Shadow 统一长期身份
 
@@ -96,7 +116,7 @@ Chat、CLI、API、Voice、Event 和 Schedule 产生的请求统一由 Shadow �
 
 ### R-004 智能与权威分离
 
-外部组件可以提供推理、提取、整理、检索、验证和执行，但权威状态只能通过 Shadow 的 Contract 和提交边界改变。
+外部组件提供推理、提取、整理、检索、融合和执行，只能产生类型化 Proposal 或 Result。任何长期状态变化都必须经过 Shadow 的 Schema、Authority、Policy 与 Expected Version 校验，再由 Canonical Commit 生效。
 
 ### R-005 实现优先复用
 
@@ -104,11 +124,15 @@ Chat、CLI、API、Voice、Event 和 Schedule 产生的请求统一由 Shadow �
 
 ### R-006 小而稳定的 Core
 
-Core 只保留不能外包而不破坏资产所有权、连续性、权威或升级能力的语义与控制。
+Kernel 只保留如果外包就会破坏资产所有权、主权、连续性或可迁移性的控制语义。一个概念只有在未来 AI 范式完全变化后仍必然需要时，才进入 Tiny Kernel。
+
+领域语义优先进入 typed Profile，智能算法和具体执行进入 Extension，未验证能力进入后续 Phase，而不是预建空模块。
 
 ### R-007 Adapter 是一等能力
 
-Shadow 必须提供稳定 Port、Adapter SDK、Manifest、权限、版本协商、健康检查和 Contract Test。
+Shadow 提供最小 AdapterDescriptor、按 Family 划分的 Port、Capability Negotiation、版本协商、健康检查和 Contract Test。
+
+通用 Descriptor 只包含 descriptor identity/version、family、implementation identity/version、supported contracts、supported target kinds、capabilities、config schema 与 digest。安装实例由 AdapterRegistration 表达，实时健康由带 TTL 的 HealthObservation 表达；权限、Secret、Checkpoint、Migration、Data Boundary 与 Reconciliation 通过 Family-specific Capability 声明，不形成万能 Manifest。
 
 ### R-008 长期可升级
 
@@ -120,7 +144,9 @@ Shadow 需要支持数据版本、兼容性检查、迁移、导出、导入、�
 
 ### R-010 所有执行经过 Shadow，但不都经过 Agent Runtime
 
-Shadow 根据任务特征将 Run 绑定到 Agent Runtime、Model Worker、Deterministic Runner 或 Capability Provider。固定脚本和单次模型推理不需要启动 Agent Loop。
+Shadow 按 Capability 和 Binding 把 Run 交给适当的 `target_kind`。Agent Runtime、Model Worker、Deterministic Runner、Workflow Target 和 Capability Provider 是首批 well-known kinds，不是封闭全集。
+
+Core 不根据名称硬编码执行逻辑；固定脚本和单次模型推理不需要启动 Agent Loop。
 
 ### R-011 健康心跳必须确定性
 
@@ -137,6 +163,10 @@ Model、Runtime、Runner 和 Provider Binding 必须声明可处理的数据等�
 ### R-014 用户拥有最终删除与迁移权
 
 逻辑删除、保留历史和审计不能取消用户的最终物理删除权。标准导出必须可迁移；完整备份必须独立加密和授权。
+
+### R-015 Profile 与 Kernel 分离
+
+Canonical Envelope 提供统一治理，但不能退化为无语义 JSON 容器。Memory、State、Task、Action、Skill 等 Profile 必须提供版本化 Schema、状态不变量和迁移规则，同时不进入 Tiny Kernel 的硬编码类型分支。
 
 ## 4. 功能需求
 
@@ -157,6 +187,7 @@ Run 最小状态机为：
 
 ~~~text
 created → queued → running
+       ↘ waiting → queued
                     ├─ waiting → running
                     ├─ paused → queued
                     ├─ completed
@@ -164,9 +195,10 @@ created → queued → running
                     └─ cancelling
                          ├─ cancelled
                          └─ cancellation_unknown
+                              └─ reconciled → cancelled | completed | failed
 ~~~
 
-Shadow 必须校验状态转换。用户请求取消不等于外部执行已停止；只有获得 Target 确认后才能提交 cancelled，无法确认时提交 cancellation_unknown。
+Shadow 必须校验状态转换。用户请求取消不等于外部执行已停止；只有获得 Target 确认后才能提交 cancelled，无法确认时提交 cancellation_unknown。该状态不是永久终态，后续 reconciliation 必须能够提交真实的 cancelled、completed 或 failed。
 
 最小记录保存身份、时间、状态、Binding、费用、结果摘要和必要审计引用。完整对话、Prompt、模型输出和 Tool Trace 按 Retention Policy 与 Data Classification 保存；Runtime 私有推理不要求保存。
 
@@ -195,19 +227,15 @@ Runtime 内部 Planner、Subtask、Subagent 和 Workflow 不要求同步为 Shad
 
 ### 4.3 Runtime 接入
 
-Shadow 必须通过 Runtime Port：
+Runtime Adapter 的最小 Port 只要求：
 
-- 启动 Run；
-- 提供授权上下文；
-- 查询状态和健康；
-- 接收进度和结果；
-- 请求 Checkpoint；
-- 暂停或取消；
-- 恢复 Runtime-native State；
-- 接收 Completion 和 Action Proposal；
-- 描述 Runtime 能力与兼容性。
+- `describe`：声明 contract version、target kind 与 capabilities；
+- `execute`：接受 Execution Request；
+- `events`：产生类型化事件流或终态结果。
 
-Runtime 实现可以替换；Runtime Session 不能成为 Durable Task 的唯一事实源。
+cancel、progress、usage、checkpoint、native resume、semantic handoff 和 reconciliation 是可选 Capability。Adapter 不能为了满足统一接口而伪造不支持的恢复或取消语义。
+
+具体 Runtime SDK、Session、Planner、Subagent 和 Tool Loop 不进入 Canonical Schema。
 
 ### 4.4 Checkpoint 与 Handoff
 
@@ -248,26 +276,13 @@ Shadow 必须通过 Source Connector 按需访问外部资料。
 
 Shadow 不要求实时同步全部外部知识库。
 
-### 4.7 Canonical Memory
+### 4.7 Canonical Memory Profile
 
-长期使用中形成的用户 Memory 属于 Shadow。
+Shadow 必须持久化用户在长期使用中形成的 Memory，使其不随 Memory Intelligence 替换而丢失。
 
-Canonical Memory 必须具有：
+Memory 由官方 typed Profile 定义稳定身份、版本、Scope、Provenance、Evidence、source_dependency、纠正、supersede、删除和迁移语义。Tiny Kernel 不理解 Memory 内容，不实现提取、整理、召回或融合算法。
 
-- 稳定身份；
-- 内容或 Claim；
-- 来源；
-- Scope；
-- 有效性和状态；
-- 版本；
-- Create、Update、Merge、Supersede 和 Delete 语义；
-- 用户查看、修正和删除能力。
-
-更换 Memory Intelligence 后，Canonical Memory 必须继续存在。
-
-Memory Candidate 必须声明 source_dependency：independent、dependent 或 unknown。外部原始资产删除后，Shadow 根据该策略决定 Memory 是否继续有效。
-
-删除 Canonical Memory 时默认先逻辑删除并允许恢复，之后按策略物理清除。最小 Tombstone 不得包含被删除的敏感原文。纠正 Memory 时默认保留版本与 supersede 关系，但用户可以彻底擦除敏感历史。
+Memory Candidate 只有经过 Proposal / Validate / Commit 才成为 Canonical Memory Record。
 
 ### 4.8 Memory Intelligence
 
@@ -284,61 +299,32 @@ Shadow 必须：
 
 当前需求只要求 Adapter Contract 不阻止未来组合多个 Memory Component，不要求现在实现动态组合、路由或结果融合。
 
-### 4.9 Durable Store
+### 4.9 Store Capability Family
 
-Shadow 必须通过 Durable Store Port 保存 Canonical State。
+Shadow 不开发数据库，也不使用一个 Port 抽象整套数据库产品。Store Adapter 可以分别声明：
 
-Shadow 自己定义：
-
-- Canonical Record；
-- Stable ID；
-- Schema Version；
-- Migration Semantics；
-- Export / Import；
+- Canonical Repository；
+- Schema Migration；
+- Portable Export / Import；
+- Backup / Restore；
+- Durable Outbox；
 - Integrity Verification。
 
-具体数据库引擎、事务实现、查询执行、复制和物理备份由可替换存储实现负责。
-
-Primary Durable Store 必须报告 availability 和可选 outbox 等能力。
-
-Store 不可用时：
-
-- 只读和临时交互可以继续，但必须明确提示不承诺保存；
-- 需要 Canonical Commit 的操作暂停；
-- 现实副作用默认禁止；
-- 只有明确配置的紧急 Capability 可以先写入可靠的本地持久 Outbox，再执行；
-- Store 恢复后必须完成提交、去重和 reconciliation。
-
-Shadow Core 不实现数据库、物理备份或消息队列；这些能力由 Store Adapter 声明并提供。
+第一阶段只强制 Canonical Repository 与必要 Migration。只有 Canonical 语义和标准可移植导出必须跨 Store 一致；事务、复制、物理备份、索引和队列属于具体实现。
 
 ### 4.10 Skill
 
-Shadow 必须将 Skill 作为用户长期能力资产管理，包括：
+Shadow 原生兼容 Agent Skills 规范，不自创 Skill 内容包标准。
 
-- Canonical Source 或稳定来源引用；
-- 版本；
-- Provenance；
-- Trust；
-- Scope；
-- Compatibility；
-- Runtime Projection 记录；
-- Import、Export 和 Migration 信息。
+一个可移植 Skill Bundle 保留原始 `SKILL.md` 和可选 `scripts/`、`references/`、`assets/`。Shadow 的 SkillAsset 只管理 Stable ID、Owner / Space、format、source reference、pinned revision、digest、trust、permission policy、classification、install status 与 Runtime Projection。
 
-Skill 的 Discovery、Activation、Composition 和 Execution 可以由 Runtime 或可替换 Skill Component 负责。
+Shadow 元数据不得修改标准 Bundle。Provider Skill ID 只是外部引用；Runtime-specific Prompt 或上传对象是 Derived State。Shadow 独立执行权限，不能把实验性的 `allowed-tools` 视为最终 Authority。
 
 ### 4.11 Extension、Integration 与 Capability
 
-Shadow 必须区分：
+用户应能统一管理 Extension、Integration、MCP Connection、SkillAsset、Executable Asset、Runtime / Model / Runner Profile 和 Provider Binding。
 
-- Extension：提供实现代码的软件包；
-- Integration：已配置的外部连接；
-- Skill：可复用的方法和经验；
-- Capability：稳定的动作或查询语义；
-- Provider Binding：Capability 当前由哪个实现提供。
-
-Extension 和 Integration 是用户长期能力资产。Shadow 必须保存其稳定身份、类型、版本、来源、配置、权限、兼容性、健康状态和 Secret Reference。
-
-Secret 内容不进入普通资产导出。
+统一管理不意味着统一成一个万能聚合。Core 只保存共同身份、Owner / Space、来源、版本、启停、Binding、Secret Reference 和 Descriptor Reference；Family Profile 定义自己的配置、权限和生命周期。
 
 ### 4.12 Capability 与外部动作
 
@@ -358,66 +344,19 @@ Shadow 必须提供：
 
 具体 Provider 和协议实现通过 Adapter 接入。
 
-### 4.13 Event、Observation 与 World State
+### 4.13 Event、Observation 与 World State Profile
 
-Shadow 必须区分：
+Event 表示发生过什么，Memory 表示值得长期保留的知识，Task 表示未来承诺，State Profile 表示当前接受的现实投影。
 
-- Event：已经发生的重要事实；
-- Observation：外部来源对当前状态的报告；
-- World State：Shadow 当前接受的、与判断和行动相关的状态投影；
-- Memory：从历史中形成的长期认知；
-- Task：Shadow 承诺完成的工作。
+State Profile 必须支持 source、observed_at、expires_at、Evidence、fresh / stale / unknown、source unavailable 和版本迁移。Accepted State 是可恢复、可迁移的 Canonical Record，但可以过期。
 
-Observation 必须携带来源、观察时间和必要的时效信息。外部组件只能提交 Observation Proposal，不能直接修改 World State。
-
-World State 必须支持：
-
-- Subject / Property / Value；
-- Source；
-- Observed Time 和 Valid Time；
-- TTL / Expiration；
-- Fresh、Stale、Unknown 等状态；
-- Scope；
-- Version；
-- 与 Event、Task 和 Capability 的关系。
-
-Shadow 只保存影响判断和行动的最小状态。Calendar、Weather、设备、位置和其他领域状态通过 State Source Adapter 接入，外部系统仍然负责其完整领域数据。
-
-Accepted World State 属于 Canonical State，必须可恢复和迁移。重启后即使状态已经过期，Shadow 仍应知道最后接受的值、来源、过期时间和当前不可信的原因。
-
-Shadow 必须保存 accepted projection，并能够引用冲突候选和证据。Observation 按类型应用 Retention Policy：高频状态可以短期保留或压缩，关键变化可以长期保留。
-
-用户明确陈述具有最高来源优先级，但不会永久锁死状态；更新、更可靠的 Observation 可以替换它。确定性优先级、TTL 和来源禁用由 Core 处理，复杂语义冲突由可替换 State Resolver 返回 Proposal。
-
-删除 Integration 后，最后状态保留并标记 source unavailable，随后按 TTL 进入 stale 或 unknown；用户可以主动删除相关状态和 Observation。
-
-World State 使用通用状态信封和版本化 schema_ref。领域 Schema 由 Integration 或 Extension 声明，Core 不内置位置、天气、设备等完整本体。
-
-World State 可以触发 Condition、Run 或 Durable Task。复杂状态融合、预测和异常检测由可替换组件提供。
+Tiny Kernel 只执行 Schema、权限、Expected Version、通用时间有效性和 Commit。Source Adapter、Resolver、预测、融合、本体和领域查询外置。Domain Event 仅作为通知信封，不要求 Event Sourcing。
 
 ### 4.14 Execution Dispatch
 
-所有执行由 Shadow 准入和记录，但不要求全部经过 Agent Runtime。
+Execution Binding 至少保存 `target_kind`、adapter reference、contract version、capabilities、policy / envelope reference 和实际版本。
 
-Shadow 必须支持以下 Execution Target：
-
-- Agent Runtime：开放式、多步骤、需要规划的任务；
-- Model Worker：单次推理、分类、提取、摘要或判断；
-- Deterministic Runner：脚本、函数、固定程序和数据处理；
-- Capability Provider：外部 API、设备、账户和现实动作。
-
-Core 必须定义：
-
-- Execution Request；
-- Execution Requirements；
-- Execution Binding；
-- Execution Target Descriptor；
-- Execution Status；
-- Execution Result。
-
-Execution Requirements 应能表达所需 Capability、隐私、本地性、预算、延迟、风险和确定性等约束。Core 负责最终 Binding、权限和 Run 状态；具体路由评分、成本预测、模型选择、Fallback 和多模型比较由可替换 Routing Component 提供。
-
-早期实现可以使用显式配置或静态规则，不要求智能路由。
+Core 根据 Capability、数据等级、预算、副作用、健康与显式规则校验 Binding；Router 可以提出 Binding Proposal，但不能提交。新增 namespaced target kind 不得要求修改 Core 主流程。
 
 ### 4.15 Model Worker 与 Routing
 
@@ -571,7 +510,7 @@ Core 重启后，应能从 Durable Store 恢复已提交的长期状态。
 
 ### NFR-008 实现克制
 
-不因未来可能需要某项能力而提前实现复杂路由、多组件融合、微服务、集群或完整多用户系统。
+一个概念先按 CORE / CONTRACT-ONLY / PROFILE-EXTENSION / LATER-PHASE 分类。没有跨组件主权或连续性证据的概念不得进入 Tiny Kernel；没有真实实现需要的 Contract 不预建服务、表或万能抽象。
 
 ### NFR-009 状态时效性
 
@@ -591,45 +530,28 @@ World State 必须显式表达时效和未知状态。过期 Observation 不得�
 
 ## 6. 明确不自研的基础能力
 
-OpenShadow 不自行开发：
+OpenShadow 不自研：
 
-- 数据库引擎；
-- 通用 Agent Loop 和 Runtime Planner；
-- 基础模型；
-- 通用 Memory Intelligence；
-- Vector Database 或 Graph Database；
-- 通用 Search Engine；
-- 通用 Skill Resolver；
-- Browser Agent 或 Coding Agent；
-- STT、TTS、Wake Word 和音频引擎；
-- 家电协议栈；
-- 通用 Workflow Engine；
-- 通用多模型路由和模型评分系统；
-- Script Runtime、Sandbox 和依赖管理器；
-- 领域专用 World State 同步或 Digital Twin；
-- Secret Store；
-- 日志、指标或 Trace 后端。
+- 基础模型、通用 Agent Loop、Planner、Subagent 或 Workflow Engine；
+- 智能 Router、Memory Intelligence、State Resolver、Search / RAG、Embedding、Graph 或领域本体；
+- 数据库引擎、复制系统、物理备份、Secret Store、消息队列或通用调度平台；
+- 脚本语言 Runtime、依赖解析、Sandbox 或资源隔离平台；
+- Skill 内容格式；默认兼容 Agent Skills；
+- STT、TTS、Wake Word、浏览器 Agent、Coding Agent、设备协议或领域数字孪生；
+- 通用 Policy 语言或自建插件操作系统。
 
-Shadow 可以提供这些外部实现所需的 Adapter 和官方集成。
+Shadow 只实现连接这些能力所需的主权、连续性、类型 Profile、Binding、Capability、迁移与用户控制边界。
 
 ## 7. 顶层验收原则
 
-- 所有输入由 Shadow 准入；被接受的 Request 创建 Root Run，准入失败只创建最小 Admission Record；
-- Runtime 更换后，Durable Task 和用户资产继续存在；
-- Memory Intelligence 更换后，Canonical Memory 继续存在；
-- Durable Store 可以通过导出、迁移和验证替换；
-- 删除派生索引后，可以从 Canonical State 重建；
-- 外部资料按需访问，不要求 Shadow 复制全部内容；
-- Skill、Extension、Integration 和 MCP Connection 可以作为用户能力资产持续管理；
-- 外部 Action 经过统一治理并具有可恢复记录；
-- World State 是可迁移的 Canonical State，并能表达来源、冲突、时效、过期和未知状态；
-- 每个 Canonical Asset 都具有明确 Owner 和 Space；
-- 家庭公共状态可以归属 Home Space，而不被固定到某个用户；
-- Model Binding 能阻止超出数据等级和来源策略的上下文披露；
-- 外部分类器不能自行降低敏感度；
-- 用户物理删除请求可以传播并显示每个组件的完成状态；
-- Store 故障时，未记录的现实副作用不会继续执行；
-- 标准导出与加密完整备份具有不同边界；
-- 简单任务可以直接绑定 Model Worker 或 Deterministic Runner，不启动 Agent Runtime；
-- Semantic Pulse 删除后，系统健康和确定性调度仍然正常；
-- 用户能够查看、修正、删除和导出自己的长期资产。
+1. 替换 Runtime、Model、Memory Intelligence、State Resolver 或 Store，不改变 Canonical ID 和 Owner；
+2. External Component 不能绕过 Proposal / Validate / Commit；
+3. 新增 Execution Target Kind 不修改 Core 主流程；
+4. 删除派生组件不会删除 Canonical Record；
+5. Profile 升级具有 Schema 与语义迁移路径；
+6. Skill Bundle 保持标准格式并可离开 Shadow 使用；
+7. Store Adapter 只实现其声明的 Capability，不伪造备份、取消或恢复；
+8. 健康、TTL、权限和恢复不依赖 LLM；
+9. 用户可以查看、纠正、撤销、删除、导出和迁移长期资产；
+10. Phase 0–1 是完整架构的真子集，不把短期实现固化为长期内核。
+

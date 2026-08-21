@@ -1,507 +1,347 @@
-# OpenShadow Core / External 责任矩阵
+# OpenShadow Tiny Kernel / External 责任矩阵
 
-- 状态：Stage 1 设计基线
-- 输入：[需求基线](requirements.md)与[概要设计](architecture.md)
-- 目标：逐项确定 Authority、Canonical State、Intelligence 和 Execution 的归属
+- 状态：Stage 1 基线 / Stage 4 Core Diet 修订
+- 输入：[需求基线](requirements.md)、[概要设计](architecture.md)与[ADR-0003](adr/0003-tiny-core-and-typed-profiles.md)
+- 目标：逐项确定 Kernel、Contract、Profile、Intelligence 和 Execution 的归属
 - 非目标：不定义数据库表、API 字段、具体组件或部署拓扑
 
 ## 1. 判定规则
 
-每项能力必须回答四个问题：
+每项能力必须回答：
 
-| 维度 | 含义 |
+| 维度 | 问题 |
 |---|---|
-| Authority | 谁能校验并提交最终状态 |
-| Canonical State | 哪些状态必须由 Shadow 语义持有并可迁移 |
-| Intelligence | 哪些推理、分类、融合和优化交给可替换组件 |
-| Execution | 谁完成模型调用、程序运行、协议交互或现实动作 |
+| Identity | 是否必须有跨组件稳定身份？ |
+| Authority | 谁可以校验并提交最终状态？ |
+| Profile Semantics | 哪些 typed Schema、不变量和迁移需要兼容？ |
+| Intelligence | 哪些判断和算法应可替换？ |
+| Execution | 谁完成模型调用、程序运行、协议交互或现实动作？ |
+| Portability | 替换组件时必须保留什么？ |
+
+四级分类：
+
+- **KERNEL**：2030 年外部 AI 范式变化后，Shadow 仍必须直接理解和执行；
+- **CONTRACT-ONLY**：需要稳定安全或连续性边界，但不把完整能力做进 Core；
+- **PROFILE / EXTENSION**：属于 Shadow 的兼容能力，但通过版本化 Profile / Adapter 演进；
+- **LATER PHASE / DERIVED**：没有证据表明当前需要固化，或可以重建。
 
 统一规则：
 
-1. Core 可以定义稳定语义、状态机、权限点和 Port，但不因此实现对应算法或基础设施。
-2. External Component 可以返回 Proposal、Result、Checkpoint Reference 和 Usage，但不能绕过 Core 提交权威状态。
-3. Canonical State 通过 Durable Store Port 持久化；数据库物理模型不定义领域语义。
-4. Derived State 可以删除重建，不作为组件替换的阻塞条件。
-5. 用户界面中的统一体验不要求所有能力位于同一个实现组件。
+1. External Component 只能提交 typed Proposal 或 Result，不能直接写 Canonical Repository；
+2. Canonical Envelope 统一身份和治理，Profile 定义 typed payload 与领域不变量；
+3. Run / Attempt 是 Kernel 控制事实；Runtime 私有 Session 不能代替；
+4. Adapter 公共 Descriptor 保持最小，复杂能力按 Family 协商；
+5. Derived State 可以删除重建；
+6. 统一 UI 不等于统一成万能聚合；
+7. Aggregate、Repository 和服务边界在实现阶段由并发与一致性需要决定，不冻结成公共协议。
 
-## 2. 总体责任矩阵
+## 2. Core Diet 总表
 
-| 领域 | Authority | Canonical State | External Intelligence | External Execution |
-|---|---|---|---|---|
-| Request / Run | Core 准入并提交生命周期 | Request metadata、Root Run、Attempt summary | 任务理解、结果摘要可外置 | Runtime、Model、Runner、Provider |
-| Durable Task | Core 提交创建、暂停、恢复、完成 | Task、Checkpoint refs、conditions、completion | 规划、分解、进度判断 | Agent Runtime 与其他 Target |
-| Execution Dispatch | Core 校验 Binding、Envelope、预算和权限 | Requirements、Binding、Envelope、Status、Usage | Router、模型评估、降级建议 | 各 Execution Target |
-| Memory | Core 提交 Candidate、修正和删除 | Canonical Memory、Evidence refs、versions | 提取、整理、召回、融合、排序 | Memory Intelligence |
-| World State | Core 提交 accepted projection | Observation、Projection、conflicts、freshness | State Resolution、预测、异常检测 | Source Connector / Model / Runner |
-| Owner / Space | Core 提交归属和生命周期 | User/Space refs、created_by | 不需要智能实现 | 管理界面通过 Core API |
-| Data Governance | Core 执行等级、披露和保留约束 | labels、policies、decisions | 内容分类只能提出标签 | Binding 负责实际数据处理 |
-| Asset / Capability | Core 提交身份、版本和 Binding | Skill、Executable、Extension、Integration metadata | Skill 选择、兼容性建议可外置 | Extension、Runner、Provider |
-| External Action | Core 授权并提交 Action 状态 | Action、Approval、Ledger、Reconciliation | 参数生成、风险建议可外置 | Capability Provider |
-| Durable Store | Core 定义持久语义和故障模式 | Store Binding、migration、integrity metadata | 无 | 外部数据库、备份、Outbox |
-| Retention / Erasure | Core 提交意图和完成状态 | policy、tombstone、component status | 分类与保留建议可外置 | 各 Adapter 删除具体副本 |
-| Scheduler / Pulse | Core 提交 Trigger 与 Proposal 结果 | schedule、trigger、bounded Run | Semantic Pulse、主动建议 | Scheduler、Model、Runner |
-| Interaction / Voice | Core 准入请求并执行权限 | endpoint / session refs、user choices | STT、TTS、唤醒、对话表现 | Voice / UI Adapter |
+| 能力 | 分类 | Kernel / Contract | Profile / External |
+|---|---|---|---|
+| Stable ID、Version | KERNEL | 生成、并发、引用 | 无 |
+| Owner / Space | KERNEL | 明确归属和 created_by | 多用户 ACL 后续 |
+| Canonical Envelope | KERNEL | Schema ref、provenance、lifecycle、retention | typed payload 由 Profile 定义 |
+| Proposal / Commit | KERNEL | Validate、Authority、ExpectedVersion、Commit | 外部组件产生 Proposal |
+| Work Admission | KERNEL | 工作准入、幂等、Request | UI / Trigger 负责输入 |
+| Run / Attempt | KERNEL | 生命周期、Binding、结果与取消事实 | Target 完成执行 |
+| Durable Task | CONTRACT-ONLY + PROFILE | stable ID、Run / checkpoint refs、completion commit | Goal、规划、分解、Workflow |
+| Execution Binding | KERNEL | target_kind、capability、envelope 校验 | Router 提出 BindingProposal |
+| Conversation | PROFILE | 身份、Commit、通用删除 | Message 顺序等 Profile 规则 |
+| Memory | PROFILE | Candidate Commit、版本、Owner、删除 | 提取、整理、召回、Embedding、Graph |
+| State | PROFILE | Proposal Commit、通用时间有效性 | Observation Schema、freshness、Resolver、预测 |
+| Skill | PROFILE | SkillAsset 治理和权限 | Agent Skills Bundle、发现、加载、执行 |
+| Integration | PROFILE | Stable ID、Binding、Secret Reference | Family config、协议与执行 |
+| Action | CONTRACT-ONLY + PROFILE | 先持久化、Approval、unknown / reconciliation | 参数生成、Provider 调用 |
+| Policy | KERNEL minimum + EXTENSION | data class、capability、approval、budget、side effect、expiry、revocation | 复杂 Policy Engine |
+| Store | FAMILY PORT | Canonical Repository Contract、restricted mode | DB、Migration、Backup、Outbox 等 Capability |
+| Export / Migration / Erasure | CONTRACT-ONLY | Intent、标准格式、状态与完整性 | 具体执行由 Store / Adapter |
+| Domain Event | NARROW CONTRACT | 通知 Envelope | Bus / delivery implementation |
+| Semantic Pulse | EXTENSION | Proposal Admission | 小模型或规则 |
+| Voice / Device | EXTENSION | Endpoint identity、permission | STT、TTS、Audio、协议 |
+| Search / RAG | EXTENSION / DERIVED | 数据授权和 Evidence ref | Index、Retrieval、Reranking |
 
-## 3. Request、Run 与 Durable Task
+## 3. Work Admission、Run 与 Task
 
-### 3.1 对象关系
+### Kernel Authority
 
-~~~mermaid
-flowchart TB
-    INPUT["Incoming Input"]
-    ADMISSION["Admission"]
-    REJECTED["Admission Record<br/>rejected / invalid / replay"]
-    REQUEST["Accepted Request<br/>immutable admission metadata"]
-    RUN["Root Run"]
-    A1["Execution Attempt 1"]
-    A2["Execution Attempt 2"]
-    PROPOSAL["Durable Task Proposal"]
-    TASK["Durable Task"]
-    LATER["Later Runs"]
+- 识别工作承载输入；
+- 提交 AdmissionRecord、Request、Root Run 和 ExecutionAttempt；
+- 校验 Run 状态转换；
+- 提交 Binding、Usage、Result / Failure summary；
+- 区分 cancelling、cancelled 和 cancellation_unknown；
+- 提交 Task / Completion Proposal 的接受或拒绝；
+- 保持 Task、Run、Checkpoint 和 Artifact 的稳定引用。
 
-    INPUT --> ADMISSION
-    ADMISSION -->|"rejected"| REJECTED
-    ADMISSION -->|"accepted"| REQUEST
-    REQUEST --> RUN
-    RUN --> A1
-    A1 -->|"retry"| A2
-    RUN --> PROPOSAL
-    PROPOSAL -->|"Core validates"| TASK
-    TASK --> LATER
+### 不创建 Root Run 的路径
+
+- health / readiness；
+- 静态资源；
+- 只读控制面 Query；
+- 订阅已有 Run 事件；
+- 内部 recovery / reconciliation step。
+
+这些路径仍执行身份、权限、速率和必要审计。
+
+### External
+
+- Runtime、Model、Runner、Workflow 和 Provider 执行 Attempt；
+- Runtime 维护私有 Planner、Subtask、Subagent、Tool Loop 和 Session；
+- Task Planner / Workflow Engine 维护复杂分解；
+- Target 返回事件、结果、失败和 capability-specific acknowledgement。
+
+Run 成功不自动完成 Durable Task。Task 最终状态必须通过 CompletionProposal 和 Commit。
+
+## 4. Execution Binding 与 Capability
+
+Binding 使用 namespaced `target_kind`，不是封闭枚举。首批 well-known kinds：
+
+- `shadow.agent-runtime`；
+- `shadow.model-worker`；
+- `shadow.deterministic-runner`；
+- `shadow.workflow-target`；
+- `shadow.capability-provider`。
+
+Kernel 校验：
+
+- required / resolved capabilities；
+- Adapter 与 Contract Version；
+- data classification；
+- resource / budget；
+- side-effect level；
+- approval；
+- expiry / revocation；
+- health。
+
+Router 负责分类、评分、质量 / 延迟 / 成本预测和 Route Proposal。Core 不理解这些算法，只接受或拒绝 BindingProposal。
+
+## 5. Adapter Family
+
+### 公共 Descriptor
+
+~~~text
+adapter_id
+adapter_family
+contract_versions
+capabilities
+config_schema_ref
+implementation_ref
+health
 ~~~
 
-确定边界：
+### Family-specific Capability
 
-- Request 是不可变的准入记录；每个被接受的 Request 创建一个 Root Run。
-- 准入失败只创建最小 Admission Record，不创建 Run。
-- 重试是同一 Run 下的新 Execution Attempt，不创建重复 Root Run。
-- Durable Task 可以跨时间产生多个 Run。
-- Runtime 内部 Subtask 不进入 Shadow 模型；需要跨 Session 或 Runtime 存在时，必须提交 Durable Task Proposal。
+| Family | 基础能力 | 可选能力 |
+|---|---|---|
+| Runtime | describe、execute、events | cancel、progress、usage、checkpoint、native resume、handoff |
+| Model | describe、execute | streaming、structured output、usage |
+| Runner | describe、execute | sandbox、artifact、cancel |
+| State Source | describe、observe | subscribe、refresh |
+| Provider | describe、execute action | idempotency、cancel、reconcile |
+| Store | canonical repository | migration、export、backup、outbox、integrity |
+| Secret | resolve reference | rotate、revoke |
+| Interaction | deliver / receive | voice stream、device presence |
 
-### 3.2 Run 状态机
+权限、Secret、Checkpoint、Migration、Data Boundary 和 Reconciliation 不进入所有 Adapter 的统一必填 Manifest。Adapter 不得伪造不支持的 Capability。
 
-~~~mermaid
-stateDiagram-v2
-    [*] --> created
-    created --> queued
-    queued --> running
-    running --> waiting
-    waiting --> running
-    running --> paused
-    paused --> queued
-    running --> completed
-    running --> failed
-    running --> cancelling
-    waiting --> cancelling
-    paused --> cancelling
-    cancelling --> cancelled
-    cancelling --> cancellation_unknown
-    completed --> [*]
-    failed --> [*]
-    cancelled --> [*]
-    cancellation_unknown --> [*]
-~~~
+Execution / Intelligence Family 可以使用 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 和 Usage 等输出族。Infrastructure Family 使用自己的 typed Result，只共享 Message Envelope、Correlation、Version 和结构化错误。
 
-Core Authority：
+## 6. Memory Profile
 
-- 分配 Request、Run 和 Attempt Stable ID；
-- 校验生命周期转换；
-- 提交 Binding、费用、Usage、结果状态和取消结果；
-- 将 Task Proposal 提交为 Durable Task；
-- 校验 Completion Proposal 和 Task 完成条件。
+### Kernel / Profile Authority
+
+- Stable Memory ID 与 Owner / Space；
+- MemoryCandidate Schema 验证；
+- create、correct、merge、supersede、delete、erase Commit；
+- ExpectedVersion；
+- source_dependency；
+- anti-resurrection Tombstone；
+- Profile Migration。
+
+### External Intelligence
+
+- extraction；
+- consolidation；
+- deduplication；
+- retrieval / reranking；
+- summary；
+- embedding / graph / cluster；
+- Evidence 相关性和 source dependency 建议。
+
+Memory Engine、Index 和 Graph 均不拥有 Canonical Memory。Memory Profile 可以升级，但必须提供语义 Migration。
+
+## 7. State Profile
+
+### Kernel / Profile Authority
+
+- StateProposal Schema、Owner、Space、ExpectedVersion；
+- 通用 observed_at / expires_at 校验；
+- accepted state version；
+- source unavailable；
+- delete / erase；
+- Profile Migration。
+
+### State Profile Semantics
+
+- state_key；
+- typed value / value_schema_ref；
+- source / Evidence；
+- fresh / stale / unknown；
+- Observation Retention；
+- correction / supersede。
+
+### External
+
+- Source Connector 采集；
+- Resolver 处理语义冲突；
+- 预测、异常检测和刷新建议；
+- 领域本体、查询和数字孪生。
+
+World State 不是 Kernel 的固定知识图谱。Accepted State 仍是可恢复、可迁移的 Canonical Record。
+
+## 8. Skill、Executable 与 Integration
+
+### SkillAsset Profile
+
+Shadow 保存：
+
+- Stable ID、Owner / Space；
+- format；
+- source reference；
+- pinned revision / immutable snapshot；
+- digest；
+- trust；
+- permission policy；
+- classification；
+- install status；
+- Runtime / Provider external refs。
+
+标准 Bundle 保持 Agent Skills 的 `SKILL.md`、`scripts/`、`references/`、`assets/`。Shadow 不修改 Bundle，不自创内容格式，也不把 `allowed-tools` 当作最终权限。
+
+### External
+
+- Skill discovery / recommendation；
+- 内容加载与 Prompt projection；
+- 脚本执行、依赖、Sandbox；
+- Provider upload；
+- MCP / Extension / Device 协议；
+- 风险检测建议。
+
+Executable Asset 继续保存 source、checksum、I/O contract 和权限请求；具体语言 Runtime 外置。
+
+Integration 具有 Stable ID 和 Secret Reference，但 Family Profile 定义配置、权限、健康和生命周期。
+
+## 9. Policy 与现实 Action
+
+Core 只实现确定性 Policy primitives：
+
+- data class；
+- capability；
+- approval；
+- budget；
+- side-effect；
+- expiry；
+- revocation。
+
+复杂 Policy Engine 可以返回 PolicyEvaluationProposal，不能自行签发授权。
+
+现实 Action Contract 必须保证：
+
+1. ActionProposal 与 Action 分离；
+2. Provider 调用前持久化 pending / approval；
+3. 使用 idempotency key；
+4. 结果为 succeeded、failed 或 unknown；
+5. unknown 需要 reconciliation；
+6. Store 不可用且没有可靠 Outbox 时禁止执行。
+
+Provider 执行协议调用，返回外部 ID、结果和 Evidence。
+
+## 10. Store、导出与 Erasure
+
+Store Family 能力：
+
+| Capability | Shadow 保证 | 外部实现 |
+|---|---|---|
+| Canonical Repository | Version、ExpectedVersion、读写语义 | 数据库与事务 |
+| Migration | Migration Intent / Result | 物理 Schema 与数据转换 |
+| Portable Export / Import | 标准 Manifest 与兼容性 | 打包与传输 |
+| Backup / Restore | 独立授权和状态 | 实现相关完整备份 |
+| Durable Outbox | Action 与投递引用 | 可靠存储和发送 |
+| Integrity | 期望清单 | checksum / scan |
+
+Primary Repository 不可用时：
+
+- 只读和显式 Ephemeral Interaction 可以继续；
+- Canonical Commit 暂停；
+- 现实副作用默认禁止；
+- 预配置紧急 Action 必须先写可靠 Outbox；
+- 恢复后幂等 reconciliation。
+
+Erasure Intent 由 Shadow 提交，各 Profile / Adapter 删除具体副本。无法确认时显示 pending 或 unreachable。
+
+## 11. Event、Outbox 与 OperationJob
+
+- Domain Event：通知和最终一致，不是 Event Sourcing；
+- Outbox：只解决可靠跨边界副作用，不是通用 Queue；
+- OperationJob：只处理 export、import、migration、backup、erasure；
+- Scheduler、Memory Maintenance 和 Workflow Engine 继续作为独立 Extension / Service。
+
+## 12. Interaction、Voice 与主动智能
+
+Core：
+
+- work-bearing Admission；
+- Owner / Space / Endpoint；
+- data boundary；
+- user correction / approval / rejection；
+- Proposal Commit。
 
 External：
 
-- Target 返回 Attempt progress、Result、Failure 和 cancellation acknowledgement；
-- Runtime 决定私有规划和 Subtask；
-- 摘要模型可以提出 result summary，但不能修改状态。
-
-内容保留：
-
-- 最小记录保存身份、时间、状态、Binding、费用、结果摘要和必要审计引用；
-- Prompt、Response 和 Tool Trace 受 Retention Policy 与 Data Classification 控制；
-- Runtime 私有推理不要求保存；
-- Run 成功不自动等于 Durable Task 完成。
-
-## 4. Execution Dispatch 与 Capability Envelope
-
-Core Authority：
-
-- 接收 Execution Requirements；
-- 校验 Target Descriptor 和健康状态；
-- 接受或拒绝 Route Proposal；
-- 提交 Execution Binding；
-- 根据 Policy 签发 Capability Envelope；
-- 执行数据、能力、资源、副作用、预算、有效期和版本边界；
-- 无安全 Binding 时通过 Interaction Port 询问用户。
-
-Canonical State：
-
-- Execution Requirements；
-- Target / Capability Descriptor；
-- Execution Binding；
-- Capability Envelope；
-- Routing Rule；
-- Attempt Status；
-- Usage / Action Record；
-- cancellation / unknown outcome。
-
-External Intelligence：
-
-- 任务分类；
-- 模型、Runtime 和 Runner 能力评分；
-- 质量、费用和延迟预测；
-- Route Proposal；
-- 降级与升级建议。
-
-External Execution：
-
-- Agent Runtime 执行开放式多步骤任务；
-- Model Worker 执行单次受限推理；
-- Deterministic Runner 执行登记程序；
-- Capability Provider 完成外部查询和现实动作。
-
-边界：
-
-- Runtime 可以在 Envelope 内管理私有执行；
-- 跨 Adapter、预算或副作用边界必须产生最小记录；
-- 越界按预设策略处理，没有策略时询问用户；
-- 用户可以将选择保存为 Routing Rule；
-- Runtime 恢复长期任务时重新验证 Envelope。
-
-## 5. Memory
-
-Core Authority：
-
-- 校验 Memory Candidate；
-- 提交 create、correct、merge、supersede、delete 和 erase；
-- 执行 Owner、Space、数据等级、来源依赖和 Recall 权限；
-- 防止已删除或被替代内容被派生组件重新提交。
-
-Canonical State：
-
-- Memory Stable ID；
-- Claim / content；
-- provenance 和 Evidence Reference；
-- owner_ref、space_id 和 scope；
-- validity、version 和 lifecycle；
-- source_dependency：independent / dependent / unknown；
-- correction / supersede 关系；
-- Retention Policy、Tombstone 和 Erasure 状态。
-
-External Intelligence：
-
-- extraction、consolidation、deduplication；
-- retrieval、reranking、summarization；
-- embedding、graph、cluster；
-- Evidence 相关性和 source dependency 建议。
-
-External Execution：
-
-- Memory Intelligence 读取授权上下文并返回 Candidate；
-- Index / Search 实现派生查询；
-- Adapter 执行派生副本清除和重建。
-
-Memory Engine、Embedding、Index 和 Graph 均不拥有 Canonical Memory。
-
-## 6. Observation 与 World State
-
-Core Authority：
-
-- 接受 Observation Proposal；
-- 校验 Schema、来源、时间、TTL、Owner、Space 和权限；
-- 处理确定性来源规则、过期、来源禁用和用户显式优先级；
-- 提交 accepted projection、stale、unknown、correction 和 deletion；
-- 校验 WorldState Proposal。
-
-Canonical State：
-
-- accepted World State projection；
-- Observation 及其类型级 Retention Policy；
-- conflict candidate 和 Evidence Reference；
-- schema_ref；
-- source availability；
-- observed_at、received_at、expires_at；
-- fresh / stale / unknown；
-- owner_ref、space_id、version、provenance。
-
-External Intelligence：
-
-- 自然语言属于 Memory 还是 World State 的分类；
-- 多来源语义冲突解决；
-- 状态融合、预测和异常检测；
-- 刷新和关注建议。
-
-External Execution：
-
-- State Source Connector 采集日历、天气、位置和设备信息；
-- State Resolver 作为普通 Execution Target 返回 Proposal；
-- Model Worker 或 Runner 可以完成领域转换；
-- 外部系统继续持有完整领域数据。
-
-边界：
-
-- Accepted World State 可恢复、迁移，也可以过期；
-- 用户明确陈述优先，但不会永久冻结状态；
-- 删除 Integration 后最后状态标记 source unavailable，并按 TTL 进入 stale / unknown；
-- State Resolver 没有特权提交路径；
-- Core 不实现数字孪生或领域本体。
-
-## 7. Owner、Space 与数据治理
-
-Core Authority：
-
-- 创建和提交 User / Space Owner Reference；
-- 提交 Space 类型和生命周期；
-- 区分 owner_ref 与 created_by；
-- 执行 Data Classification、Retention 和 Binding 约束。
-
-Canonical State：
-
-~~~text
-CanonicalEnvelope
-├─ record_id / record_type / schema_ref
-├─ owner_ref: User | Space
-├─ space_id / created_by
-├─ data_classification
-├─ provenance / version
-├─ retention_policy / lifecycle_state
-└─ typed payload
-~~~
-
-近期边界：
-
-- 创建默认 Personal Space 和隐式 Home Space；
-- 个人资产可以归 User；
-- 家庭公共状态归 Home Space；
-- 暂不实现成员、角色、邀请、共享和完整 ACL。
-
-数据等级：
-
-- Core 定义 public、personal、sensitive、restricted；
-- 无法判断时默认 sensitive；
-- 用户、来源和外部分类器可以提出标签；
-- 分类器可以提高等级；
-- 降低等级需要用户或确定性策略确认。
-
-Model Binding 必须声明：
-
-- local / remote；
-- 允许的数据等级；
-- 是否允许 Memory、World State 和外部资产内容；
-- retention / training；
-- 地域和组织约束。
-
-## 8. Skill、Executable Asset、Extension 与 Integration
-
-Core Authority：
-
-- 提交 Stable ID、版本、来源、信任和生命周期；
-- 校验 Manifest、权限、兼容性和 Binding；
-- 签发安装、升级、禁用和执行授权；
-- 管理 Secret Reference，不接管 Secret Store 实现。
-
-Canonical State：
-
-- Skill 方法与来源；
-- Executable Asset 的 source ref、version、checksum、I/O Contract；
-- Extension Manifest；
-- Integration 配置结构；
-- MCP Connection metadata；
-- Runtime / Model / Runner Profile；
-- Capability 和 Provider Binding；
-- Secret Reference。
-
-External Intelligence：
-
-- Skill 搜索、推荐和组合；
-- 兼容性与升级建议；
-- Capability 发现；
-- 恶意或风险检测建议。
-
-External Execution：
-
-- Extension 代码；
-- Runner、语言运行时和 Sandbox；
-- MCP Client / Server；
-- Provider、设备和协议；
-- Secret Store。
-
-高风险 Executable 权限绑定具体版本或 checksum；普通权限可以绑定 Stable ID。代码实质变化后，高风险授权失效。
-
-## 9. Capability 与现实动作
-
-Core Authority：
-
-- 校验 Action Proposal 和 Schema；
-- 执行 Capability Envelope、Policy 和 Approval；
-- 分配 Action ID；
-- 提交 pending、executing、succeeded、failed、unknown；
-- 管理 reconciliation 和用户可见审计。
-
-Canonical State：
-
-- Capability Declaration；
-- Provider Binding；
-- Action Proposal；
-- Approval Decision；
-- Action Ledger；
-- idempotency key；
-- external reference；
-- unknown outcome 和 reconciliation state。
-
-External Intelligence：
-
-- 参数生成；
-- 风险解释；
-- 最佳执行时间建议；
-- reconciliation 建议。
-
-External Execution：
-
-- Provider Adapter 调用账户、API、设备或服务；
-- Provider 返回外部 ID、结果和可验证证据。
-
-任何组件都不能把“已请求取消”直接写成“动作未发生”。无法确认时保持 unknown。
-
-## 10. Durable Store、导出与 Erasure
-
-Core Authority：
-
-- 定义 Canonical Record 和一致性要求；
-- 选择 Primary Store Binding；
-- 提交 Migration、Export 和 Integrity 状态；
-- 管理 restricted mode、Erasure Intent 和组件完成状态；
-- Store 不可用时阻止无记录现实副作用。
-
-Canonical State：
-
-- Store Binding 和 Capability；
-- Schema Version；
-- Migration Plan / Result；
-- Integrity Report；
-- Export Manifest；
-- Backup Metadata；
-- Erasure Request、Tombstone、pending / unreachable status；
-- Outbox reconciliation reference。
-
-External Execution：
-
-- 数据库、事务、复制和物理备份；
-- 加密 Secret Store；
-- 可靠持久 Outbox；
-- Adapter 中的具体擦除；
-- 导出打包和完整性计算。
-
-两种产物：
-
-1. 标准可移植导出不包含 Secret 内容和可重建状态；
-2. 完整设备备份可以包含加密 Secret、Checkpoint 和部分派生状态，但必须独立授权和加密。
-
-Primary Store 不可用时：
-
-- 只读和明确标记的临时交互可以继续；
-- Canonical Commit 暂停；
-- 现实副作用默认禁止；
-- 只有预先配置的紧急 Capability 可以先写可靠 Outbox，再执行；
-- 恢复后进行幂等提交、去重和 reconciliation。
-
-## 11. Scheduler、Health 与 Semantic Pulse
-
-Core Authority：
-
-- 提交 Schedule、Trigger、Lease、Timeout 和 bounded Run；
-- 执行预算、权限和 Capability Envelope；
-- 校验 Pulse Proposal；
-- 提交由 Proposal 产生的状态或 Task。
-
-Canonical State：
-
-- schedule / trigger identity；
-- next occurrence 和 last outcome；
-- health / lease summary；
-- Pulse Run、Usage 和 Proposal status。
-
-External Intelligence：
-
+- Web / Mobile UX；
+- STT / TTS / Wake Word；
+- speaker recognition；
+- audio routing；
+- device transport；
 - Semantic Pulse；
-- 主动 Recall；
-- 状态更新、Run、Task 和升级建议。
+- proactive suggestion ranking。
 
-External Execution：
+Semantic Pulse 可以提出 Recall、State、Run、Task 或 escalation Proposal，但不直接 Commit，也不是系统健康、TTL、Lease、Timeout 或恢复的依赖。
 
-- Scheduler 和 Clock；
-- Health Probe；
-- Model Worker / rule program；
-- Infrastructure Adapter。
+## 13. 必须由 Tiny Kernel 实现
 
-System Health、TTL、Lease、Timeout、Scheduler Tick 和恢复不依赖 LLM。Semantic Pulse 可以自动运行无现实副作用且满足预算的 Run，但不能直接修改 Canonical State，也不能直接创建 Durable Task 或现实副作用。
+1. Stable ID、Owner / Space、Version 与 Canonical Envelope；
+2. Schema / Profile Registry 与 ExpectedVersion；
+3. Proposal / Validate / Commit；
+4. work-bearing Admission、Request、Run 与 Attempt；
+5.最小 Durable Task continuity；
+6. Execution Binding、Capability 与 deterministic Policy enforcement；
+7. minimal Adapter Registry；
+8. Profile Migration / Export / Erasure Intent；
+9.受治理 Action 的最小安全 Contract；
+10.用户查看、纠正、撤销、删除和导出 API。
 
-## 12. Interaction、Voice 与设备入口
+## 14. 必须由 Profile / Extension / Infrastructure 负责
 
-Core Authority：
+1. Conversation、Memory、State、Task、Action、Skill 与 Integration 的可演进业务 Schema；
+2. Runtime、Planner、Subagent、Tool Loop 与 Workflow Engine；
+3. Model、Router、Memory Intelligence、State Resolver、Search / RAG；
+4. Script Runtime、依赖、Sandbox；
+5.数据库、复制、物理备份、Secret Store、Queue 与 Scheduler；
+6.复杂 Policy Engine；
+7. Skill discovery、loading、execution 与 Provider projection；
+8. STT、TTS、Wake Word、Audio 与设备协议；
+9.领域本体、预测、数字孪生；
+10.浏览器 Agent、Coding Agent 与 Provider 实现。
 
-- 准入 Chat、CLI、API、Voice、Event 和 Schedule 请求；
-- 绑定 Owner、Space、Session 和 Endpoint；
-- 执行数据和动作权限；
-- 保存用户明确路由、纠正、批准和拒绝。
+## 15. 退出条件
 
-Canonical State：
-
-- Interaction Endpoint metadata；
-- Session reference；
-- Device / Integration Binding；
-- user decision 和 preference；
-- minimal Admission / Run reference。
-
-External Intelligence 与 Execution：
-
-- STT、TTS、Wake Word；
-- Speaker recognition；
-- Audio routing；
-- Voice UX；
-- Device transport；
-- 多麦克风和扬声器协调。
-
-近期仅实现单用户入口 Contract，不实现家庭成员识别、角色权限和分布式音频系统。
-
-## 13. 必须由 Core 实现
-
-1. Stable ID 和 versioned Domain Contract；
-2. Admission Record、Request、Run、Attempt 和 Durable Task 状态机；
-3. Authority 和合法状态转换；
-4. Execution Requirements、Binding 和 Capability Envelope 校验；
-5. Canonical Memory 和 World State 提交语义；
-6. Owner、Space、Data Classification 和 Retention 执行点；
-7. Asset、Extension、Integration 和 Capability Registry；
-8. Policy Enforcement、Approval 和 Action Ledger；
-9. Migration、Export、Integrity、Erasure 和 restricted mode 状态；
-10. Adapter Registry、版本协商和 Contract Test；
-11. 用户查看、纠正、撤销、删除和导出 API。
-
-## 14. 必须外置
-
-1. Agent Runtime、Planner、Subagent 和 Tool Loop；
-2. Model Provider、推理和智能 Router；
-3. Memory 提取、整理、召回、Embedding、Graph 和 Index；
-4. State Source、语义 Resolver、预测和数字孪生；
-5. Script Runtime、依赖管理、Sandbox 和资源隔离；
-6. 数据库、Secret Store、物理备份和可靠 Outbox；
-7. Search Engine、Scheduler、Telemetry backend；
-8. STT、TTS、Wake Word 和音频处理；
-9. Browser Agent、Coding Agent、设备协议和 Provider 实现；
-10. 领域 Schema 和领域数据生命周期。
-
-## 15. Stage 1 退出条件
-
-本阶段完成时必须满足：
-
-- 每个需求领域都明确 Authority；
-- 每类 Canonical State 都有稳定所有者；
-- 每项智能能力都能被替换；
-- 每项具体执行都通过 Port 或 Adapter 外置；
-- Core 不持有模型评分、Memory 算法、State Resolver、数据库或设备协议；
-- External Component 没有直接提交权威状态的路径；
-- 单用户实现不阻塞未来 User / Space 扩展；
-- Store、模型、Runtime 和 Adapter 故障路径不依赖隐式行为；
-- 后续关键用例可以直接引用本矩阵确定参与者和责任。
+- 每项概念已有 KERNEL / CONTRACT-ONLY / PROFILE-EXTENSION / LATER-PHASE 分类；
+- External Component 没有直接 Commit 路径；
+- Canonical Envelope 与 typed Profile 没有混成万能 JSON；
+- 新增 target_kind 不要求修改 Core 主流程；
+- Adapter 只承诺 Family Capability；
+- Store Contract 没有膨胀为数据库产品抽象；
+- Skill 使用外部标准；
+- Run、Task、Memory、State 和 Action 的关键安全不变量仍然可验证；
+- 分阶段实现不需要预建空服务或表。

@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/adapters/1.0.0",
+  "title": "OpenShadow Adapter and Capability Contracts",
+  "$defs": {
+    "SupportedContract": {
+      "type": "object",
+      "required": ["contract_id", "version_range"],
+      "properties": {
+        "contract_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "version_range": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/VersionRange" }
+      },
+      "unevaluatedProperties": false
+    },
+    "CapabilityDeclaration": {
+      "type": "object",
+      "required": ["capability_id", "capability_version", "contract_ref"],
+      "properties": {
+        "capability_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "capability_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SemVer" },
+        "contract_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+        "declaration_schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+        "typed_parameters": {}
+      },
+      "unevaluatedProperties": false
+    },
+    "AdapterDescriptor": {
+      "type": "object",
+      "required": ["descriptor_id", "descriptor_version", "adapter_family", "implementation_ref", "implementation_version", "supported_contracts", "supported_target_kinds", "capabilities", "config_schema_ref", "descriptor_digest"],
+      "properties": {
+        "descriptor_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "descriptor_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SemVer" },
+        "adapter_family": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "implementation_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "implementation_version": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "supported_contracts": { "type": "array", "items": { "$ref": "#/$defs/SupportedContract" }, "minItems": 1 },
+        "supported_target_kinds": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }, "uniqueItems": true },
+        "capabilities": { "type": "array", "items": { "$ref": "#/$defs/CapabilityDeclaration" }, "uniqueItems": true },
+        "config_schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+        "descriptor_digest": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Digest" }
+      },
+      "unevaluatedProperties": false
+    },
+    "AdapterRegistrationPayload": {
+      "type": "object",
+      "required": ["adapter_id", "descriptor_ref", "descriptor_digest", "config_ref", "secret_refs", "host_binding_ref", "trust_policy_ref", "status", "installed_at", "compatibility_result_ref"],
+      "properties": {
+        "adapter_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "descriptor_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "descriptor_digest": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Digest" },
+        "config_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "secret_refs": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }, "uniqueItems": true },
+        "host_binding_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "trust_policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "status": { "enum": ["enabled", "disabled", "incompatible"] },
+        "installed_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "compatibility_result_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" }
+      },
+      "unevaluatedProperties": false
+    },
+    "HealthObservation": {
+      "type": "object",
+      "required": ["observation_id", "adapter_id", "status", "observed_at", "valid_until", "source"],
+      "properties": {
+        "observation_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "adapter_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "status": { "enum": ["healthy", "degraded", "unavailable", "unknown"] },
+        "observed_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "valid_until": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "source": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "typed_details": {}
+      },
+      "unevaluatedProperties": false
+    },
+    "CapabilityRequirement": {
+      "type": "object",
+      "required": ["capability_id", "version_range", "required"],
+      "properties": {
+        "capability_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "version_range": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/VersionRange" },
+        "required": { "type": "boolean" },
+        "constraint_schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
+        "typed_constraints": {}
+      },
+      "unevaluatedProperties": false
+    },
+    "CapabilityResolution": {
+      "type": "object",
+      "required": ["requirement_ref", "capability_id", "satisfied"],
+      "properties": {
+        "requirement_ref": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "capability_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "selected_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SemVer" },
+        "declaration_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "satisfied": { "type": "boolean" },
+        "mismatch_reason": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "satisfied": { "const": true } }, "required": ["satisfied"] },
+          "then": { "required": ["selected_version", "declaration_ref"] },
+          "else": { "required": ["mismatch_reason"] }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "AuthorizedCapability": {
+      "allOf": [
+        { "$ref": "#/$defs/CapabilityResolution" },
+        {
+          "type": "object",
+          "required": ["satisfied"],
+          "properties": { "satisfied": { "const": true } }
+        }
+      ]
+    },
+    "DataScope": {
+      "type": "object",
+      "required": ["allowed_space_ids", "allowed_record_types", "maximum_classification", "external_source_refs"],
+      "properties": {
+        "allowed_space_ids": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" }, "uniqueItems": true },
+        "allowed_record_types": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }, "uniqueItems": true },
+        "maximum_classification": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/DataClassification" },
+        "external_source_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true }
+      },
+      "unevaluatedProperties": false
+    },
+    "ResourceScope": {
+      "type": "object",
+      "required": ["allowed_resource_refs", "allowed_operations"],
+      "properties": {
+        "allowed_resource_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "allowed_operations": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }, "uniqueItems": true }
+      },
+      "unevaluatedProperties": false
+    },
+    "CapabilityEnvelopePayload": {
+      "type": "object",
+      "required": ["envelope_id", "principal_ref", "grantee_ref", "scope_ref", "allowed_capabilities", "data_scope", "resource_scope", "budget_limits", "allowed_side_effects", "approval_refs", "policy_ref", "policy_version", "valid_from", "valid_until", "state", "issued_at"],
+      "properties": {
+        "envelope_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "principal_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "grantee_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "scope_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "allowed_capabilities": { "type": "array", "items": { "$ref": "#/$defs/AuthorizedCapability" }, "uniqueItems": true },
+        "data_scope": { "$ref": "#/$defs/DataScope" },
+        "resource_scope": { "$ref": "#/$defs/ResourceScope" },
+        "budget_limits": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Quantity" } },
+        "allowed_side_effects": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" }, "uniqueItems": true },
+        "approval_refs": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" }, "uniqueItems": true },
+        "policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "policy_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "valid_from": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "valid_until": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "state": { "enum": ["active", "revoked"] },
+        "issued_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
+        "revoked_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" }
+      },
+      "unevaluatedProperties": false
+    },
+    "ExecutionBindingPayload": {
+      "type": "object",
+      "required": ["binding_id", "binding_scope", "target_kind", "adapter_id", "descriptor_ref", "descriptor_digest", "family_contract_id", "selected_contract_version", "required_capabilities", "resolved_capabilities", "capability_envelope_ref", "implementation_ref", "implementation_version", "selection_source_ref", "created_at"],
+      "properties": {
+        "binding_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "binding_scope": {
+          "type": "object",
+          "required": ["scope_kind", "scope_ref"],
+          "properties": {
+            "scope_kind": { "enum": ["attempt", "run", "saved-rule"] },
+            "scope_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }
+          },
+          "unevaluatedProperties": false
+        },
+        "target_kind": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "adapter_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "descriptor_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "descriptor_digest": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Digest" },
+        "family_contract_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "selected_contract_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SemVer" },
+        "required_capabilities": { "type": "array", "items": { "$ref": "#/$defs/CapabilityRequirement" } },
+        "resolved_capabilities": { "type": "array", "items": { "$ref": "#/$defs/CapabilityResolution" } },
+        "capability_envelope_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "implementation_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "implementation_version": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "health_observation_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "selection_source_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "created_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}
