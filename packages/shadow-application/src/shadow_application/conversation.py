@@ -1,0 +1,550 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from shadow_adapters import DeterministicTestAdapter
+from shadow_kernel.adapters import AdapterDescriptor, AdapterRegistry
+from shadow_kernel.commit import CommitAuthority
+from shadow_kernel.errors import ShadowDomainError, ShadowError
+from shadow_kernel.ids import sha256_digest, utc_timestamp
+from shadow_kernel.models import (
+    AdmissionRecordPayload,
+    CommitOperation,
+    CommitPlan,
+    ContentBlock,
+    ConversationPayload,
+    ExecutionAttemptPayload,
+    ExecutionRequirementsPayload,
+    MessagePayload,
+    Provenance,
+    RecordVersionRef,
+    RequestPayload,
+    RunPayload,
+    StableRecordRef,
+)
+from shadow_kernel.repository import CanonicalRepository
+
+PROFILE_SCHEMA = "https://schemas.openshadow.dev/contracts/profiles/1.0.0"
+KERNEL_SCHEMA = "https://schemas.openshadow.dev/contracts/kernel/1.0.0"
+ADAPTER_SCHEMA = "https://schemas.openshadow.dev/contracts/adapters/1.0.0"
+RETENTION_REF = StableRecordRef(record_id="retention-default")
+
+
+@dataclass(frozen=True, slots=True)
+class TurnResult:
+    conversation: dict[str, Any]
+    run: dict[str, Any]
+    user_message: dict[str, Any]
+    assistant_message: dict[str, Any]
+    admission: dict[str, Any]
+    ephemeral: bool = False
+    replayed: bool = False
+
+
+class ConversationService:
+    """Phase 1 application flow: conversation -> admission -> run -> result."""
+
+    def __init__(self, repository: CanonicalRepository, authority: CommitAuthority):
+        self.repository = repository
+        self.authority = authority
+        self.adapters = AdapterRegistry()
+        self.deterministic = DeterministicTestAdapter()
+        self._ensure_deterministic_descriptor()
+
+    def create_conversation(
+        self,
+        *,
+        owner_ref: str,
+        space_id: str,
+        title: str | None = None,
+        idempotency_key: str = "default",
+    ) -> dict[str, Any]:
+        record_id = f"conversation-{sha256_digest({'owner': owner_ref, 'space': space_id, 'key': idempotency_key})[7:31]}"
+        payload = ConversationPayload(
+            title=title,
+            conversation_state="open",
+            message_refs=[],
+            queued_run_refs=[],
+        )
+        provenance = Provenance(
+            origin_type="shadow.origin.user-command", origin_ref=f"create-conversation-{record_id}"
+        )
+        operation = self._operation(
+            operation_id=f"operation-{record_id}",
+            operation="create",
+            record_id=record_id,
+            record_type="shadow.profile.conversation",
+            target_schema_ref=f"{PROFILE_SCHEMA}#/$defs/ConversationPayload",
+            owner_ref=owner_ref,
+            space_id=space_id,
+            created_by=owner_ref,
+            typed_payload=payload.model_dump(mode="json", exclude_none=True),
+            provenance=provenance,
+        )
+        plan = CommitPlan(
+            commit_request_id=f"commit-request-{record_id}",
+            idempotency_scope=f"conversation:{owner_ref}:{space_id}",
+            idempotency_key=idempotency_key,
+            request_digest=sha256_digest(payload.model_dump(mode="json", exclude_none=True)),
+            actor_ref=owner_ref,
+            operations=[operation],
+            prepared_at=utc_timestamp(),
+        )
+        result = self.authority.commit(plan)
+        if result.outcome == "failed":
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.conversation.create-failed",
+                    category="validation",
+                    message="Conversation creation failed.",
+                    typed_details=result.structured_error,
+                )
+            )
+        record = self.repository.get(record_id)
+        if record is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.repository.record-missing",
+                    category="internal",
+                    message="Committed conversation could not be read back.",
+                )
+            )
+        return record
+
+    def get_conversation(self, conversation_id: str) -> dict[str, Any] | None:
+        return self.repository.get(conversation_id)
+
+    def list_conversations(
+        self, owner_ref: str | None = None, space_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        return self.repository.query(
+            owner_refs={owner_ref} if owner_ref else None,
+            space_ids={space_id} if space_id else None,
+            record_types={"shadow.profile.conversation"},
+            record_states={"active"},
+        )
+
+    def list_messages(self, conversation_id: str) -> list[dict[str, Any]]:
+        conversation = self.repository.get(conversation_id)
+        if not conversation:
+            return []
+        return [
+            self.repository.get(ref["record_id"], ref["version"])
+            for ref in conversation["typed_payload"]["message_refs"]
+        ]
+
+    def get_run(self, run_id: str) -> dict[str, Any] | None:
+        return self.repository.get(run_id)
+
+    def submit_turn(
+        self,
+        *,
+        conversation_id: str,
+        principal_ref: str,
+        endpoint_ref: str = "endpoint-local-web",
+        text: str,
+        idempotency_key: str,
+    ) -> TurnResult:
+        if not self.repository.available:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.repository.unavailable",
+                    category="unavailable",
+                    message="Canonical Repository is unavailable; this request must be retried as ephemeral only.",
+                    retryable=True,
+                )
+            )
+        conversation = self.repository.get(conversation_id)
+        if not conversation:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.conversation.not-found",
+                    category="validation",
+                    message=f"Conversation {conversation_id} was not found.",
+                )
+            )
+        token = sha256_digest({"conversation": conversation_id, "key": idempotency_key})[7:31]
+        ids = {
+            name: f"{name}-{token}"
+            for name in (
+                "message-user",
+                "message-assistant",
+                "admission",
+                "request",
+                "requirements",
+                "run",
+                "attempt",
+                "binding",
+                "capability-envelope",
+            )
+        }
+        now = utc_timestamp()
+        output = self.deterministic.execute(text)
+        current_payload = ConversationPayload.model_validate(conversation["typed_payload"])
+        owner_ref = conversation["owner_ref"]
+        space_id = conversation["space_id"]
+        user_message = MessagePayload(
+            conversation_ref=StableRecordRef(record_id=conversation_id),
+            sequence=len(current_payload.message_refs) + 1,
+            message_type="shadow.message.user",
+            author_ref=principal_ref,
+            content_blocks=[
+                ContentBlock(
+                    block_type="shadow.content.text",
+                    content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
+                    typed_content={"text": text},
+                )
+            ],
+            finalized_at=now,
+        )
+        assistant_message = MessagePayload(
+            conversation_ref=StableRecordRef(record_id=conversation_id),
+            sequence=len(current_payload.message_refs) + 2,
+            message_type="shadow.message.assistant",
+            author_ref="shadow.deterministic-runner",
+            content_blocks=[
+                ContentBlock(
+                    block_type="shadow.content.text",
+                    content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
+                    typed_content={"text": output.text},
+                )
+            ],
+            finalized_at=now,
+            source_request_ref=RecordVersionRef(record_id=ids["request"], version=1),
+            produced_by_run_ref=RecordVersionRef(record_id=ids["run"], version=1),
+        )
+        admission = AdmissionRecordPayload(
+            admission_id=ids["admission"],
+            submission_id=f"submission-{token}",
+            input_type="shadow.input.conversation-turn",
+            principal_ref=principal_ref,
+            endpoint_ref=endpoint_ref,
+            space_id=space_id,
+            request_digest=sha256_digest({"conversation_id": conversation_id, "text": text}),
+            decision="accepted",
+            request_ref=StableRecordRef(record_id=ids["request"]),
+            root_run_ref=StableRecordRef(record_id=ids["run"]),
+            decided_at=now,
+            retention_policy_ref=RETENTION_REF,
+        )
+        requirements = ExecutionRequirementsPayload(
+            requirements_id=ids["requirements"],
+            required_capabilities=[],
+            acceptable_target_kinds=["shadow.deterministic-runner"],
+            allowed_side_effects=[],
+            streaming_required=True,
+            checkpoint_required=False,
+            created_from=RecordVersionRef(record_id=ids["admission"], version=1),
+        )
+        request = RequestPayload(
+            admission_ref=RecordVersionRef(record_id=ids["admission"], version=1),
+            request_type="shadow.request.conversation-turn",
+            work_input=RecordVersionRef(record_id=ids["message-user"], version=1),
+            requirements_ref=RecordVersionRef(record_id=ids["requirements"], version=1),
+            principal_ref=principal_ref,
+            endpoint_ref=endpoint_ref,
+            accepted_at=now,
+            correlation_id=f"correlation-{token}",
+        )
+        cap = {
+            "envelope_id": ids["capability-envelope"],
+            "principal_ref": principal_ref,
+            "grantee_ref": "adapter-deterministic",
+            "scope_ref": {"record_id": ids["run"]},
+            "allowed_capabilities": [],
+            "data_scope": {
+                "allowed_space_ids": [space_id],
+                "allowed_record_types": [],
+                "maximum_classification": "personal",
+                "external_source_refs": [],
+            },
+            "resource_scope": {"allowed_resource_refs": [], "allowed_operations": []},
+            "budget_limits": [],
+            "allowed_side_effects": [],
+            "approval_refs": [],
+            "policy_ref": {"record_id": "policy-default"},
+            "policy_version": 1,
+            "valid_from": now,
+            "valid_until": now,
+            "state": "active",
+            "issued_at": now,
+        }
+        binding = self.adapters.bind(
+            descriptor_id="shadow.adapter.deterministic",
+            target_kind="shadow.deterministic-runner",
+            required_capabilities=[],
+            binding_id=ids["binding"],
+            scope_ref={"record_id": ids["run"]},
+            capability_envelope_ref={"record_id": ids["capability-envelope"], "version": 1},
+            selection_source_ref={"record_id": ids["request"]},
+        )
+        run = RunPayload(
+            request_ref=RecordVersionRef(record_id=ids["request"], version=1),
+            lifecycle="completed",
+            requirements_ref=RecordVersionRef(record_id=ids["requirements"], version=1),
+            binding_refs=[RecordVersionRef(record_id=ids["binding"], version=1)],
+            attempt_refs=[RecordVersionRef(record_id=ids["attempt"], version=1)],
+            active_attempt_ref=StableRecordRef(record_id=ids["attempt"]),
+            result_ref=RecordVersionRef(record_id=ids["message-assistant"], version=1),
+            usage_summary=output.usage,
+            started_at=now,
+            terminal_at=now,
+            last_event_cursor="2",
+        )
+        attempt = ExecutionAttemptPayload(
+            run_ref=StableRecordRef(record_id=ids["run"]),
+            binding_ref=RecordVersionRef(record_id=ids["binding"], version=1),
+            lifecycle="succeeded",
+            attempt_number=1,
+            execution_ref=f"deterministic:{token}",
+            result_ref=RecordVersionRef(record_id=ids["message-assistant"], version=1),
+            started_at=now,
+            finished_at=now,
+        )
+        new_refs = current_payload.message_refs + [
+            RecordVersionRef(record_id=ids["message-user"], version=1),
+            RecordVersionRef(record_id=ids["message-assistant"], version=1),
+        ]
+        conversation_update = ConversationPayload(
+            title=current_payload.title,
+            conversation_state=current_payload.conversation_state,
+            message_refs=new_refs,
+            queued_run_refs=current_payload.queued_run_refs,
+            foreground_run_ref=StableRecordRef(record_id=ids["run"]),
+            profile_settings=current_payload.profile_settings,
+        )
+        provenance = Provenance(
+            origin_type="shadow.origin.user-command", origin_ref=f"submission-{token}"
+        )
+        operations = [
+            self._operation(
+                f"operation-{ids['message-user']}",
+                "create",
+                ids["message-user"],
+                "shadow.profile.message",
+                f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                user_message.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['admission']}",
+                "create",
+                ids["admission"],
+                "shadow.kernel.admission",
+                f"{KERNEL_SCHEMA}#/$defs/AdmissionRecordPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                admission.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['requirements']}",
+                "create",
+                ids["requirements"],
+                "shadow.kernel.execution-requirements",
+                f"{KERNEL_SCHEMA}#/$defs/ExecutionRequirementsPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                requirements.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['request']}",
+                "create",
+                ids["request"],
+                "shadow.kernel.request",
+                f"{KERNEL_SCHEMA}#/$defs/RequestPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                request.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['run']}",
+                "create",
+                ids["run"],
+                "shadow.kernel.run",
+                f"{KERNEL_SCHEMA}#/$defs/RunPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                run.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['attempt']}",
+                "create",
+                ids["attempt"],
+                "shadow.kernel.execution-attempt",
+                f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                attempt.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['capability-envelope']}",
+                "create",
+                ids["capability-envelope"],
+                "shadow.adapter.capability-envelope",
+                f"{ADAPTER_SCHEMA}#/$defs/CapabilityEnvelopePayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                cap,
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['binding']}",
+                "create",
+                ids["binding"],
+                "shadow.adapter.execution-binding",
+                f"{ADAPTER_SCHEMA}#/$defs/ExecutionBindingPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                binding.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{ids['message-assistant']}",
+                "create",
+                ids["message-assistant"],
+                "shadow.profile.message",
+                f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+                owner_ref,
+                space_id,
+                "shadow.deterministic-runner",
+                assistant_message.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-conversation-{token}",
+                "update",
+                conversation_id,
+                "shadow.profile.conversation",
+                f"{PROFILE_SCHEMA}#/$defs/ConversationPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                conversation_update.model_dump(mode="json", exclude_none=True),
+                provenance,
+                expected_version=conversation["version"],
+            ),
+        ]
+        plan = CommitPlan(
+            commit_request_id=f"commit-request-turn-{token}",
+            idempotency_scope=f"turn:{conversation_id}",
+            idempotency_key=idempotency_key,
+            request_digest=sha256_digest({"conversation_id": conversation_id, "text": text}),
+            actor_ref=principal_ref,
+            operations=operations,
+            prepared_at=now,
+            correlation_id=f"correlation-{token}",
+        )
+        result = self.authority.commit(plan)
+        if result.outcome == "failed":
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.turn.commit-failed",
+                    category="validation",
+                    message="Conversation turn commit failed.",
+                    typed_details=result.structured_error,
+                )
+            )
+        for event_type, payload in (
+            ("shadow.run.started", {"run_id": ids["run"], "attempt_id": ids["attempt"]}),
+            (
+                "shadow.run.completed",
+                {
+                    "run_id": ids["run"],
+                    "result_message_id": ids["message-assistant"],
+                    "usage": output.usage,
+                },
+            ),
+        ):
+            self.repository.append_event(ids["run"], event_type, payload)
+        return TurnResult(
+            conversation=self.repository.get(conversation_id) or {},
+            run=self.repository.get(ids["run"]) or {},
+            user_message=self.repository.get(ids["message-user"]) or {},
+            assistant_message=self.repository.get(ids["message-assistant"]) or {},
+            admission=self.repository.get(ids["admission"]) or {},
+            ephemeral=False,
+            replayed=result.outcome == "idempotent_replay",
+        )
+
+    def _ensure_deterministic_descriptor(self) -> None:
+        body = {
+            "descriptor_id": "shadow.adapter.deterministic",
+            "descriptor_version": "1.0.0",
+            "adapter_family": "shadow.execution",
+            "implementation_ref": "openshadow://adapters/test-deterministic",
+            "implementation_version": "0.1.0",
+            "supported_contracts": [{"contract_id": "shadow.execution", "version_range": "1.0.0"}],
+            "supported_target_kinds": ["shadow.deterministic-runner"],
+            "capabilities": [],
+            "config_schema_ref": f"{ADAPTER_SCHEMA}#/$defs/AdapterDescriptor",
+        }
+        descriptor = AdapterDescriptor(**body, descriptor_digest=sha256_digest(body))
+        self.adapters.register(descriptor)
+        operation = self._operation(
+            "operation-adapter-deterministic",
+            "create",
+            descriptor.descriptor_id,
+            "shadow.adapter.descriptor",
+            f"{ADAPTER_SCHEMA}#/$defs/AdapterDescriptor",
+            "system",
+            "system",
+            "system",
+            descriptor.model_dump(mode="json", exclude_none=True),
+            Provenance(origin_type="shadow.origin.system", origin_ref="phase0-bootstrap"),
+        )
+        plan = CommitPlan(
+            commit_request_id="commit-request-adapter-deterministic",
+            idempotency_scope="system-adapter",
+            idempotency_key="deterministic-v1",
+            request_digest=sha256_digest(descriptor.model_dump(mode="json", exclude_none=True)),
+            actor_ref="system",
+            operations=[operation],
+            prepared_at=utc_timestamp(),
+        )
+        self.authority.commit(plan)
+
+    @staticmethod
+    def _operation(
+        operation_id: str,
+        operation: str,
+        record_id: str,
+        record_type: str,
+        target_schema_ref: str,
+        owner_ref: str,
+        space_id: str,
+        created_by: str,
+        typed_payload: dict[str, Any],
+        provenance: Provenance,
+        expected_version: int | None = None,
+    ) -> CommitOperation:
+        return CommitOperation(
+            operation_id=operation_id,
+            operation=operation,
+            record_id=record_id,
+            record_type=record_type,
+            target_schema_ref=target_schema_ref,
+            owner_ref=owner_ref,
+            space_id=space_id,
+            created_by=created_by,
+            data_classification="personal",
+            provenance=provenance,
+            retention_policy_ref=RETENTION_REF,
+            typed_payload=typed_payload,
+            expected_version=expected_version,
+        )
