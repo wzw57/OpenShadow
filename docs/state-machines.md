@@ -11,21 +11,21 @@
 3. Command 携带 command_id、expected_version 和 actor。
 4. unknown、stale 和 cancellation_unknown 是有效业务状态，不用 failed 或 null 代替。
 5. Runtime 私有 planning、tooling 和 subtask 不进入 Canonical 状态机。
-6. 第一版只实现 MVP-1 状态机；其余状态先作为 Contract 和测试场景。
+6. 各状态机按 Phase 1–4 实现；未实现部分先保留 Contract 和测试场景。
 7. 新状态只有在改变用户可观察行为、恢复语义或权限边界时才加入。
 
 ## 2. 实现优先级
 
 | 状态机 | 层级 | 原因 |
 |---|---|---|
-| Run | MVP-1 | 所有执行的统一生命周期 |
-| ExecutionAttempt | MVP-1 | Retry、费用和失败证据 |
-| Memory | MVP-1 | 长期资产、纠正和删除 |
-| DurableTask | MVP-2 | 跨时间连续性 |
-| WorldState Freshness | MVP-2 | 当前状态的时效诚实性 |
+| Run | Phase 1 | 所有执行的统一生命周期 |
+| ExecutionAttempt | Phase 1 | Retry、费用和失败证据 |
+| Memory | Phase 2 | 长期资产、纠正和删除 |
+| DurableTask | Phase 3 | 跨时间连续性 |
+| WorldState Freshness | Phase 3 | 当前状态的时效诚实性 |
 | Action | Later | 现实副作用与 unknown outcome |
 
-InteractionEndpoint、Integration、Store、OperationJob 和 Erasure 的生命周期先使用简单枚举与 Command 校验，不在 MVP-1 建立完整状态机。
+InteractionEndpoint、Integration、Store、OperationJob 和 Erasure 的生命周期先使用简单枚举与 Command 校验，不在其首个实现 Phase 建立完整状态机。
 
 ## 3. Run
 
@@ -53,7 +53,7 @@ stateDiagram-v2
     cancellation_unknown --> [*]
 ~~~
 
-MVP-1 可以先不实现 waiting 和 paused 的用户操作，但必须保留枚举兼容性。
+Phase 1 可以先不开放 waiting 和 paused 的用户操作；它们在 Phase 3 随 Durable Task 完整实现，但必须保留枚举兼容性。
 
 不变量：
 
@@ -90,9 +90,9 @@ Attempt 是 Run 聚合内的追加式 Entity：
 - 已结束 Attempt 不可覆盖；
 - transient Attempt failure 不必使 Run failed；
 - permanent failure、预算耗尽或无可用 Target 才终止 Run；
-- MVP-1 至少实现 pending、executing、succeeded、failed、timed_out。
+- Phase 1 至少实现 pending、executing、succeeded、failed、timed_out。
 
-outcome_unknown 在 MVP-1 主要用于无法确认 Target 结果；涉及现实副作用时由 Later Action 状态机处理。
+outcome_unknown 在 Phase 1 用于无法确认 Target 结果；涉及现实副作用时由 Phase 4 Action 状态机处理。
 
 ## 5. Memory
 
@@ -122,7 +122,7 @@ Memory.current_version_id
     v3 supersedes v2
 ~~~
 
-MVP-1 必须实现 active 和新版本 correction。logical delete 可以先实现；跨组件 erasure_pending / erased 在 Later 完整实现。
+Phase 2 必须实现 active、新版本 correction、logical delete 和 restore；跨组件 erasure_pending / erased 在 Phase 4 完整实现。
 
 约束：
 
@@ -134,7 +134,7 @@ MVP-1 必须实现 active 和新版本 correction。logical delete 可以先实�
 
 ## 6. DurableTask
 
-MVP-2：
+Phase 3：
 
 ~~~mermaid
 stateDiagram-v2
@@ -167,7 +167,7 @@ TaskProposal 在 accepted 前不是 Task。Runtime 只能提出 CompletionPropos
 
 ## 7. World State Freshness
 
-MVP-2。Freshness 与删除生命周期分离：
+Phase 3。Freshness 与删除生命周期分离：
 
 ~~~mermaid
 stateDiagram-v2
@@ -232,13 +232,13 @@ Provider 调用只能发生在持久 pending 后。unknown 不得盲目 Retry。
 
 | Record | 最小枚举 | 实现层级 |
 |---|---|---|
-| InteractionEndpoint | active / revoked | MVP-2 扩展 trust |
-| Integration | configured / active / degraded / disabled / deleted | MVP-2 |
-| StoreBinding | available / unavailable / recovering | MVP-1 health check |
+| InteractionEndpoint | active / revoked | Phase 5 扩展 trust |
+| Integration | configured / active / degraded / disabled / deleted | Phase 2 |
+| StoreBinding | available / unavailable / recovering | Phase 1 health check |
 | OperationJob | planned / running / completed / failed | Contract-only |
 | ComponentEraseStatus | pending / scheduled / completed / failed / unreachable | Later |
 | RoutingRule | active / disabled | Later |
-| Schedule | enabled / disabled | MVP-2 |
+| Schedule | enabled / disabled | Phase 3 |
 
 如果未来需要更复杂转换，应由真实失败用例和并发需求证明，而不是提前扩展。
 
@@ -259,7 +259,7 @@ payload_schema_ref
 payload
 ~~~
 
-MVP-1 使用模块化单体内的提交后分发，不要求 Event Sourcing、Broker 或分布式事务。
+Phase 0–1 使用模块化单体内的提交后分发，不要求 Event Sourcing、Broker 或分布式事务。
 
 要求：
 
@@ -276,7 +276,7 @@ Stage 3 只需正式冻结：
 1. Run 状态机；
 2. ExecutionAttempt 状态机；
 3. Memory Root 生命周期与不可变版本语义；
-4. DurableTask 和 WorldState 的 MVP-2 Contract；
+4. DurableTask 和 WorldState 的 Phase 3 Contract；
 5. Action 的 Later Contract；
 6. 简单 Record 的最小生命周期枚举；
 7. Domain Event Envelope。
