@@ -12,6 +12,7 @@ from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.registry import ContractRegistry
 from shadow_kernel.repository import CanonicalRepository
+from shadow_store import SqliteCanonicalRepository
 
 
 class CreateConversationCommand(BaseModel):
@@ -67,7 +68,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         database_path = root / ".shadow" / "shadow.db"
         database_path.parent.mkdir(parents=True, exist_ok=True)
         database_url = f"sqlite:///{database_path.as_posix()}"
-    repository = CanonicalRepository(database_url)
+    repository = SqliteCanonicalRepository(database_url)
     authority = CommitAuthority(repository, registry)
     conversations = ConversationService(repository, authority)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
