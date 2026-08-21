@@ -181,6 +181,7 @@ OpenShadow 自行实现的范围收紧为：
 - [分阶段实现计划](docs/implementation-stages.md)
 - [参考实现 Profile](docs/implementation-profile.md)
 - [开发路线](docs/roadmap.md)
+- [Phase 0–1 实现状态](docs/phase0-1-status.md)
 - [Stage 4 Contract 基线](docs/contract-baseline.md)
 - [架构决策记录](docs/adr/README.md)
 

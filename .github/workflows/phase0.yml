@@ -15,5 +15,5 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]"
-      - run: ruff check packages/shadow-kernel/src packages/shadow-application/src adapters/test-deterministic/src apps/shadow-server tests
+      - run: ruff check packages/shadow-kernel/src packages/shadow-application/src adapters/test-deterministic/src adapters/store-sqlite/src apps/shadow-server migrations tests
       - run: pytest -q

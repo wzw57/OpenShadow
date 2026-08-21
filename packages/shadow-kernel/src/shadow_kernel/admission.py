@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .commit import CommitAuthority
+from .errors import ShadowDomainError, ShadowError
 from .ids import new_id, sha256_digest, utc_timestamp
 from .models import (
     AdmissionRecordPayload,
@@ -61,7 +62,7 @@ class AdmissionService:
             {
                 "request_type": request_type,
                 "input_type": input_type,
-                "work_input": work_input.model_dump(mode="json")
+                "work_input": work_input.model_dump(mode="json", exclude_none=True)
                 if isinstance(work_input, RecordVersionRef)
                 else work_input,
                 "principal_ref": principal_ref,
@@ -77,6 +78,18 @@ class AdmissionService:
                     execution_id=new_id("ephemeral"),
                     message="Canonical Repository is unavailable; no durable state was created.",
                 ),
+            )
+
+        if isinstance(work_input, RecordVersionRef) and self.repository.get(
+            work_input.record_id, work_input.version
+        ) is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.admission.work-input-not-found",
+                    category="validation",
+                    message="A durable work input reference must resolve before admission.",
+                    typed_details=work_input.model_dump(mode="json"),
+                )
             )
 
         admission_id = new_id("admission")
@@ -136,7 +149,7 @@ class AdmissionService:
                 data_classification="personal",
                 provenance=provenance,
                 retention_policy_ref=RETENTION_REF,
-                typed_payload=admission_payload.model_dump(mode="json"),
+                typed_payload=admission_payload.model_dump(mode="json", exclude_none=True),
             ),
             CommitOperation(
                 operation_id=new_id("operation"),
@@ -150,7 +163,7 @@ class AdmissionService:
                 data_classification="personal",
                 provenance=provenance,
                 retention_policy_ref=RETENTION_REF,
-                typed_payload=requirements_payload.model_dump(mode="json"),
+                typed_payload=requirements_payload.model_dump(mode="json", exclude_none=True),
             ),
             CommitOperation(
                 operation_id=new_id("operation"),
@@ -164,7 +177,7 @@ class AdmissionService:
                 data_classification="personal",
                 provenance=provenance,
                 retention_policy_ref=RETENTION_REF,
-                typed_payload=request_payload.model_dump(mode="json"),
+                typed_payload=request_payload.model_dump(mode="json", exclude_none=True),
             ),
             CommitOperation(
                 operation_id=new_id("operation"),
@@ -178,7 +191,7 @@ class AdmissionService:
                 data_classification="personal",
                 provenance=provenance,
                 retention_policy_ref=RETENTION_REF,
-                typed_payload=run_payload.model_dump(mode="json"),
+                typed_payload=run_payload.model_dump(mode="json", exclude_none=True),
             ),
         ]
         plan = CommitPlan(

@@ -29,9 +29,10 @@ where = [
   "packages/shadow-kernel/src",
   "packages/shadow-application/src",
   "adapters/test-deterministic/src",
+  "adapters/store-sqlite/src",
   "apps/shadow-server",
 ]
-include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_server*"]
+include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_store*", "shadow_server*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -39,6 +40,7 @@ pythonpath = [
   "packages/shadow-kernel/src",
   "packages/shadow-application/src",
   "adapters/test-deterministic/src",
+  "adapters/store-sqlite/src",
   "apps/shadow-server",
 ]
 addopts = "-ra"

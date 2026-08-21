@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: OpenShadow Phase 0-1 API
   version: 0.1.0-stage4
-  description: Proposed Stage 4 API contract. This is not a Stage 5 implementation.
+  description: Accepted Stage 4 API contract implemented by the Stage 5 Phase 0-1 reference slice.
 servers:
   - url: http://127.0.0.1:8080
 security:

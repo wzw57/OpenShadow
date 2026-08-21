@@ -10,3 +10,13 @@ The first migration must preserve the logical contracts in
 expected-version writes are compare-and-swap, and idempotency records are
 digest-bound. PostgreSQL compatibility is a later Store Profile and is not
 required for the Phase 0 local loop.
+
+The checked-in Alembic baseline is `versions/0001_initial.py`. To initialize or
+upgrade a database explicitly:
+
+```powershell
+alembic upgrade head
+```
+
+Set `SHADOW_DATABASE_URL` to target another SQLite URL. The Repository Port
+does not expose Alembic; migration orchestration remains a Store Adapter concern.

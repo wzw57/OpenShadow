@@ -150,6 +150,12 @@ Stage 5 不是重新设计完整架构，而是按[分阶段实现计划](implem
 
 首个开发目标是 Phase 0–1 纵向闭环，但代码结构服务完整目标架构，不把短期范围冻结为长期内核。
 
+当前交付状态：Phase 0–1 的 Python reference slice 已在
+`stage5/phase0-1-implementation` 分支实现并通过本地 Contract / Repository / API
+测试。已覆盖 Kernel Port、SQLite Store Adapter、Commit / Admission、Binding、
+Deterministic Adapter、Conversation / Message、Run / Attempt、SSE、幂等重放与 Store
+不可用路径。Phase 2–5 继续只维护已接受的 Contract 与退出条件，暂不实现业务能力。
+
 ## 延后实现与重新评估
 
 以下只有在真实用例和测量证据出现后实现：

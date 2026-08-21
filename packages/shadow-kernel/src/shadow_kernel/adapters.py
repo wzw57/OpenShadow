@@ -158,6 +158,27 @@ class AdapterRegistry:
                     )
                 )
                 continue
+            if not self._version_satisfies(declaration.capability_version, requirement.version_range):
+                if requirement.required:
+                    raise ShadowDomainError(
+                        ShadowError(
+                            code="shadow.adapter.capability-version-incompatible",
+                            category="incompatible",
+                            message=(
+                                f"Capability {requirement.capability_id} does not satisfy "
+                                f"version range {requirement.version_range}."
+                            ),
+                        )
+                    )
+                resolutions.append(
+                    CapabilityResolution(
+                        requirement_ref=f"requirement-{index}",
+                        capability_id=requirement.capability_id,
+                        satisfied=False,
+                        mismatch_reason="shadow.capability.version-incompatible",
+                    )
+                )
+                continue
             resolutions.append(
                 CapabilityResolution(
                     requirement_ref=f"requirement-{index}",
@@ -184,3 +205,20 @@ class AdapterRegistry:
             selection_source_ref=selection_source_ref,
             created_at=utc_timestamp(),
         )
+
+    @staticmethod
+    def _version_satisfies(version: str, version_range: str) -> bool:
+        """Support the small range vocabulary used by the Phase 0 contract."""
+        if version_range in {version, "*", "latest"}:
+            return True
+        if version_range.endswith(".x"):
+            return version.startswith(version_range[:-1])
+        if version_range.startswith("^"):
+            requested = version_range[1:].split(".")
+            actual = version.split(".")
+            return bool(actual and requested and actual[0] == requested[0])
+        if version_range.startswith(">="):
+            requested = tuple(int(part) for part in version_range[2:].split(".")[:3])
+            actual = tuple(int(part) for part in version.split(".")[:3])
+            return actual >= requested
+        return False
