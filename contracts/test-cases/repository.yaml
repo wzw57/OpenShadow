@@ -8,6 +8,16 @@ cases:
     requirement_level: must
     input_fixture_refs: [../fixtures/repository/invalid-commit-plan.json]
     expected_outcome: invalid
+  - case_id: repository.failed-result-metadata.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/repository/invalid-failed-result-metadata.json]
+    expected_outcome: invalid
+    invariants: [failed-is-not-committed, no-resulting-version-on-failure]
+  - case_id: repository.committed-result.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/repository/valid-committed-result.json]
+    expected_outcome: valid
+    invariants: [commit-metadata-required, resulting-version-required]
   - case_id: repository.batch.atomic
     requirement_level: must
     description: One conflict prevents every operation in the batch.

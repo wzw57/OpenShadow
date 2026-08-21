@@ -1,0 +1,3 @@
+# Contract registry and bundle digests cover raw bytes. Preserve those bytes
+# exactly on every platform; do not apply Git line-ending conversion.
+contracts/** -text

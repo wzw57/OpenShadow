@@ -1,0 +1,19 @@
+{
+  "outcome": "failed",
+  "commit_id": "commit-1",
+  "committed_at": "2026-08-22T00:00:00Z",
+  "operation_results": [
+    {
+      "operation_id": "operation-1",
+      "record_id": "memory-1",
+      "resulting_version": 2
+    }
+  ],
+  "structured_error": {
+    "error_id": "error-1",
+    "code": "shadow.repository.unavailable",
+    "category": "unavailable",
+    "message": "Commit outcome was not established.",
+    "retryable": true
+  }
+}

@@ -4,7 +4,7 @@
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/adapters/1.0.0",
       "path": "schemas/adapters/1.0.0/schema.json",
-      "sha256": "a0e1d97e27f9db01cec2918e82656fb7da3381b563d64948d6c61883b254d9c2"
+      "sha256": "8717167fb986e2e78992e8b8ae0afa2bd868c4e1c47624787efe97e0966fd2c3"
     },
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/common/1.0.0",
@@ -19,17 +19,17 @@
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/kernel/1.0.0",
       "path": "schemas/kernel/1.0.0/schema.json",
-      "sha256": "aae1c86799a7935076df5565d26770e652ae81099203dcab062f87628febcf83"
+      "sha256": "5f84a6760940fb4232841c37a124d8834520d323d1fca1b368fca783dcc08359"
     },
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/profiles/1.0.0",
       "path": "schemas/profiles/1.0.0/schema.json",
-      "sha256": "5e3c9b7601c94fa9054a76795b5eec5b100862dbb5bbde210f14f0633c755ddf"
+      "sha256": "808c19847f95b0ebfde24c0afdb1d1303c2f7a4180f18fe11ae8170da42e23ef"
     },
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/repository/1.0.0",
       "path": "schemas/repository/1.0.0/schema.json",
-      "sha256": "0e6c59cdc96a1de906762245c88c5ad4775c438a4f4b10e91d1465caba3a3a18"
+      "sha256": "f7b00086ecef3fae9f87af0940f21a5eb81ba456529fae7f3c1a9d9f0a3da704"
     },
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/skills/1.0.0",

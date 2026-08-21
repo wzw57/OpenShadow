@@ -104,6 +104,16 @@
       ],
       "unevaluatedProperties": false
     },
+    "AuthorizedCapability": {
+      "allOf": [
+        { "$ref": "#/$defs/CapabilityResolution" },
+        {
+          "type": "object",
+          "required": ["satisfied"],
+          "properties": { "satisfied": { "const": true } }
+        }
+      ]
+    },
     "DataScope": {
       "type": "object",
       "required": ["allowed_space_ids", "allowed_record_types", "maximum_classification", "external_source_refs"],
@@ -132,7 +142,7 @@
         "principal_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
         "grantee_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
         "scope_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
-        "allowed_capabilities": { "type": "array", "items": { "$ref": "#/$defs/CapabilityResolution" }, "uniqueItems": true },
+        "allowed_capabilities": { "type": "array", "items": { "$ref": "#/$defs/AuthorizedCapability" }, "uniqueItems": true },
         "data_scope": { "$ref": "#/$defs/DataScope" },
         "resource_scope": { "$ref": "#/$defs/ResourceScope" },
         "budget_limits": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Quantity" } },

@@ -109,7 +109,12 @@
         {
           "if": { "properties": { "decision": { "const": "accepted" } }, "required": ["decision"] },
           "then": { "required": ["resulting_version"] },
-          "else": { "required": ["reason_code"] }
+          "else": {
+            "allOf": [
+              { "required": ["reason_code"] },
+              { "not": { "required": ["resulting_version"] } }
+            ]
+          }
         }
       ],
       "unevaluatedProperties": false
@@ -134,6 +139,35 @@
         "decided_at": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Timestamp" },
         "retention_policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }
       },
+      "allOf": [
+        {
+          "if": { "properties": { "decision": { "const": "accepted" } }, "required": ["decision"] },
+          "then": {
+            "allOf": [
+              { "required": ["request_ref", "root_run_ref"] },
+              { "not": { "required": ["approval_request_ref"] } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "approval_required" } }, "required": ["decision"] },
+          "then": {
+            "allOf": [
+              { "required": ["public_reason_code", "approval_request_ref"] },
+              { "not": { "anyOf": [{ "required": ["request_ref"] }, { "required": ["root_run_ref"] }] } }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "decision": { "const": "rejected" } }, "required": ["decision"] },
+          "then": {
+            "allOf": [
+              { "required": ["public_reason_code"] },
+              { "not": { "anyOf": [{ "required": ["request_ref"] }, { "required": ["root_run_ref"] }, { "required": ["approval_request_ref"] }] } }
+            ]
+          }
+        }
+      ],
       "unevaluatedProperties": false
     },
     "RequestPayload": {

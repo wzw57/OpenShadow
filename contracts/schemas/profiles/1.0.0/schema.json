@@ -165,13 +165,21 @@
       },
       "unevaluatedProperties": false
     },
+    "MemoryProposalTarget": {
+      "type": "object",
+      "required": ["memory_ref", "expected_version"],
+      "properties": {
+        "memory_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "expected_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" }
+      },
+      "unevaluatedProperties": false
+    },
     "MemoryProposalPayload": {
       "type": "object",
-      "required": ["proposed_operation", "target_memory_refs", "expected_versions", "memory_kind", "content_schema_ref", "proposed_content", "applicability_scope", "evidence_refs", "source_refs", "source_dependency"],
+      "required": ["proposed_operation", "targets", "memory_kind", "content_schema_ref", "proposed_content", "applicability_scope", "evidence_refs", "source_refs", "source_dependency"],
       "properties": {
         "proposed_operation": { "enum": ["create", "correct", "merge", "invalidate"] },
-        "target_memory_refs": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }, "uniqueItems": true },
-        "expected_versions": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" } },
+        "targets": { "type": "array", "items": { "$ref": "#/$defs/MemoryProposalTarget" }, "uniqueItems": true },
         "memory_kind": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
         "content_schema_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/SchemaRef" },
         "proposed_content": {},
@@ -182,6 +190,20 @@
         "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
         "proposal_reason": { "type": "string", "maxLength": 4000 }
       },
+      "allOf": [
+        {
+          "if": { "properties": { "proposed_operation": { "const": "create" } }, "required": ["proposed_operation"] },
+          "then": { "properties": { "targets": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "proposed_operation": { "enum": ["correct", "invalidate"] } }, "required": ["proposed_operation"] },
+          "then": { "properties": { "targets": { "minItems": 1, "maxItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "proposed_operation": { "const": "merge" } }, "required": ["proposed_operation"] },
+          "then": { "properties": { "targets": { "minItems": 2 } } }
+        }
+      ],
       "unevaluatedProperties": false
     },
     "ProfileValidationResult": {

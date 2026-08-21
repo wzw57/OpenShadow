@@ -1,0 +1,14 @@
+{
+  "admission_id": "admission-1",
+  "submission_id": "submission-1",
+  "input_type": "shadow.input.conversation-turn",
+  "principal_ref": "principal-1",
+  "endpoint_ref": "endpoint-1",
+  "space_id": "space-1",
+  "request_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "decision": "accepted",
+  "request_ref": { "record_id": "request-1" },
+  "root_run_ref": { "record_id": "run-1" },
+  "decided_at": "2026-08-22T00:00:00Z",
+  "retention_policy_ref": { "record_id": "retention-default" }
+}

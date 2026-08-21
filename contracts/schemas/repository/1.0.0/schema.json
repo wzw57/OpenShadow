@@ -100,7 +100,62 @@
       "allOf": [
         {
           "if": { "properties": { "outcome": { "enum": ["committed", "idempotent_replay"] } }, "required": ["outcome"] },
-          "then": { "required": ["commit_id", "committed_at"] }
+          "then": {
+            "allOf": [
+              { "required": ["commit_id", "committed_at"] },
+              {
+                "properties": {
+                  "operation_results": {
+                    "items": {
+                      "allOf": [
+                        { "$ref": "#/$defs/OperationResult" },
+                        { "required": ["resulting_version"], "not": { "required": ["conflict_current_version"] } }
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "conflict" } }, "required": ["outcome"] },
+          "then": {
+            "allOf": [
+              { "not": { "anyOf": [{ "required": ["commit_id"] }, { "required": ["repository_revision"] }, { "required": ["committed_at"] }] } },
+              {
+                "properties": {
+                  "operation_results": {
+                    "minItems": 1,
+                    "items": { "allOf": [{ "$ref": "#/$defs/OperationResult" }, { "not": { "required": ["resulting_version"] } }] },
+                    "contains": { "required": ["conflict_current_version"] },
+                    "minContains": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "failed" } }, "required": ["outcome"] },
+          "then": {
+            "allOf": [
+              { "required": ["structured_error"] },
+              { "not": { "anyOf": [{ "required": ["commit_id"] }, { "required": ["repository_revision"] }, { "required": ["committed_at"] }] } },
+              {
+                "properties": {
+                  "operation_results": {
+                    "items": {
+                      "allOf": [
+                        { "$ref": "#/$defs/OperationResult" },
+                        { "not": { "anyOf": [{ "required": ["resulting_version"] }, { "required": ["conflict_current_version"] }] } }
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
         }
       ],
       "unevaluatedProperties": false

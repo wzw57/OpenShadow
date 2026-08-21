@@ -17,6 +17,8 @@ is merged.
 
 All schema references must resolve from `manifest.json`; validators must not
 fetch schemas from the network. Schema versions and bundle digests are immutable.
+The repository `.gitattributes` disables text conversion below `contracts/` so
+the hashed bytes remain identical across operating systems and fresh checkouts.
 
 ## Skill bundle digest v1
 

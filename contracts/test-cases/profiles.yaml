@@ -21,9 +21,15 @@ cases:
     expected_outcome: invalid
   - case_id: profile.memory.merge.atomic
     requirement_level: must
+    input_fixture_refs: [../fixtures/profiles/valid-memory-merge-proposal.json]
     description: A merge creates one Memory and supersedes all inputs atomically.
     expected_outcome: committed
     invariants: [all-or-nothing, expected-version-on-every-input]
+  - case_id: profile.memory.merge-target.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/profiles/invalid-memory-merge-proposal.json]
+    expected_outcome: invalid
+    invariants: [target-and-expected-version-bound, merge-requires-multiple-inputs]
   - case_id: profile.memory.proposal-rejected
     requirement_level: must
     description: Rejecting a candidate creates a decision but no Memory asset.

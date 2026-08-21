@@ -1,0 +1,34 @@
+{
+  "envelope_id": "capability-envelope-1",
+  "principal_ref": "principal-1",
+  "grantee_ref": "adapter-1",
+  "scope_ref": { "record_id": "run-1" },
+  "allowed_capabilities": [
+    {
+      "requirement_ref": "requirement-1",
+      "capability_id": "shadow.runtime.cancel",
+      "selected_version": "1.0.0",
+      "declaration_ref": "adapter-descriptor-1#cancel",
+      "satisfied": true
+    }
+  ],
+  "data_scope": {
+    "allowed_space_ids": ["space-1"],
+    "allowed_record_types": ["shadow.record.run"],
+    "maximum_classification": "personal",
+    "external_source_refs": []
+  },
+  "resource_scope": {
+    "allowed_resource_refs": ["run-1"],
+    "allowed_operations": ["shadow.operation.cancel"]
+  },
+  "budget_limits": [],
+  "allowed_side_effects": [],
+  "approval_refs": [],
+  "policy_ref": { "record_id": "policy-1" },
+  "policy_version": 1,
+  "valid_from": "2026-08-22T00:00:00Z",
+  "valid_until": "2026-08-23T00:00:00Z",
+  "state": "active",
+  "issued_at": "2026-08-22T00:00:00Z"
+}

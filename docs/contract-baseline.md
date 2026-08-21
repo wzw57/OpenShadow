@@ -209,6 +209,10 @@ Memory Intelligence submits typed proposals. A pending proposal may be stored
 as a restricted control record when review must survive restart, but it is not
 Canonical Memory until accepted.
 
+Every correction, invalidation, or merge target pairs its Stable Record
+reference with its own Expected Version. Separate parallel target and version
+arrays are not a valid proposal representation.
+
 ## 10. Agent Skills compatibility
 
 The official Skill Profile preserves an Agent Skills bundle without injecting

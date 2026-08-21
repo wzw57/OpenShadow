@@ -22,6 +22,26 @@ cases:
     expected_outcome: conflict
     expected_error_code: shadow.repository.expected-version-conflict
     invariants: [no-last-write-wins, revalidation-required]
+  - case_id: kernel.admission.accepted-missing-work.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/kernel/invalid-accepted-admission.json]
+    expected_outcome: invalid
+    invariants: [accepted-admission-has-request, accepted-admission-has-root-run]
+  - case_id: kernel.admission.accepted.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/kernel/valid-accepted-admission.json]
+    expected_outcome: valid
+    invariants: [accepted-admission-has-request, accepted-admission-has-root-run]
+  - case_id: kernel.commit.rejected-version.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/kernel/invalid-rejected-decision-version.json]
+    expected_outcome: invalid
+    invariants: [only-accepted-creates-version]
+  - case_id: kernel.commit.accepted-version.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/kernel/valid-accepted-decision.json]
+    expected_outcome: valid
+    invariants: [accepted-has-resulting-version]
   - case_id: kernel.tombstone.no-sensitive-payload
     requirement_level: must
     description: An erased envelope accepts only the minimal Tombstone payload.

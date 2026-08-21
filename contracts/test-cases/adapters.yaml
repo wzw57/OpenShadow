@@ -8,6 +8,16 @@ cases:
     requirement_level: must
     input_fixture_refs: [../fixtures/adapters/invalid-capability.json]
     expected_outcome: invalid
+  - case_id: adapter.authorization.unsatisfied-capability.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/adapters/invalid-unsatisfied-allowed-capability.json]
+    expected_outcome: invalid
+    invariants: [allowed-capability-satisfied]
+  - case_id: adapter.authorization.satisfied-capability.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/adapters/valid-capability-envelope.json]
+    expected_outcome: valid
+    invariants: [allowed-capability-satisfied, declaration-version-pinned]
   - case_id: adapter.required-capability.unknown
     requirement_level: must
     description: An unknown required Capability makes the Binding incompatible.
