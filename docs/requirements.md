@@ -40,7 +40,7 @@ Shadow 内部负责推理、规划、Subtask、Subagent、Tool Loop 和具体执
 
 通过 Adapter 接入 Shadow 的数据库、Memory Intelligence、Search、Provider、Model、Voice、Storage 或其他实现。
 
-“External”表示实现边界，不表示它在 Shadow 产品之外或用户需要单独使用。
+“External”表示实现边界，不表示它在 Shadow 产品之外或用户需要单独使用。External Component 只能通过 Port 返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage，不能直接提交 Canonical State。
 
 ### 2.5 Canonical Asset
 
@@ -60,7 +60,7 @@ Shadow 当前认为与判断和行动相关的现实状态投影。World State �
 
 ### 2.9 Execution Target
 
-能够执行 Shadow Run 的可替换目标，包括 Agent Runtime、Model Worker、Deterministic Runner 和 Capability Provider。
+能够执行 Shadow Run 的可替换目标，包括 Agent Runtime、Model Worker、Deterministic Runner、Workflow Target 和 Capability Provider。Workflow Target 的具体 Workflow Engine 仍是外部实现。
 
 ### 2.10 Executable Asset
 
@@ -120,7 +120,7 @@ Shadow 需要支持数据版本、兼容性检查、迁移、导出、导入、�
 
 ### R-010 所有执行经过 Shadow，但不都经过 Agent Runtime
 
-Shadow 根据任务特征将 Run 绑定到 Agent Runtime、Model Worker、Deterministic Runner 或 Capability Provider。固定脚本和单次模型推理不需要启动 Agent Loop。
+Shadow 根据任务特征将 Run 绑定到 Agent Runtime、Model Worker、Deterministic Runner、Workflow Target 或 Capability Provider。固定脚本和单次模型推理不需要启动 Agent Loop。
 
 ### R-011 健康心跳必须确定性
 
@@ -404,6 +404,7 @@ Shadow 必须支持以下 Execution Target：
 - Agent Runtime：开放式、多步骤、需要规划的任务；
 - Model Worker：单次推理、分类、提取、摘要或判断；
 - Deterministic Runner：脚本、函数、固定程序和数据处理；
+- Workflow Target：明确步骤、等待和补偿流程，具体 Workflow Engine 外置；
 - Capability Provider：外部 API、设备、账户和现实动作。
 
 Core 必须定义：
@@ -630,6 +631,6 @@ Shadow 可以提供这些外部实现所需的 Adapter 和官方集成。
 - 用户物理删除请求可以传播并显示每个组件的完成状态；
 - Store 故障时，未记录的现实副作用不会继续执行；
 - 标准导出与加密完整备份具有不同边界；
-- 简单任务可以直接绑定 Model Worker 或 Deterministic Runner，不启动 Agent Runtime；
+- 简单任务可以直接绑定 Model Worker 或 Deterministic Runner，明确流程可以绑定外部 Workflow Target，不要求启动 Agent Runtime；
 - Semantic Pulse 删除后，系统健康和确定性调度仍然正常；
 - 用户能够查看、修正、删除和导出自己的长期资产。
