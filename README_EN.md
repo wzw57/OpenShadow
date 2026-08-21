@@ -192,6 +192,6 @@ Near-term implementation focuses on a single-user path without making future mul
 
 ## Status
 
-**Stage 2 is complete, and Stage 3 domain modeling and state-machine design are in progress.**
+**Stage 2 is complete, and Stage 3 is narrowing the minimal domain model.**
 
-The nineteen key use cases are now an accepted baseline. The current work extracts the minimal Aggregate Roots, Canonical Records, Proposals, Value Objects, relationships, consistency boundaries, and state transitions.
+The nineteen key use cases are an accepted baseline. The domain model is split into MVP-1, MVP-2, Later, and Contract-only layers. The first implementation slice contains only local Web, Conversation, Run, static Binding, one execution adapter, Canonical Memory, and one Primary Store.
