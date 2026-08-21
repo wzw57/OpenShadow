@@ -1,5 +1,7 @@
 # 交互与准入用例
 
+> 本文中的 Request 均指 work-bearing Request。Health、只读控制面 Query、已有 Run 事件订阅和内部恢复步骤不创建 Root Run。
+
 ## UC-001 普通请求闭环
 
 ### 目标
@@ -27,7 +29,7 @@
 
 1. Web Client 为提交生成 idempotency key，并发送 Conversation version、message 和客户端上下文。
 2. Interaction API 完成身份、Endpoint、Space、数据等级和格式检查。
-3. Shadow 创建 Accepted Request 和唯一 Root Run。
+3. Shadow 将其识别为承载工作的输入，创建 Accepted Request 和唯一 Root Run。
 4. Core 建立 Execution Requirements。
 5. 低风险且可逆的轻微歧义可以按上下文解析；影响任务本质、费用、隐私或副作用时返回 Clarification Request。
 6. Router 或静态规则返回 Route Proposal。
@@ -75,7 +77,7 @@ Prompt、Response 和 Tool Trace 是否持久化由 Retention Policy 决定。Ru
 
 ### Acceptance Criteria
 
-- 一个 Accepted Request 恰好创建一个 Root Run；
+- 一个 Accepted work-bearing Request 恰好创建一个 Root Run；
 - 自动重试不创建第二个 Root Run；
 - transient 与 permanent failure 行为可区分；
 - Target 切换不突破数据、费用和语义边界；
@@ -213,7 +215,7 @@ Store 故障期间无法承诺任何 Canonical Commit。
 - user UI preference；
 - last acknowledged event cursor when policy requires。
 
-Conversation 是独立可保留对象，不等于 Run、Memory 或 Durable Task。
+Conversation 是官方 typed Profile，不等于 Run、Memory Profile 或 Durable Task Profile。
 
 ### External Side Effects
 
