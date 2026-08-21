@@ -46,7 +46,7 @@ Shadow 是完整产品；Shadow Core 只是其中必须长期稳定的最小内�
 
 > **所有请求都经过 Shadow，但不必都经过 Agent Runtime。**
 
-每个被 Shadow 接受的 Request 形成一个 Root Run；准入失败只形成最小 Admission Record。Shadow 根据明确的 Execution Binding，将工作交给 Agent Runtime、单次 Model Worker、Deterministic Runner 或 Capability Provider。完整输入、输出和工具过程是否长期保存，由用户策略和产生的长期价值决定。需要跨 Session、执行目标或时间继续存在的工作才成为 Durable Task。
+每个被 Shadow 接受的 Request 形成一个 Root Run；准入失败只形成最小 Admission Record。Shadow 根据明确的 Execution Binding，将工作交给 Agent Runtime、单次 Model Worker、Deterministic Runner、外部 Workflow 或 Capability Provider。完整输入、输出和工具过程是否长期保存，由用户策略和产生的长期价值决定。需要跨 Session、执行目标或时间继续存在的工作才成为 Durable Task。
 
 > **Shadow owns assets, continuity, current state and authority.**
 
@@ -84,13 +84,14 @@ Accepted World State 属于可迁移的 Canonical State。Shadow 保存当前投
 
 ## 灵活执行平面
 
-Shadow 支持四类可替换 Execution Target：
+Shadow 支持五类可替换 Execution Target：
 
 | Target | 用途 |
 |---|---|
 | Agent Runtime | 开放式、多步骤、需要规划或工具循环 |
 | Model Worker | 分类、提取、总结等一次受限推理 |
 | Deterministic Runner | 脚本、函数和固定程序 |
+| Workflow Target | 明确步骤、等待和补偿流程；具体引擎外置 |
 | Capability Provider | 外部 API、账户、设备和现实动作 |
 
 Core 负责准入、权限、预算、Binding、状态与结果记录。高级任务分类、多模型评分和动态选择由外部 Routing Component 提议；Core 只校验并接受或拒绝。早期版本可以使用用户显式选择和静态规则。
@@ -189,6 +190,7 @@ OpenShadow 必须自行定义和实现：
 - [状态机基线](docs/state-machines.md)
 - [完整技术架构](docs/technical-architecture.md)
 - [分阶段实现计划](docs/implementation-stages.md)
+- [参考实现 Profile](docs/implementation-profile.md)
 - [开发路线](docs/roadmap.md)
 - [架构决策记录](docs/adr/README.md)
 
@@ -196,4 +198,4 @@ OpenShadow 必须自行定义和实现：
 
 **Stage 3 领域模型已经收紧，Stage 4 正在形成完整技术架构与分阶段实现基线。**
 
-Stage 4 不把 MVP 当作架构边界。完整目标架构已经定义 Interaction、Access、Core、Execution、Adapter、Canonical State 与 Infrastructure 平面，以及统一执行模型、关键数据流和部署演进；实现按照 Phase 0–5 逐步交付，每个阶段都是同一目标架构的真子集。
+Stage 4 不把 MVP 当作架构边界。完整目标架构已经定义 Interaction、Access、Core、Execution、Adapter、Canonical State 与 Infrastructure 平面，以及统一执行模型、关键数据流和部署演进；实现按照 Phase 0–5 逐步交付，每个阶段都是同一目标架构的真子集。首套参考实现已经确定采用 Python、FastAPI、React + TypeScript + Vite、OpenAPI / JSON Schema、SSE、SQLite WAL、SQLAlchemy、Alembic，以及进程内 Port 与进程外 stdio Adapter Transport。
