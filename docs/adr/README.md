@@ -85,6 +85,14 @@ NNNN-short-title.md
 35. **标准可移植导出与完整设备备份是不同的兼容和安全承诺。**
 36. **Primary Store 故障时进入受限模式，未记录现实副作用默认禁止。**
 37. **只有预先配置的紧急能力可以先写可靠持久 Outbox，再执行并恢复 reconciliation。**
+38. **被接受的 Request 是不可变准入记录，并创建且只创建一个 Root Run。**
+39. **准入失败只产生受保留策略控制的最小 Admission Record，不创建 Run。**
+40. **失败重试是同一 Run 下的新 Execution Attempt，不能覆盖旧 Attempt。**
+41. **Run 采用 Core 管理的最小通用状态机，Runtime 私有业务状态不进入 Canonical Model。**
+42. **取消必须区分 cancelling、cancelled 和 cancellation_unknown。**
+43. **Durable Task 由连续性需求决定；外部组件只能提交 Task Proposal。**
+44. **Run 成功不自动完成 Durable Task，最终完成状态由 Shadow 校验并提交。**
+45. **Stage 1 责任矩阵是后续用例和领域模型的责任归属基线。**
 
 ## 何时必须新增 ADR
 
