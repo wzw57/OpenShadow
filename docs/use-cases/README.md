@@ -33,6 +33,7 @@
 
 - [UC-003 直接 Model Worker 执行](02-execution-and-continuity.md#uc-003-直接-model-worker-执行)
 - [UC-004 Executable Asset 与 Runner](02-execution-and-continuity.md#uc-004-executable-asset-与-runner)
+- [UC-004A 外部 Workflow Target 执行](02-execution-and-continuity.md#uc-004a-外部-workflow-target-执行)
 - [UC-005 Run 晋升为 Durable Task](02-execution-and-continuity.md#uc-005-run-晋升为-durable-task)
 - [UC-006 Runtime 故障恢复与 Handoff](02-execution-and-continuity.md#uc-006-runtime-故障恢复与-handoff)
 
@@ -64,7 +65,7 @@
 1. 所有输入经过 Shadow Admission；
 2. 被接受的 Request 创建一个 Root Run；
 3. 重试是同一 Run 下的新 Execution Attempt；
-4. External Component 只能返回 Proposal、Result、Usage 或 Checkpoint Reference；
+4. External Component 只能返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage；
 5. 只有 Shadow Authority 提交 Canonical State；
 6. Execution Target 受 Binding 和 Capability Envelope 约束；
 7. 未知数据默认 sensitive；
@@ -79,4 +80,5 @@
 - 每个现实副作用都有授权、幂等和 unknown outcome 语义；
 - 用例不依赖具体数据库、模型、Runtime 或 Provider；
 - 用例足以提取 Stage 3 领域对象、关系和状态机；
+- Stage 4 增补 Workflow Target 用例，不改变 Stage 2 已确认的 Authority 边界；
 - 未决项只保留真正影响产品行为或 Core 边界的问题。
