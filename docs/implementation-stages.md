@@ -329,17 +329,10 @@ Web
 - 因当前没有多服务而让 Domain 依赖 Framework；
 - 因未来可能需要而提前实现微服务、队列或复杂多主一致性。
 
-## 14. 进入开发前的最后准备
+## 14. 已接受的参考实现
 
-完整目标架构冻结后，开始 Phase 0–1 编码前只需确定一个可更换的“首选实现 Profile”：
+Stage 4 已经接受 [参考实现 Profile](implementation-profile.md)：Python Core、FastAPI、React + TypeScript + Vite、REST / OpenAPI、SSE、checked-in JSON Schema、进程内 Python Port、进程外 JSON-RPC-style stdio Transport、SQLite WAL、SQLAlchemy、Alembic、PostgreSQL Store Profile，以及 Deterministic Test、OpenAI Model、Process Runtime 三类 Reference Adapter。
 
-- Core 实现语言；
-- Web Client 技术；
-- API 协议；
-- 第一 Primary Store Adapter；
-- 第一真实 Execution Adapter；
-- Schema / migration 工具；
-- Adapter SDK 的首种语言与进程内 transport；
-- 测试、打包和本地启动方式。
+这些是实现选择，不改变本文件或完整技术架构定义的长期边界。具体依赖按 Release 锁定并通过 Contract Test 与 Migration 验证；任何具体项目未来都可以由兼容 Adapter 替换。
 
-这些是实现选择，不改变本文件或完整技术架构定义的长期边界。任何具体项目未来都可以由兼容 Adapter 替换。
+开始 Phase 0–1 编码前剩余工作只有字段级 Port Schema、可执行 Contract Example、项目脚手架和本地开发命令。
