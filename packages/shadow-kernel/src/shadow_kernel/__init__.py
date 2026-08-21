@@ -5,6 +5,7 @@ from .commit import CommitAuthority
 from .models import CanonicalEnvelope, CommitBatchResult, CommitPlan
 from .registry import ContractRegistry
 from .repository import CanonicalRepository, RepositoryUnavailable
+from .runtime import RuntimeAdapter
 
 __all__ = [
     "AdmissionResult",
@@ -16,4 +17,5 @@ __all__ = [
     "CommitPlan",
     "ContractRegistry",
     "RepositoryUnavailable",
+    "RuntimeAdapter",
 ]
