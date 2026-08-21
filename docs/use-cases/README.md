@@ -51,6 +51,12 @@
 - [UC-014 标准导出、完整备份与恢复](04-actions-resilience-portability.md#uc-014-标准导出完整备份与恢复)
 - [UC-015 Erasure 跨组件传播](04-actions-resilience-portability.md#uc-015-erasure-跨组件传播)
 
+### E. Integration、外部资产与主动智能
+
+- [UC-016 安装、配置与撤销 Integration](05-integrations-and-proactive.md#uc-016-安装配置与撤销-integration)
+- [UC-017 按需访问外部信息资产](05-integrations-and-proactive.md#uc-017-按需访问外部信息资产)
+- [UC-018 Semantic Pulse 提议与拒绝](05-integrations-and-proactive.md#uc-018-semantic-pulse-提议与拒绝)
+
 ## 3. 全局约束
 
 所有用例继续满足：
