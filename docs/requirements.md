@@ -50,6 +50,22 @@ Shadow 内部负责推理、规划、Subtask、Subagent、Tool Loop 和具体执
 
 可以由 Canonical Asset 重建的索引、Embedding、Graph、Summary、Projection、Cache 或 Runtime-specific State。
 
+### 2.7 Observation
+
+外部来源对现实状态的一次带来源和时间信息的报告。Observation 是 Proposal，不等于 Shadow 已接受的当前状态。
+
+### 2.8 World State
+
+Shadow 当前认为与判断和行动相关的现实状态投影。World State 具有来源、时效和过期语义，不试图复制整个外部世界。
+
+### 2.9 Execution Target
+
+能够执行 Shadow Run 的可替换目标，包括 Agent Runtime、Model Worker、Deterministic Runner 和 Capability Provider。
+
+### 2.10 Executable Asset
+
+可以被 Shadow 长期登记、版本化和授权执行的脚本、函数或固定程序。
+
 ## 3. 已确认的设计原则
 
 ### R-001 所有请求经过 Shadow
@@ -89,6 +105,14 @@ Shadow 需要支持数据版本、兼容性检查、迁移、导出、导入、�
 ### R-009 单用户优先
 
 近期只开发单用户场景。核心 Contract 不依赖不可移除的全局单用户假设，但暂不开发完整多用户功能。
+
+### R-010 所有执行经过 Shadow，但不都经过 Agent Runtime
+
+Shadow 根据任务特征将 Run 绑定到 Agent Runtime、Model Worker、Deterministic Runner 或 Capability Provider。固定脚本和单次模型推理不需要启动 Agent Loop。
+
+### R-011 健康心跳必须确定性
+
+进程健康、Lease、Timeout 和 Scheduler Tick 不依赖模型。小模型可以作为可替换的 Semantic Pulse 提出状态、Recall、Run 或 Task Proposal，但不能成为系统正确运行的必要条件。
 
 ## 4. 功能需求
 
@@ -275,21 +299,98 @@ Shadow 必须提供：
 
 具体 Provider 和协议实现通过 Adapter 接入。
 
-### 4.13 Event 与持续运行
+### 4.13 Event、Observation 与 World State
 
-Shadow 必须支持：
+Shadow 必须区分：
 
-- 接收和持久化重要 Event；
-- 处理重复 Event；
-- 维护 Task 行动所需的最小 State Projection；
-- Schedule 和 Condition；
-- Background Job；
-- 在没有 Chat Prompt 时创建、恢复或检查 Task；
-- Core 重启后的恢复。
+- Event：已经发生的重要事实；
+- Observation：外部来源对当前状态的报告；
+- World State：Shadow 当前接受的、与判断和行动相关的状态投影；
+- Memory：从历史中形成的长期认知；
+- Task：Shadow 承诺完成的工作。
 
-具体 Event Collector、Scheduler Engine 或 Broker 可以由可替换组件提供。
+Observation 必须携带来源、观察时间和必要的时效信息。外部组件只能提交 Observation Proposal，不能直接修改 World State。
 
-### 4.14 Context
+World State 必须支持：
+
+- Subject / Property / Value；
+- Source；
+- Observed Time 和 Valid Time；
+- TTL / Expiration；
+- Fresh、Stale、Unknown 等状态；
+- Scope；
+- Version；
+- 与 Event、Task 和 Capability 的关系。
+
+Shadow 只保存影响判断和行动的最小状态。Calendar、Weather、设备、位置和其他领域状态通过 State Source Adapter 接入，外部系统仍然负责其完整领域数据。
+
+World State 可以触发 Condition、Run 或 Durable Task。复杂状态融合、预测和异常检测由可替换组件提供。
+
+### 4.14 Execution Dispatch
+
+所有执行由 Shadow 准入和记录，但不要求全部经过 Agent Runtime。
+
+Shadow 必须支持以下 Execution Target：
+
+- Agent Runtime：开放式、多步骤、需要规划的任务；
+- Model Worker：单次推理、分类、提取、摘要或判断；
+- Deterministic Runner：脚本、函数、固定程序和数据处理；
+- Capability Provider：外部 API、设备、账户和现实动作。
+
+Core 必须定义：
+
+- Execution Request；
+- Execution Requirements；
+- Execution Binding；
+- Execution Target Descriptor；
+- Execution Status；
+- Execution Result。
+
+Execution Requirements 应能表达所需 Capability、隐私、本地性、预算、延迟、风险和确定性等约束。Core 负责最终 Binding、权限和 Run 状态；具体路由评分、成本预测、模型选择、Fallback 和多模型比较由可替换 Routing Component 提供。
+
+早期实现可以使用显式配置或静态规则，不要求智能路由。
+
+### 4.15 Model Worker 与 Routing
+
+Shadow 必须允许不经过 Agent Loop 的直接 Model Worker。
+
+Model Worker 通过 Model Port 接收受约束的输入并返回结构化或文本结果。模型 Provider、模型选择和推理实现可以替换。
+
+Routing Component 只能返回 Route Proposal。Shadow 必须根据可用性、权限、预算和任务要求校验后提交 Execution Binding。
+
+### 4.16 Executable Asset 与 Runner
+
+需要长期复用的脚本、函数或固定程序可以登记为 Executable Asset。
+
+Executable Asset 需要具有：
+
+- Stable ID；
+- Source 或 Source Reference；
+- Version；
+- Input / Output Contract；
+- Runtime Requirements；
+- Permission；
+- Provenance；
+- Trust；
+- Checksum。
+
+Shadow 管理其身份、版本、授权、Schedule / Event Binding 和执行记录。具体语言运行时、Sandbox、资源限制、依赖安装和进程隔离由可替换 Runner 提供。
+
+### 4.17 Health Heartbeat 与 Semantic Pulse
+
+Shadow 的 Health Check、Lease、Timeout、Queue State 和 Scheduler Tick 必须使用确定性机制。
+
+Shadow 可以接入可替换 Semantic Pulse，通过小模型或其他低成本智能对 Event 和 World State 进行轻量分析，并提出：
+
+- State Update Proposal；
+- Recall Proposal；
+- Run Proposal；
+- Durable Task Proposal；
+- stronger Execution Target Proposal。
+
+Semantic Pulse 不能直接提交 World State、Task 或高风险 Action，也不能成为 Core 持续运行的必要依赖。
+
+### 4.18 Context
 
 Shadow 必须在调用 Runtime 前建立授权上下文边界，可能包括：
 
@@ -305,7 +406,7 @@ Shadow 必须在调用 Runtime 前建立授权上下文边界，可能包括：
 
 Runtime-specific Prompt、Token Layout 和 Context Rendering 不属于稳定 Core Contract。
 
-### 4.15 用户控制
+### 4.19 用户控制
 
 用户必须能够：
 
@@ -318,7 +419,7 @@ Runtime-specific Prompt、Token Layout 和 Context Rendering 不属于稳定 Cor
 - 导出 Shadow 长期资产；
 - 查看迁移和完整性验证结果。
 
-### 4.16 交互便利性与未来接口
+### 4.20 交互便利性与未来接口
 
 Shadow 产品需要允许通过 Chat、CLI、API 和未来的 Voice / Device Endpoint 使用。
 
@@ -358,6 +459,14 @@ Core 重启后，应能从 Durable Store 恢复已提交的长期状态。
 
 不因未来可能需要某项能力而提前实现复杂路由、多组件融合、微服务、集群或完整多用户系统。
 
+### NFR-009 状态时效性
+
+World State 必须显式表达时效和未知状态。过期 Observation 不得被静默当作当前事实。
+
+### NFR-010 确定性基础运行
+
+系统健康、调度 Tick、Lease 和 Timeout 不依赖任何模型或语义智能组件。
+
 ## 6. 明确不自研的基础能力
 
 OpenShadow 不自行开发：
@@ -373,6 +482,9 @@ OpenShadow 不自行开发：
 - STT、TTS、Wake Word 和音频引擎；
 - 家电协议栈；
 - 通用 Workflow Engine；
+- 通用多模型路由和模型评分系统；
+- Script Runtime、Sandbox 和依赖管理器；
+- 领域专用 World State 同步或 Digital Twin；
 - Secret Store；
 - 日志、指标或 Trace 后端。
 
@@ -388,4 +500,7 @@ Shadow 可以提供这些外部实现所需的 Adapter 和官方集成。
 - 外部资料按需访问，不要求 Shadow 复制全部内容；
 - Skill、Extension、Integration 和 MCP Connection 可以作为用户能力资产持续管理；
 - 外部 Action 经过统一治理并具有可恢复记录；
+- World State 能表达来源、时效、过期和未知状态；
+- 简单任务可以直接绑定 Model Worker 或 Deterministic Runner，不启动 Agent Runtime；
+- Semantic Pulse 删除后，系统健康和确定性调度仍然正常；
 - 用户能够查看、修正、删除和导出自己的长期资产。
