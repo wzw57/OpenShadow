@@ -1,6 +1,7 @@
 # ADR-0001: 完整目标架构与分阶段实现
 
 - Status: Accepted
+- Refined by: [ADR-0003](0003-tiny-core-and-typed-profiles.md)
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
 
@@ -23,15 +24,11 @@ Shadow 的完整逻辑架构由以下责任平面组成：
 - Replaceable Infrastructure；
 - External Implementations and Sources。
 
-所有输入和触发统一经过 Admission。所有执行使用 Run、Execution Binding 和 Execution Attempt，并支持五种 Execution Mode：
+所有承载工作的输入和触发统一经过 Admission；健康、只读控制面查询和已有 Run 订阅不创建 Root Run。所有执行使用 Run、Execution Binding 和 Execution Attempt。
 
-- agent_runtime；
-- direct_model；
-- deterministic_program；
-- workflow；
-- capability_provider。
+Binding 使用可扩展 namespaced `target_kind`。agent-runtime、model-worker、deterministic-runner、workflow-target 和 capability-provider 是首批 well-known kinds，不是封闭全集。
 
-Shadow Core 持有 Authority、Canonical State、Continuity、Binding 和用户控制。外部组件只能返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage。
+Shadow Tiny Kernel 持有 Identity、Canonical Envelope、Proposal / Commit、Run / Attempt、minimal Continuity、Binding 和用户控制。Memory、State、Task、Action、Skill 等领域语义使用 typed Profile。Execution / Intelligence 与 Infrastructure Port 使用 family-specific Contract。
 
 完整目标架构先冻结，按照 Phase 0–5 逐步实现。Phase 标签只表示实现顺序，每个 Phase 必须是同一目标架构的真子集。
 
@@ -40,7 +37,7 @@ Shadow Core 持有 Authority、Canonical State、Continuity、Binding 和用户�
 ## Rationale
 
 - 用户长期资产不能依赖某个快速变化组件的私有格式；
-- 统一执行模型允许简单模型、脚本、工作流和 Agent Runtime 共存；
+- Capability-first 执行模型允许当前与未来 Target 共存；
 - 完整边界避免后续建立旁路；
 - 分阶段实现避免为未验证用例提前构建微服务和复杂基础设施；
 - 逻辑架构与部署拓扑分离，允许低成本起步和长期演进。
@@ -74,7 +71,7 @@ Shadow Core 持有 Authority、Canonical State、Continuity、Binding 和用户�
 
 代价：
 
-- 第一版必须保留 owner_ref、space_id、schema_version、Binding 和 Adapter Manifest 等基础字段；
+- 第一版必须保留 owner_ref、space_id、schema_ref、Binding 和 minimal AdapterDescriptor 等基础字段；
 - 需要维护跨语言 Schema 与 Contract Test；
 - External Component 不能直接写数据库，增加一层边界映射；
 - 每个 Phase 都需要验证没有绕过完整架构。
@@ -84,9 +81,9 @@ Shadow Core 持有 Authority、Canonical State、Continuity、Binding 和用户�
 仅在以下证据出现时重新评估：
 
 - 某类权威状态无法由当前 Core 边界表达；
-- 五种 Execution Mode 无法覆盖真实执行类型；
+- namespaced target_kind 与 Capability 无法覆盖真实执行类型；
 - 模块化单体无法满足已测量的可靠性或隔离需求；
-- Adapter Capability Negotiation 无法支持主要外部项目；
+- Profile / Adapter Capability Negotiation 无法支持主要外部项目；
 - 多用户或多设备需求要求改变 Owner / Space 的事实所有权。
 
 重新评估必须新增 ADR，不能通过实现旁路悄悄改变架构。
