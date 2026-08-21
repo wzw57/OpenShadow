@@ -140,22 +140,39 @@ Model、Runtime、Runner 和 Provider Binding 必须声明可处理的数据等�
 
 ## 4. 功能需求
 
-### 4.1 Request 与 Run
+### 4.1 Admission、Request、Run 与 Attempt
 
-Shadow 必须：
+Shadow 必须区分：
 
-- 接收用户请求、外部 Event 和 Schedule Trigger；
-- 为每次执行创建稳定 Run 标识；
-- 记录最小 Run 元数据；
-- 根据配置绑定 Runtime 和所需组件；
-- 支持取消、失败和完成；
-- 将有长期价值的结果晋升为 Memory、Artifact、Action 或 Durable Task。
+- Admission Record：准入结果的最小记录；
+- Request：被接受请求的不可变准入记录；
+- Root Run：一个被接受 Request 对应的一次顶层运行；
+- Execution Attempt：同一 Run 下的一次具体执行尝试。
 
-最小 Run 记录用于连续性和审计，不要求永久保存完整对话、Prompt、模型输出和工具过程。
+身份无法确认、格式无效、权限拒绝、来源撤销或重复重放等准入失败只创建受 Retention Policy 控制的最小 Admission Record，不创建 Run。
+
+每个被接受的 Request 必须创建一个 Root Run。失败重试必须创建新的 Execution Attempt，不创建重复 Root Run，也不能覆盖旧 Attempt。
+
+Run 最小状态机为：
+
+~~~text
+created → queued → running
+                    ├─ waiting → running
+                    ├─ paused → queued
+                    ├─ completed
+                    ├─ failed
+                    └─ cancelling
+                         ├─ cancelled
+                         └─ cancellation_unknown
+~~~
+
+Shadow 必须校验状态转换。用户请求取消不等于外部执行已停止；只有获得 Target 确认后才能提交 cancelled，无法确认时提交 cancellation_unknown。
+
+最小记录保存身份、时间、状态、Binding、费用、结果摘要和必要审计引用。完整对话、Prompt、模型输出和 Tool Trace 按 Retention Policy 与 Data Classification 保存；Runtime 私有推理不要求保存。
 
 ### 4.2 Durable Task
 
-需要跨 Session、Runtime、等待条件或长期时间存在的工作必须表示为 Durable Task。
+需要跨 Session、Execution Target、重启、等待条件或长期时间存在的工作必须表示为 Durable Task。执行耗时较长或使用 Agent Runtime 本身不构成 Durable Task。
 
 Shadow 必须支持：
 
@@ -168,9 +185,13 @@ Shadow 必须支持：
 - Event 或 Schedule 触发恢复；
 - Runtime 崩溃后的恢复；
 - Runtime 切换后的继续执行；
-- Shadow 对最终 Task 状态的提交。
+- Shadow 对最终 Task 状态的提交；
+- 一个 Durable Task 跨时间关联多个 Run；
+- 从普通 Run 接收 Durable Task Proposal。
 
-Runtime 内部 Planner、Subtask、Subagent 和 Workflow 不要求同步为 Shadow Task。
+用户可以直接创建 Durable Task。Runtime、Semantic Pulse、规则和其他组件只能提交 Durable Task Proposal，由 Shadow 校验后创建。
+
+Runtime 内部 Planner、Subtask、Subagent 和 Workflow 不要求同步为 Shadow Task。Run 成功不自动代表 Durable Task 完成；Runtime 提交 Completion Proposal，Shadow 根据 Task 完成条件、外部结果和 reconciliation 提交最终状态。
 
 ### 4.3 Runtime 接入
 
