@@ -3,6 +3,7 @@
 - 状态：已确认边界的概要设计
 - 目标：描述完整 Shadow、最小 Core 与可替换组件之间的关系
 - 非目标：不选择具体 Runtime、模型、Memory 项目、数据库或部署平台
+- 详细事实源：[完整技术架构](technical-architecture.md)；本文件保留产品级逻辑概要
 
 ## 1. 系统定义
 
@@ -36,7 +37,7 @@ Shadow Core 不以自行实现更多功能为目标。它只保留无法外包�
    管理 Request Admission、Run、Durable Task、Checkpoint、Execution Binding 和 Handoff。
 
 4. **Execution Dispatch**  
-   根据已确认的 Binding 将执行交给 Agent Runtime、Model Worker、Deterministic Runner 或 Capability Provider，并统一记录 Status 与 Result。高级路由策略不属于 Core。
+   根据已确认的 Binding 将执行交给 Agent Runtime、Model Worker、Deterministic Runner、Workflow Target 或 Capability Provider，并统一记录 Status 与 Result。高级路由策略不属于 Core。
 
 5. **Asset & Capability Catalog**  
    管理用户长期资产、Owner / Space、外部资产引用、Executable Asset、Routing Rule、Skill、Extension、Integration 和 Capability Binding。
@@ -81,6 +82,7 @@ flowchart TB
             RUNTIME_PORT{{"Agent Runtime"}}
             MODEL_PORT{{"Model Worker"}}
             RUNNER_PORT{{"Deterministic Runner"}}
+            WORKFLOW_PORT{{"Workflow"}}
             ROUTING_PORT{{"Routing"}}
             MEMORY_PORT{{"Memory Intelligence"}}
             SOURCE_PORT{{"Asset / State Source"}}
@@ -103,6 +105,7 @@ flowchart TB
     EXEC --> RUNTIME_PORT
     EXEC --> MODEL_PORT
     EXEC --> RUNNER_PORT
+    EXEC --> WORKFLOW_PORT
     EXEC --> ROUTING_PORT
     ASSETS --> MEMORY_PORT
     WORLD --> SOURCE_PORT
@@ -145,6 +148,7 @@ flowchart TB
             P_RUNTIME{{"Agent Runtime"}}
             P_MODEL{{"Model Worker"}}
             P_RUNNER{{"Deterministic Runner"}}
+            P_WORKFLOW{{"Workflow"}}
             P_ROUTING{{"Routing"}}
             P_MEMORY{{"Memory Intelligence"}}
             P_SOURCE{{"Asset / State Source"}}
@@ -160,6 +164,7 @@ flowchart TB
         A_RUNTIME["Runtime Adapter"]
         A_MODEL["Model Adapter"]
         A_RUNNER["Runner Adapter"]
+        A_WORKFLOW["Workflow Adapter"]
         A_ROUTING["Routing Adapter"]
         A_MEMORY["Memory Adapter"]
         A_SOURCE["Source Connector"]
@@ -174,6 +179,7 @@ flowchart TB
         RUNTIME["Agent Runtime<br/>Planner / Subagent / Tool Loop"]
         MODELS["Models / Small Workers<br/>Classify / Extract / Summarize"]
         RUNNERS["Script Runners<br/>Functions / Programs / Sandboxes"]
+        WORKFLOWS["Workflow Engines<br/>Steps / Waits / Compensation"]
         ROUTER["Routing Intelligence<br/>Rules / Policy / Evaluation"]
         MEMORY["Memory Intelligence<br/>Extract / Consolidate / Retrieve"]
         SOURCES["External Sources<br/>Notes / Calendar / Weather / Devices"]
@@ -198,6 +204,7 @@ flowchart TB
     DISPATCH --> P_RUNTIME
     DISPATCH --> P_MODEL
     DISPATCH --> P_RUNNER
+    DISPATCH --> P_WORKFLOW
     DISPATCH --> P_ROUTING
     CATALOG --> P_MEMORY
     WORLD --> P_SOURCE
@@ -210,6 +217,7 @@ flowchart TB
     P_RUNTIME <--> A_RUNTIME <--> RUNTIME
     P_MODEL <--> A_MODEL <--> MODELS
     P_RUNNER <--> A_RUNNER <--> RUNNERS
+    P_WORKFLOW <--> A_WORKFLOW <--> WORKFLOWS
     P_ROUTING <--> A_ROUTING <--> ROUTER
     P_MEMORY <--> A_MEMORY <--> MEMORY
     P_SOURCE <--> A_SOURCE <--> SOURCES
@@ -218,7 +226,7 @@ flowchart TB
     P_INFRA <--> A_INFRA <--> INFRA
 ~~~
 
-外部实现不能绕过 Port 直接修改 Shadow 权威状态。Adapter 可以由 OpenShadow 官方提供，也可以由第三方提供，但必须遵守相同 Contract。
+外部实现不能绕过 Port 直接修改 Shadow 权威状态。External Component 只能返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage。Adapter 可以由 OpenShadow 官方提供，也可以由第三方提供，但必须遵守相同 Contract。
 
 ## 4. Admission、Request、Run、Attempt 与 Task
 
@@ -279,6 +287,7 @@ Core 负责准入、显式规则、Binding 校验、预算与权限执行、记�
 | Agent Runtime | 开放式、多步骤、需要规划或工具循环 | Shadow 权威状态 |
 | Model Worker | 分类、提取、总结、改写等单次受限推理 | Durable Task 编排 |
 | Deterministic Runner | 已登记脚本、函数、固定程序 | 语义规划和权限决策 |
+| Workflow Target | 明确步骤、等待和补偿流程 | Shadow 权威状态与通用工作流引擎实现 |
 | Capability Provider | 外部 API、账户、家电和其他现实动作 | Shadow Action Authority |
 
 一个 Run 可以依次使用多个 Target，但每次 Binding 都必须可追踪。基础版本可以只使用用户显式选择和静态规则，不要求先实现智能路由。
@@ -428,7 +437,7 @@ Asset Catalog 只保存资产存在性、来源、引用、Integration Binding�
 - Extension；
 - Integration；
 - MCP Connection；
-- Runtime / Model / Runner Profile；
+- Runtime / Model / Runner / Workflow Profile；
 - Capability Binding；
 - Configuration 和 Permission Metadata。
 
@@ -460,7 +469,7 @@ Core 不实现数据库、物理备份或消息队列。
 
 ## 14. Capability 与现实动作
 
-Agent Runtime、Model Worker、Runner 或其他组件只能提出 Action Proposal。
+Agent Runtime、Model Worker、Runner、Workflow 或其他组件只能提出 Action Proposal。
 
 ~~~text
 Proposal
