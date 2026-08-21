@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from shadow_application import MemoryService
 from shadow_kernel.adapters import AdapterDescriptor, AdapterRegistry, CapabilityRequirement
 from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
@@ -115,3 +116,23 @@ def test_admission_is_atomic_and_degrades_explicitly(tmp_path: Path) -> None:
     )
     assert ephemeral.decision == "ephemeral"
     assert ephemeral.ephemeral and ephemeral.ephemeral.durable is False
+
+
+def test_memory_candidate_requires_commit(tmp_path: Path) -> None:
+    repository = SqliteCanonicalRepository(tmp_path / "shadow.db")
+    registry = ContractRegistry(ROOT)
+    authority = CommitAuthority(repository, registry)
+    memories = MemoryService(repository, authority, registry)
+    candidate = memories.propose_create(
+        submitted_by="principal-test",
+        owner_ref="principal-test",
+        space_id="space-test",
+        memory_kind="shadow.memory.preference",
+        content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
+        typed_content={"text": "concise updates"},
+        applicability_scope={"scope_kind": "shadow.scope.personal", "scope_refs": []},
+    )
+    assert repository.get(candidate.candidate_id) is None
+    record = memories.commit_candidate(candidate, idempotency_key="memory-1")
+    assert record["record_type"] == "shadow.profile.memory"
+    assert record["typed_payload"]["created_from_ref"]["record_id"] == candidate.candidate_id

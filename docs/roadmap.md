@@ -154,7 +154,8 @@ Stage 5 不是重新设计完整架构，而是按[分阶段实现计划](implem
 `stage5/phase0-1-implementation` 分支实现并通过本地 Contract / Repository / API
 测试。已覆盖 Kernel Port、SQLite Store Adapter、Commit / Admission、Binding、
 Deterministic Adapter、Conversation / Message、Run / Attempt、SSE、幂等重放与 Store
-不可用路径。Phase 2–5 继续只维护已接受的 Contract 与退出条件，暂不实现业务能力。
+不可用路径，以及最小 Memory Candidate → Commit。Phase 2–5 继续只维护已接受的
+Contract 与退出条件，暂不实现业务能力。
 
 ## 延后实现与重新评估
 

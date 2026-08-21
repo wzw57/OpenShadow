@@ -65,3 +65,38 @@ def test_store_outage_does_not_claim_durable_success() -> None:
     )
     assert response.status_code == 503
     assert response.json()["code"] == "shadow.repository.unavailable"
+
+
+def test_memory_candidate_is_committed_only_through_authority() -> None:
+    client = TestClient(create_app("sqlite://"))
+    response = client.post(
+        "/v1/memories",
+        json={
+            "memory_kind": "shadow.memory.preference",
+            "content_schema_ref": "https://schemas.openshadow.dev/content/text/1.0.0",
+            "typed_content": {"text": "concise updates"},
+            "applicability_scope": {"scope_kind": "shadow.scope.personal", "scope_refs": []},
+            "source_dependency": "independent",
+        },
+        headers={"Idempotency-Key": "memory-1"},
+    )
+    assert response.status_code == 201
+    record = response.json()["record"]
+    assert record["record_type"] == "shadow.profile.memory"
+    assert record["typed_payload"]["memory_state"] == "active"
+    assert client.get("/v1/memories").json()["records"][0]["record_id"] == record["record_id"]
+
+
+def test_invalid_memory_candidate_is_a_structured_validation_error() -> None:
+    client = TestClient(create_app("sqlite://"))
+    response = client.post(
+        "/v1/memories",
+        json={
+            "memory_kind": "not-namespaced",
+            "content_schema_ref": "https://schemas.openshadow.dev/content/text/1.0.0",
+            "typed_content": {"text": "invalid"},
+            "applicability_scope": {"scope_kind": "shadow.scope.personal", "scope_refs": []},
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "shadow.memory.candidate-invalid"

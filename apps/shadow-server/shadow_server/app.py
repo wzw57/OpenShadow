@@ -7,9 +7,10 @@ from typing import Annotated, Any
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from shadow_application import ConversationService
+from shadow_application import ConversationService, MemoryService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
+from shadow_kernel.ids import sha256_digest
 from shadow_kernel.registry import ContractRegistry
 from shadow_kernel.repository import CanonicalRepository
 from shadow_store import SqliteCanonicalRepository
@@ -34,6 +35,16 @@ class ConversationTurnSubmission(BaseModel):
     message_type: str = "shadow.message.user"
     content_blocks: list[ContentBlockInput] = Field(min_length=1)
     turn_mode: str = "new"
+
+
+class MemoryCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    memory_kind: str
+    content_schema_ref: str
+    typed_content: Any
+    applicability_scope: dict[str, Any]
+    evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
+    source_dependency: str = "independent"
 
 
 def _repo_root() -> Path:
@@ -71,9 +82,11 @@ def create_app(database_url: str | None = None) -> FastAPI:
     repository = SqliteCanonicalRepository(database_url)
     authority = CommitAuthority(repository, registry)
     conversations = ConversationService(repository, authority)
+    memories = MemoryService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
     app.state.conversations = conversations
+    app.state.memories = memories
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:
@@ -109,6 +122,39 @@ def create_app(database_url: str | None = None) -> FastAPI:
                 idempotency_key=idempotency_key or command.title or "default",
             )
         }
+
+    @app.get("/v1/memories")
+    async def list_memories(
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str | None, Header()] = None,
+    ) -> dict[str, Any]:
+        return {
+            "records": memories.list_memories(
+                owner_ref=_principal(x_principal_ref), space_id=x_space_id
+            )
+        }
+
+    @app.post("/v1/memories", status_code=status.HTTP_201_CREATED)
+    async def create_memory(
+        command: MemoryCommand,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
+        idempotency_key: Annotated[str | None, Header()] = None,
+    ) -> dict[str, Any]:
+        principal_ref = _principal(x_principal_ref)
+        key = idempotency_key or sha256_digest(command.model_dump(mode="json"))
+        candidate = memories.propose_create(
+            submitted_by=principal_ref,
+            owner_ref=principal_ref,
+            space_id=x_space_id,
+            memory_kind=command.memory_kind,
+            content_schema_ref=command.content_schema_ref,
+            typed_content=command.typed_content,
+            applicability_scope=command.applicability_scope,
+            evidence_refs=command.evidence_refs,
+            source_dependency=command.source_dependency,
+        )
+        return {"record": memories.commit_candidate(candidate, idempotency_key=key)}
 
     @app.get("/v1/conversations")
     async def list_conversations(

@@ -19,12 +19,14 @@ Contract；Phase 2–5 的设计仍以[分阶段实现计划](implementation-sta
   unknown target kind 和 Deterministic Adapter 验证路径。
 - Phase 1 的本地 Conversation / Message API、work-bearing turn、Admission → Request →
   Run → Attempt、Result Commit、SSE Run events、幂等重放和 Store unavailable 响应。
+- Phase 1 的最小 Memory Candidate → Commit 边界与 `/v1/memories` 用户命令；普通对话结果
+  不会自动成为 Memory。
 - 本地开发和 CI 的 `ruff`、`pytest` 基线，测试覆盖 Contract fixtures、Repository CAS /
   replay、API loop 和 outage path。
 
 ## 当前明确不在实现范围
 
-- Memory Candidate / Memory Intelligence、State、Durable Task、Action、Router、Pulse；
+- Memory Intelligence、State、Durable Task、Action、Router、Pulse；
 - PostgreSQL、远程 Runtime、OpenAI Model Adapter、React Web Client；
 - Portable Export / Import、Backup、Outbox、Erasure Job；
 - 多 Endpoint、多用户 ACL、共享 Space 与设备 / 语音协议。
@@ -40,6 +42,7 @@ Contract；Phase 2–5 的设计仍以[分阶段实现计划](implementation-sta
 python -m pip install -e ".[dev]"
 ruff check packages/shadow-kernel/src packages/shadow-application/src adapters/test-deterministic/src adapters/store-sqlite/src apps/shadow-server tests
 pytest -q
+alembic upgrade head
 ```
 
 启动本地服务：
