@@ -142,7 +142,7 @@ Execution
 
 草案完成结论：
 
-- 18 个用例覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse；
+- 19 个用例覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse；
 - 每个用例均包含 Actor、Trigger、Preconditions、正常流程、失败流程、持久状态、外部副作用、Policy 与验收条件；
 - 用例直接引用 Stage 1 责任边界，不选择具体数据库、模型、Runtime 或 Provider；
 - 审阅通过后进入 Stage 3，提取领域对象、关系、聚合与状态机。
