@@ -1,6 +1,6 @@
 # OpenShadow 开发路线
 
-- 状态：Stage 2 已完成，Stage 3 领域模型与状态机设计进行中
+- 状态：Stage 3 领域模型已收紧，Stage 4 完整技术架构设计进行中
 - 原则：先明确完整需求，再决定 Core 与 External 的边界，最后选择具体实现
 
 OpenShadow 不按外部项目名称制定路线，也不因为某项能力可能有用就提前实现。每个阶段都必须产生可审阅的工程产物和退出条件。
@@ -147,7 +147,7 @@ Execution
 - 用例直接引用 Stage 1 责任边界，不选择具体数据库、模型、Runtime 或 Provider；
 - 已审阅并合并为 Stage 2 正式基线。
 
-## Stage 3：领域模型与状态机（进行中）
+## Stage 3：领域模型与状态机（基线已形成）
 
 初始产物：
 
@@ -191,40 +191,53 @@ Execution
 - MVP-1 可以在不实现 Router、Pulse、Action、World State 或多用户的情况下闭环；
 - Later 与 Contract-only 能力不阻塞 Stage 4。
 
-## Stage 4：Port Contract 与 Adapter SDK
+## Stage 4：完整技术架构与 Adapter Contract（进行中）
 
-定义最小、版本化的 Port：
+正式产物：
 
-- Durable Store Port；
-- Agent Runtime Port；
-- Model Worker Port；
-- Deterministic Runner Port；
-- Routing Port；
-- Memory Intelligence Port；
-- Asset / State Source Port；
-- Capability Provider Port；
-- Interaction Port；
-- Infrastructure Port。
+- [完整技术架构](technical-architecture.md)
+- [分阶段实现计划](implementation-stages.md)
 
-同时定义：
+本阶段不再把 MVP 当作设计边界。先定义完整 Shadow 的长期逻辑架构，再按 Phase 0–5 逐步实现。完整架构包含：
 
-- Extension Manifest；
-- Target / Capability Declaration；
-- Capability Envelope；
-- Model Data Boundary Declaration；
-- Permission / Data Classification Declaration；
-- Retention / Erasure Contract；
-- Store Availability / Outbox Contract；
-- Version Negotiation；
-- Health Contract；
-- Contract Test Suite。
+- Interaction Plane；
+- Access & Admission；
+- Shadow Core；
+- Execution Plane；
+- Adapter Control Plane；
+- Canonical State Plane；
+- Replaceable Infrastructure；
+- External Implementations and Sources。
+
+已冻结的顶层决定：
+
+- 逻辑架构与部署拓扑分离，默认模块化单体起步；
+- Web 是第一客户端，但 Core 使用稳定 API 支持未来多端；
+- 所有触发统一进入 Admission；
+- Execution Mode 包含 Agent Runtime、Direct Model、Deterministic Program、Workflow 和 Capability Provider；
+- Shadow Core 持有 Authority，外部组件只返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage；
+- Adapter 使用统一 Manifest、Capability Negotiation、Version、Health、Data Boundary 和 Contract Test；
+- Canonical State、Derived State 和 External Source Asset 分离；
+- Domain Event 使用最小信封，不强制 Event Sourcing；
+- 跨 Adapter 流程通过幂等、状态机和 reconciliation 恢复；
+- 完整目标架构先冻结，实现阶段不得创建冲突旁路。
+
+后续在本阶段继续确定：
+
+- 首选实现 Profile；
+- Port 的字段级请求、响应与错误 Schema；
+- Adapter SDK 首种语言与 Transport；
+- Primary Store 与首个真实 Execution Adapter；
+- API、迁移、测试和本地打包方案。
 
 退出条件：
 
-- 可以用 Fake Adapter 完成所有核心用例；
-- Contract 不依赖某个具体外部项目；
-- Optional Capability 可以演进而不扩大基础接口；
-- Router 只能返回 Binding Proposal，Source 只能返回 Observation Proposal。
+- 完整逻辑模块、依赖方向、Authority 和信任边界明确；
+- 每类执行都能映射到统一 Run / Binding / Attempt；
+- 每类长期数据都能归类为 Canonical、Derived 或 External；
+- Adapter 的共同生命周期与 Capability Negotiation 明确；
+- Phase 0–5 的实施顺序不会改变 Canonical 身份和核心契约；
+- 选定首个实现 Profile 后可以直接进入编码。
 
 ## Stage 5：最小纵向闭环
 
