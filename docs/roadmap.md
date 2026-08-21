@@ -17,6 +17,9 @@ OpenShadow 不按外部项目名称制定路线，也不因为某项能力可能
 - 明确 Canonical Memory、Observation、World State 和外部信息资产的差异；
 - 明确 Execution Target、Executable Asset、Skill、Extension、Integration、Capability 和 Provider Binding；
 - 明确 System Health Heartbeat 与可选 Semantic Pulse 的差异；
+- 明确 Owner 可以是 User 或 Space，并从第一版保存显式归属；
+- 明确本地优先是控制、可迁移和可验证，而非固定物理位置；
+- 明确数据分级、Model Binding、Secret、删除和 Store 故障边界；
 - 明确单用户优先但不封死未来扩展；
 - 删除没有经过讨论的具体组件选择和实现方案。
 
@@ -58,6 +61,11 @@ Execution
 - Extension / Integration；
 - Capability / Provider；
 - Event / Scheduler / System Health；
+- Owner / Personal Space / Home Space；
+- Data Classification / Model Data Boundary；
+- Retention / Erasure；
+- Export / Full Backup / Secret；
+- Store Availability / Outbox；
 - Context；
 - User Interface / Voice。
 
@@ -93,7 +101,15 @@ Execution
 18. Semantic Pulse 提出建议但被权限或预算拒绝；
 19. 更换 Agent Runtime、Memory Intelligence、Runner 或 Model；
 20. 更换 Durable Store；
-21. 导出和恢复 Shadow 长期资产。
+21. 导出和恢复 Shadow 长期资产；
+22. 将个人资产和家庭公共状态分别归属 User 与 Home Space；
+23. 未知敏感度默认 sensitive，分类器不能自行降低；
+24. Model Binding 拒绝超出声明数据边界的上下文；
+25. 删除 Memory 并追踪派生组件的 Erasure 状态；
+26. 删除 Integration 后状态进入 source unavailable 和 stale / unknown；
+27. Primary Store 故障时阻止未记录副作用；
+28. 使用可靠 Outbox 执行预先配置的紧急能力；
+29. 分别验证标准可移植导出和加密完整备份。
 
 每个用例需要：
 
@@ -125,9 +141,13 @@ Execution
 5. Memory Candidate / Canonical Memory；
 6. Observation / World State Projection；
 7. Executable Asset；
-8. Extension / Integration；
-9. Capability Request / Action；
-10. Migration / Export。
+8. Owner / Space / created_by；
+9. Data Classification / Retention Policy；
+10. Capability Envelope / Routing Rule；
+11. Erasure Request / Tombstone；
+12. Extension / Integration；
+13. Capability Request / Action；
+14. Migration / Standard Export / Full Backup。
 
 退出条件：
 
@@ -155,7 +175,11 @@ Execution
 
 - Extension Manifest；
 - Target / Capability Declaration；
-- Permission Declaration；
+- Capability Envelope；
+- Model Data Boundary Declaration；
+- Permission / Data Classification Declaration；
+- Retention / Erasure Contract；
+- Store Availability / Outbox Contract；
 - Version Negotiation；
 - Health Contract；
 - Contract Test Suite。
@@ -192,7 +216,9 @@ Replaceable Durable Store
 - Core 重启恢复；
 - Runtime 删除后 Canonical State 仍存在；
 - Memory Component 删除后 Canonical Memory 仍存在；
-- 用户可以查看和导出长期资产。
+- 用户可以查看和导出长期资产；
+- 所有 Canonical Asset 都有显式 owner_ref 和 space_id；
+- 默认 Personal Space 与 Home Space 可以恢复。
 
 退出条件：
 
@@ -211,6 +237,8 @@ Replaceable Durable Store
 - Durable Task lifecycle；
 - Runtime Checkpoint Reference；
 - Semantic Checkpoint；
+- Capability Envelope；
+- Runtime 跨边界 Usage / Action Record；
 - deterministic health / lease / timeout；
 - pause / resume / cancel；
 - failure recovery；
@@ -255,6 +283,10 @@ Replaceable Durable Store
 - TTL / expires_at；
 - fresh / stale / unknown；
 - conflict preservation 与 accepted projection；
+- Canonical World State 恢复；
+- type-specific Observation Retention；
+- State Resolver Proposal；
+- source unavailable；
 - State Source Adapter；
 - World State 条件触发；
 - 用户查看、纠正和使状态失效。
@@ -266,7 +298,30 @@ Replaceable Durable Store
 - 外部 Source 不能绕过 Shadow 提交 World State；
 - 领域采集、复杂融合与预测不进入 Core。
 
-## Stage 9：能力资产与外部动作
+## Stage 9：归属、隐私、保留与删除
+
+实现：
+
+- User / Space Owner Reference；
+- Personal Space / Home Space Record；
+- created_by 与 owner_ref 分离；
+- public / personal / sensitive / restricted；
+- Model Binding 数据边界与上下文裁剪；
+- 分类器只升不降规则；
+- logical delete / restore / physical erase；
+- source_dependency；
+- Erasure Request 与组件完成状态；
+- Secret Reference。
+
+退出条件：
+
+- 家庭公共状态可以归 Home Space；
+- 未知数据默认 sensitive；
+- 超出 Model Binding 的上下文不会发送；
+- 删除请求能够传播到受管派生组件；
+- pending / unreachable 不会被报告为删除成功。
+
+## Stage 10：能力资产与外部动作
 
 实现：
 
@@ -287,7 +342,7 @@ Replaceable Durable Store
 - 用户可以查看和迁移已配置的能力资产；
 - 外部副作用不会绕过 Shadow 治理路径。
 
-## Stage 10：升级与可移植性
+## Stage 11：升级、可移植性与 Store 故障
 
 实现：
 
@@ -297,15 +352,23 @@ Replaceable Durable Store
 - Integrity Verification；
 - component compatibility check；
 - Durable Store replacement；
+- standard portable export；
+- separately encrypted full-device backup；
+- Store availability state；
+- restricted mode；
+- persistent Outbox 和 reconciliation；
 - backup metadata。
 
 退出条件：
 
 - 可以在新环境恢复 Shadow Canonical Assets；
 - 数据库实现替换后 Stable ID、关系和历史保持一致；
-- 派生数据可以重建。
+- 派生数据可以重建；
+- Secret 不进入标准导出；
+- Store 故障时未记录的现实副作用被阻止；
+- 紧急 Outbox 操作可以幂等恢复和 reconciliation。
 
-## Stage 11：使用便利性
+## Stage 12：使用便利性
 
 在 Core 和 Adapter Contract 稳定后，提供统一用户体验：
 
@@ -318,7 +381,7 @@ Replaceable Durable Store
 
 具体 Voice、STT、TTS、设备协议和 UI 技术继续由可替换组件提供。
 
-## Stage 12：可选主动智能
+## Stage 13：可选主动智能
 
 只有基础正确性和成本边界可观测后，再评估：
 
@@ -337,7 +400,7 @@ Replaceable Durable Store
 - 多 Memory Component 自动组合；
 - 高级动态 Capability / Model Router；
 - 常驻 Semantic Pulse 的频率和模型选择；
-- 多用户和家庭权限；
+- 多用户成员、角色、邀请和家庭权限；
 - 分布式麦克风与扬声器；
 - 多节点同步；
 - Plugin Marketplace；
@@ -355,5 +418,8 @@ Replaceable Durable Store
 4. 所有权威状态通过 Shadow 提交；
 5. 所有执行经过 Shadow 治理，但不强制经过 Agent Runtime；
 6. 基础正确性不依赖任何 LLM 心跳；
-7. 用户能够查看、纠正、删除和导出长期资产；
-8. 新机制只在真实用例证明必要后加入。
+7. 所有 Canonical Asset 都有显式 Owner 和 Space；
+8. 数据披露受 Model / Provider Binding 与敏感度约束；
+9. 用户能够查看、纠正、物理删除和导出长期资产；
+10. Store 故障时不产生无法审计的现实副作用；
+11. 新机制只在真实用例证明必要后加入。
