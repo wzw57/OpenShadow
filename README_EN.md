@@ -46,7 +46,7 @@ Shadow is the complete product. Shadow Core is only the smallest part that must 
 
 ### Every request goes through Shadow, but not necessarily an Agent Runtime
 
-Every request creates at least a minimal Run record. Shadow uses an explicit Execution Binding to dispatch work to an Agent Runtime, a bounded Model Worker, a Deterministic Runner, or a Capability Provider. Full prompts, outputs, and tool traces are retained according to user policy and durable value. Only work that must survive sessions, execution targets, waiting conditions, or long periods becomes a Durable Task.
+Every Request accepted by Shadow creates one Root Run; rejected admission creates only a minimal Admission Record. Shadow uses an explicit Execution Binding to dispatch work to an Agent Runtime, a bounded Model Worker, a Deterministic Runner, or a Capability Provider. Full prompts, outputs, and tool traces are retained according to user policy and durable value. Only work that must survive sessions, execution targets, waiting conditions, or long periods becomes a Durable Task.
 
 ### Shadow owns assets, continuity, current state, and authority
 
