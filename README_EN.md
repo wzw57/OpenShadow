@@ -33,6 +33,7 @@ Shadow
 └─ User-owned Assets
    ├─ Tasks / Runs / Checkpoints
    ├─ Canonical Memories / World State
+   ├─ Owner / Personal Space / Home Space
    ├─ Skills / Executable Assets
    ├─ Extensions / Integrations
    ├─ Asset Catalog / Artifacts
@@ -79,6 +80,8 @@ External systems collect and retain domain data. Shadow stores only portable sta
 
 World State differs from Memory: Memory is durable historical knowledge, World State is a time-sensitive current belief, an Event records what happened, and a Task records a future commitment.
 
+Accepted World State is portable Canonical State. Shadow retains the current projection, conflicting candidates, evidence, and expiry reason, while applying type-specific retention to Observations. Explicit user statements have the highest source priority without freezing state forever; newer and more reliable Observations may replace them. Complex fusion is proposed by a replaceable State Resolver.
+
 ## Flexible execution plane
 
 Shadow supports four replaceable Execution Targets:
@@ -93,6 +96,8 @@ Shadow supports four replaceable Execution Targets:
 Core owns admission, permissions, budgets, Binding validation, status, and result records. Advanced task classification, multi-model scoring, and dynamic selection are proposed by a replaceable Routing Component. Early implementations can use explicit user choices and static rules.
 
 Scripts are durable Executable Assets with stable identity, version, input/output contracts, dependencies, permissions, provenance, and checksums. Language runtimes, dependency resolution, isolation, and execution belong to replaceable Runners.
+
+A Runtime operates freely inside a Capability Envelope issued by Shadow. Crossing its data, capability, resource, side-effect, budget, or validity boundary requires renewed authorization. Shadow does not retain private Runtime reasoning, but it records minimal Usage or Action Records at adapter, budget, and side-effect boundaries.
 
 ## Heartbeat and Semantic Pulse
 
@@ -140,6 +145,18 @@ Capability Assets
 
 These assets need stable identities, versions, provenance, configuration, permissions, compatibility, and migration metadata so they remain reusable when models, runtimes, and devices change.
 
+## Durable governance, local-first, and failure boundaries
+
+Every Canonical Asset has an explicit Owner and Space from the first version. An Owner may be a User or Space. Personal assets can belong to a User, while shared room and household device state can belong to a Home Space. The near-term implementation only creates a default Personal Space and implicit Home Space; it does not implement membership, roles, invitations, or sharing.
+
+Core enforces four stable data classes: public, personal, sensitive, and restricted. Unknown data defaults to sensitive. A Model Binding declares accepted data classes, Memory, World State, and external asset boundaries, plus retention, training, and regional constraints. External classifiers may raise protection but cannot lower it on their own.
+
+Deleting Canonical Memory defaults to recoverable logical deletion followed by policy-controlled physical erasure. Corrections preserve version relationships by default, while sensitive history can be fully erased. A common Erasure Request tracks deletion across adapters and reports unconfirmed components as pending or unreachable.
+
+Local-first means user control, portability, and verifiability rather than a fixed physical location. A standard export excludes secrets and rebuildable state. A separately authorized and encrypted full-device backup may include secrets, checkpoints, and selected derived state.
+
+When the Primary Durable Store is unavailable, Shadow may continue clearly marked read-only and ephemeral interaction, but it pauses Canonical Commits and blocks real-world side effects by default. Only preconfigured emergency capabilities may first commit to a reliable local persistent Outbox, execute, and reconcile after recovery.
+
 ## Current boundary
 
 OpenShadow does not build database engines, general agent loops, foundation models, intelligent routing algorithms, memory intelligence, vector or graph databases, script runtimes and sandboxes, speech engines, browser agents, coding agents, device protocol stacks, or domain-specific digital twins.
@@ -149,7 +166,9 @@ OpenShadow must implement:
 - Shadow Domain Contracts;
 - the authoritative state commit boundary;
 - Task and Run continuity;
-- minimal Observation and World State semantics;
+- minimal Observation, World State, Owner, and Space semantics;
+- Data Classification, Retention, and Erasure semantics;
+- Capability Envelopes;
 - Execution Dispatch and Binding;
 - the Adapter SDK and Extension Registry;
 - Integration and Capability Binding;
