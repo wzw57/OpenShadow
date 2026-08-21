@@ -1,5 +1,7 @@
 # Integration、外部资产与主动智能用例
 
+> Integration 使用 Family Profile；Semantic Pulse 是可替换 Proposal producer。Skill Bundle 遵循 Agent Skills 标准，Shadow 只持有治理 sidecar。
+
 ## UC-016 安装、配置与撤销 Integration
 
 ### 目标
@@ -36,7 +38,7 @@ User；Trusted Web Endpoint；Extension / Integration Registry；Secret Store；
 
 1. Disable 立即阻止新 Binding，但保留配置和历史引用。
 2. Delete 撤销 Secret Reference 和权限，并将 Source 标记 unavailable。
-3. 相关 World State 按 TTL 进入 stale / unknown。
+3. 相关 State Profile Record 按 TTL 进入 stale / unknown。
 4. 相关 Memory 按 source_dependency 处理。
 5. 用户可选是否对 Integration metadata、Observation 和 Shadow 副本发起 Erasure。
 
@@ -61,7 +63,7 @@ Extension / Integration Stable ID、Manifest version、Owner / Space、permissio
 - Secret 不进入普通 Canonical Asset 或标准导出；
 - 删除连接后不能继续产生 Run 或 Action；
 - Integration identity 与具体 Adapter 实现可分离；
-- Source 删除对 World State 与 Memory 的影响符合既定策略；
+- Source 删除对 State Profile 与 Memory Profile 的影响符合既定策略；
 - 更换 Adapter 后配置和 Capability Binding 可迁移。
 
 ## UC-017 按需访问外部信息资产
@@ -158,7 +160,7 @@ Scheduler；Semantic Pulse Worker；Shadow Core；User。
 ### Failure Flow
 
 - Pulse 超预算、超频或不可用时跳过，不影响 Health、TTL、Task 恢复和 Scheduler；
-- Pulse 不能直接提交 Memory、World State、Task 或 Action；
+- Pulse 不能直接提交 Memory、State、Task 或 Action Profile Record；
 - stronger Target 超出数据或费用边界时拒绝或询问用户；
 - Store 不可用时不创建 Canonical Proposal decision；普通 Pulse 默认暂停；
 - 删除 Pulse 组件不需要迁移 Canonical State。
