@@ -2,220 +2,132 @@
 
 **中文版** | [English](README_EN.md)
 
-> **Shadow 持有连续性。**  
-> 模型、Runtime 和外部生态可以替换，属于用户的长期状态、经验、能力和治理规则不应该随之消失。
+> **Shadow 是一个可以长期存在、持续升级的个人 AI。**
 
-OpenShadow 是一个**本地优先、运行时无关的个人 AI 连续性与控制层**。
+OpenShadow 是一个本地优先、Runtime 无关的个人 AI 资产与能力平台。用户始终在使用同一个 Shadow；Runtime、Memory Intelligence、数据库、搜索、Skill System、Provider、语音和其他能力都是 Shadow 内部可替换的组成部分。
 
-它不试图成为另一个“大而全”的 Agent，也不重做 Runtime 已经擅长的推理、规划、Skill 激活和工具编排。Shadow 负责长期持有规范化个人资产、任务连续性和治理边界，让 Hermes、DSH、Claude、Codex 以及未来的新 Runtime 都可以作为可替换的执行核心。
+Shadow 的目标不是重新实现所有 AI 基础设施，而是用尽可能小且稳定的 Core，将外部优秀项目组合成一个能够长期积累和复用用户资产的完整 Agent。
+
+## 产品组成
+
+~~~text
+Shadow
+├─ Shadow Core
+│  ├─ Domain Contracts
+│  ├─ Authority & State Transition
+│  ├─ Task Continuity
+│  ├─ Extension / Integration Registry
+│  └─ Portability & Upgrade
+│
+├─ Replaceable Components
+│  ├─ Runtime
+│  ├─ Memory Intelligence
+│  ├─ Durable Store
+│  ├─ Search / Index
+│  ├─ Skill System
+│  ├─ Capability Providers
+│  └─ Voice / User Interfaces
+│
+└─ User-owned Assets
+   ├─ Tasks / Runs / Checkpoints
+   ├─ Canonical Memories
+   ├─ Skills
+   ├─ Extensions / Integrations
+   ├─ Asset Catalog
+   ├─ Artifacts
+   └─ Policies / Action History
+~~~
+
+Shadow 是完整产品；Shadow Core 只是其中必须长期稳定的最小内核。
 
 ## 核心原则
 
-> **必须跨模型、跨 Runtime、跨设备、跨 Session 或跨年份保持一致的状态和契约，由 Shadow 持有；其余功能优先复用成熟系统。**
+> **所有请求都经过 Shadow。**
 
-> **Shadow owns durable work; Runtime owns execution decomposition.**
+每个请求至少形成一个最小 Run 记录。完整输入、输出和工具过程是否长期保存，由用户策略和产生的长期价值决定。需要跨 Session、Runtime 或时间继续存在的工作才成为 Durable Task。
 
-> **Shadow supervises execution; it does not plan execution.**
+> **Shadow owns assets, continuity and authority.**
 
-> **Shadow controls availability; Runtime controls Skill activation.**
+属于用户的长期资产、任务连续性和最终状态不能被某个 Runtime、Memory Engine、数据库私有格式或 Provider 独占。
 
-> **Memory 默认可访问，但默认不注入。**
+> **Replaceable components own intelligence and execution.**
 
-> **Intelligence may be outsourced; authority may not.**
+推理、规划、Memory 提取与整理、检索、Embedding、Graph、语音、设备协议和具体外部执行优先复用可替换组件。
 
-也就是说：Runtime 可以越来越聪明，但不能成为用户长期状态、权限和任务连续性的唯一事实源。
+> **Adapter 是稳定架构的一部分。**
 
-## 五个逻辑域
+Shadow 自己定义 Port Contract、Adapter SDK、Extension Manifest、权限、版本协商和 Contract Test；具体 Adapter 与外部实现可以持续替换。
 
-OpenShadow 的宏观架构只保留五个一级逻辑域：
+## Memory 边界
 
-```text
-                 User / Apps / Event Sources
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────┐
-│                    SHADOW CORE                      │
-│                                                     │
-│  1. Task & Continuity                              │
-│  2. Memory & Personal Assets                       │
-│  3. Control & Governance                           │
-│  4. World State & Scheduler                        │
-│  5. Integration & Runtime Bridge                   │
-└───────────────────────┬─────────────────────────────┘
-                        │
-          ┌─────────────┼──────────────┐
-          ▼             ▼              ▼
-       Runtime        Engines       Providers
-     Hermes / DSH   Mem0/LangMem   Gmail/GitHub
-     Claude/Codex   Graphiti/...   Home/Server/...
-```
+用户在长期使用中形成的 Canonical Memory 属于 Shadow，必须在更换 Memory Intelligence 后继续存在。
 
-这五个域是**责任与代码边界，不是五个微服务**。
+~~~text
+Conversation / Task / External Source
+                 ↓
+       Replaceable Memory Intelligence
+                 ↓
+          Memory Candidate
+                 ↓
+       Shadow validates and commits
+                 ↓
+      Primary Durable Store Adapter
+                 ↓
+       Replaceable Database Engine
+~~~
 
-### 1. Task & Continuity
+Shadow Core 持有 Memory 的稳定身份、来源、Scope、版本和提交语义；外部组件负责 Extraction、Consolidation、Retrieval、Reranking、Embedding、Graph 和其他快速演进的智能能力。
 
-负责长期工作的连续性：
+数据库引擎也不是 Shadow 自研能力。Shadow 定义 Durable Store Port、Canonical Record、迁移和导出语义，具体数据库通过 Adapter 接入。
 
-```text
-Durable Task
-Task Supervisor
-Semantic Checkpoint
-Runtime Checkpoint Ref
-Runtime Binding
-Handoff / Recovery
-```
+## 外部信息资产
 
-Runtime 内部的 Subtask、Subagent、Workflow 和 Planner 默认属于 Runtime；Shadow 不同步它们。
+Shadow 不负责复制和长期保存用户所有外部资料。
 
-### 2. Memory & Personal Assets
+对于 Notion、Obsidian、Drive、Email、文件系统等外部来源，Shadow 默认只在 Asset Catalog 中知道：
 
-负责用户长期积累的资产：
+- 有什么资产；
+- 位于哪里；
+- 通过哪个 Integration 访问；
+- 当前是否可用；
+- 它与哪些 Shadow 资产存在来源关系。
 
-```text
-Raw Evidence
-Canonical Memory
-Task Working Memory
-Canonical Skill
-Version / Provenance / Trust
-```
+Shadow 在 Task、Recall 或后台 Memory 整理需要时，通过 Connector 按需读取外部内容。外部来源仍负责原始数据的存储和生命周期；由此形成的 Canonical Memory 则由 Shadow 负责长期保存。
 
-Memory Engine 和 Runtime Skill Engine 都可以替换，但 Canonical Assets 不随它们迁移。
+## 能力资产
 
-### 3. Control & Governance
+用户长期积累的不只是数据，还包括能力：
 
-负责 Shadow 的权威控制：
+~~~text
+Capability Assets
+├─ Skills
+├─ Extensions
+├─ Integrations
+├─ MCP connections
+├─ Provider bindings
+├─ Runtime profiles
+└─ Configuration / permission metadata
+~~~
 
-```text
-Policy
-Capability
-Approval
-Idempotency
-Execution Ledger
-```
+这些资产应具有稳定身份、版本、来源、配置、权限、兼容性和迁移信息，使用户切换 Runtime 或设备后仍能复用已有能力。
 
-LLM 可以辅助语义判断，但不能直接提交 Shadow 的权威状态。
+## 当前边界
 
-### 4. World State & Scheduler
+OpenShadow 不自研数据库、通用 Agent Loop、Memory Intelligence、向量数据库、知识图谱、基础模型、语音引擎、浏览器 Agent、Coding Agent 或设备协议栈。
 
-负责持续运行：
+OpenShadow 必须自行定义和实现：
 
-```text
-Event
-World State
-Scheduler
-Condition
-Background Jobs
-```
+- Shadow Domain Contracts；
+- 权威状态提交边界；
+- Task / Run 连续性；
+- Adapter SDK 与 Extension Registry；
+- Integration / Capability Binding；
+- 权限执行点；
+- 可移植数据格式；
+- 兼容性、迁移和完整性验证；
+- 用户控制 API。
 
-即使没有 Chat Prompt，Shadow 也可以根据事件、时间和条件恢复或创建 Task。
-
-### 5. Integration & Runtime Bridge
-
-负责所有可替换实现的边界：
-
-```text
-SRI / Runtime Adapter
-Memory Engine Adapter
-Provider Adapter
-Model Adapter
-Context / Hydration
-```
-
-统一模式：
-
-```text
-Shadow Contract
-      ↓
-Adapter
-      ↓
-Replaceable Implementation
-```
-
-## Task 边界
-
-Shadow Task 是需要跨 Runtime / Session 生存的 **Durable Work**，不是 Runtime 内部 Planner Task。
-
-Runtime 可以自由拆 Subtask、调用 Subagent、建立 Workflow。只有内部工作跨过持久化边界，例如需要长期等待、独立调度、跨 Runtime 生存或用户独立管理时，才考虑晋升为新的 Shadow Task。
-
-Checkpoint 分两层：
-
-- **Runtime Checkpoint**：runtime-specific、可 opaque，用于同 Runtime 高保真恢复；
-- **Semantic Checkpoint**：runtime-neutral，用于切换 Runtime、长期暂停或 Runtime 原生状态丢失。
-
-Runtime 可以提出 progress / completion，但 Durable Task 的最终状态由 Shadow 提交。
-
-## Memory 与 Skill 边界
-
-Memory：
-
-```text
-Raw Evidence
-    ↓
-Canonical Memory
-    ↓
-Rebuildable Index / Summary / Graph
-```
-
-Shadow 持有 Memory truth 与访问边界；Mem0、LangMem、Graphiti、MemOS 等提供可替换的 Memory Intelligence。
-
-Skill：
-
-```text
-Raw Skill Source
-      ↓
-Canonical Skill
-      ↓
-Runtime Projection
-      ↓
-Runtime-native execution
-```
-
-Shadow 控制 Skill availability，Runtime 控制 discovery / activation / composition / execution。
-
-## 轻量实现原则
-
-OpenShadow 的复杂度应该主要存在于**语义边界**，而不是运行时拓扑。
-
-V0.1 推荐物理结构：
-
-```text
-1 Shadow process
-1 PostgreSQL
-1 artifact directory
-1 background worker
-1 primary Runtime
-several adapters
-```
-
-默认内部通信使用普通函数 / service 调用；持久状态使用 PostgreSQL；后台工作使用单 worker。V0.1 不需要 Kafka、RabbitMQ、Kubernetes 或复杂微服务。
-
-代码组织可以是：
-
-```text
-openshadow/
-├─ task/
-├─ assets/
-├─ control/
-├─ world/
-├─ integrations/
-├─ storage/
-├─ api/
-└─ worker/
-```
-
-## v0.1 要证明什么
-
-第一版不追求完整个人 AI 平台，只证明几个核心命题：
-
-1. Runtime 消失后 Durable Task 和个人资产仍存在；
-2. Runtime A 可以通过 Semantic Checkpoint 将长期工作交给 Runtime B；
-3. Runtime 保留自己的 Planner / Subtask / Skill execution 自由；
-4. Memory Engine / Runtime / Provider 可替换而不迁移 Canonical Assets；
-5. Event / Scheduler 能在没有 Chat Prompt 时推进长期工作；
-6. Shadow 能治理进入其权限域的动作并记录外部副作用；
-7. 关闭 Memory 后 Task / Control / Event / Runtime 主干仍然有意义。
-
-V0.1 明确不做：自研 Agent Loop、同步 Runtime Subtask Graph、完整 Workflow Engine、自研 Skill Resolver、复杂 Intelligence Gateway、多模型路由平台、微服务化和多数据库事实源。
+近期实现以单用户场景为主，但核心 Contract 不封死未来多用户和多设备可能性。
 
 ## 文档
 
@@ -226,6 +138,6 @@ V0.1 明确不做：自研 Agent Loop、同步 Runtime Subtask Graph、完整 Wo
 
 ## 当前状态
 
-**前期设计对齐 / MVP 实现前。**
+**需求收紧与 Core / External 责任边界设计阶段。**
 
-当前重点是继续冻结少量关键 Contract，而不是继续增加一级模块。
+当前重点是先冻结完整需求和不可或缺的 Core，再选择具体外部组件和实现技术。
