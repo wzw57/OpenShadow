@@ -4,6 +4,7 @@
 - 适用范围：完整 Shadow 产品，不等同于第一阶段实现范围
 - 核心方法：先冻结长期稳定边界，再按阶段实现
 - 非目标：不指定某个 Runtime、模型、Memory 项目、数据库、消息队列或云平台
+- 参考实现：[Stage 4 Implementation Profile](implementation-profile.md)
 
 ## 1. 架构目标
 
@@ -600,7 +601,7 @@ restricted mode 禁止：
 
 ### 10.1 参考部署原则
 
-完整逻辑架构不要求微服务。推荐演进路径：
+完整逻辑架构不要求微服务。第一套官方实现采用 Python 模块化单体、FastAPI Server、React Web、SQLite Store Adapter 和可隔离 Adapter Host；具体约束见 [参考实现 Profile](implementation-profile.md)。推荐演进路径：
 
 1. 模块化单体：Core、API、调度协调和本地 Adapter Host 同进程；
 2. 隔离 Worker：Runtime、Runner、Memory Engine 或语音组件使用子进程；
