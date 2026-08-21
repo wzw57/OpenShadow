@@ -184,11 +184,12 @@ OpenShadow 必须自行定义和实现：
 - [需求基线](docs/requirements.md)
 - [概要设计](docs/architecture.md)
 - [Core / External 责任矩阵](docs/responsibility-matrix.md)
+- [关键用例](docs/use-cases/README.md)
 - [开发路线](docs/roadmap.md)
 - [架构决策记录](docs/adr/README.md)
 
 ## 当前状态
 
-**Stage 1 Core / External 责任矩阵已完成，准备进入 Stage 2 关键用例。**
+**Stage 2 关键用例草案已完成，等待集中审阅。**
 
-当前已经冻结顶层需求、概要架构和逐领域责任边界。下一步将为关键用例定义 Actor、Trigger、正常流程、失败流程、持久状态变化、外部副作用和验收条件。
+19 个用例已经覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse。审阅通过后进入 Stage 3，冻结领域对象、关系和状态机。
