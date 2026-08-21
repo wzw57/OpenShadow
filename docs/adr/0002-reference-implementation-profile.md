@@ -1,6 +1,7 @@
 # ADR-0002: 第一套参考实现 Profile
 
 - Status: Accepted
+- Constrained by: [ADR-0003](0003-tiny-core-and-typed-profiles.md)、[ADR-0004](0004-agent-skills-compatibility.md)
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
 
@@ -21,9 +22,9 @@
 - SSE 作为 Chat / Run 单向流式协议；
 - WebSocket 仅为未来双向音频和实时 Endpoint 保留；
 - checked-in JSON Schema 与 OpenAPI 作为跨语言 Contract 事实源；
-- Python Port / Protocol 作为可信进程内 Adapter 接口；
-- JSON-RPC-style Envelope over stdio 作为第一种隔离 Adapter Transport；
-- SQLite 文件数据库与 WAL 作为默认本地 Store Profile；
+- Python Family Port / Protocol 作为可信进程内 Adapter 接口；
+- JSON-RPC-style Message Envelope over stdio 作为第一种隔离 Adapter Transport；
+- SQLite 文件数据库与 WAL 作为默认 Canonical Repository 实现；
 - SQLAlchemy 作为关系持久化实现；
 - Alembic 作为参考物理 Schema Migration 工具；
 - PostgreSQL 作为第二官方 Store Profile；
@@ -40,7 +41,9 @@
 - stdio Transport 便于隔离多语言 Runtime，且不要求首版运行网络服务；
 - SQLite 降低个人本地部署成本；
 - PostgreSQL Profile 验证 Durable Store Contract 不依赖 SQLite；
-- 三种参考 Adapter 分别验证确定性测试、直接模型和外部 Agent Runtime。
+- 三种参考 Adapter 分别验证确定性测试、`shadow.model-worker` 和 `shadow.agent-runtime`；
+- Adapter 只实现实际声明的 Capability；
+- Agent Skills Bundle fixture 验证标准 Skill 可移植性。
 
 ## Alternatives considered
 
@@ -83,7 +86,7 @@
 - 需要维护 Python Model 与 checked-in Schema 的一致性；
 - Python Server 与 TypeScript Web 需要生成或校验 Client 类型；
 - stdio Transport 需要处理进程生命周期和背压；
-- SQLite 与 PostgreSQL 都启用后需要共享 Contract Test；
+- SQLite 与 PostgreSQL 的共同 Canonical Repository Capability 需要共享 Contract Test；
 - ORM Entity、API DTO 和 Domain Object 之间需要显式映射。
 
 ## Revisit triggers
@@ -95,4 +98,4 @@
 - Web Client 需要原生平台能力且包装方案不能满足；
 - 参考 Model 或 Runtime Adapter 缺乏稳定集成面。
 
-更换参考实现不得改变 Canonical State、Port Semantics 或 Stable ID。
+更换参考实现不得改变 Canonical ID、Proposal / Commit、Profile portability 或 Stable ID。新增 target kind、Profile 或 Adapter Capability 不得反向增加 Kernel 依赖。
