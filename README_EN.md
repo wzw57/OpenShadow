@@ -187,11 +187,13 @@ Near-term implementation focuses on a single-user path without making future mul
 - [Key Use Cases](docs/use-cases/README.md)
 - [Domain Model](docs/domain-model.md)
 - [State Machine Baseline](docs/state-machines.md)
+- [Complete Technical Architecture](docs/technical-architecture.md)
+- [Phased Implementation Plan](docs/implementation-stages.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
 ## Status
 
-**Stage 2 is complete, and Stage 3 is narrowing the minimal domain model.**
+**The Stage 3 domain model has been narrowed, and Stage 4 is establishing the complete technical architecture and phased implementation baseline.**
 
-The nineteen key use cases are an accepted baseline. The domain model is split into MVP-1, MVP-2, Later, and Contract-only layers. The first implementation slice contains only local Web, Conversation, Run, static Binding, one execution adapter, Canonical Memory, and one Primary Store.
+Stage 4 does not treat the MVP as the architecture boundary. The target architecture now defines the Interaction, Access, Core, Execution, Adapter, Canonical State, and Infrastructure planes, together with the unified execution model, key data flows, and deployment evolution. Delivery proceeds through Phases 0–5, each a true subset of the same target architecture.
