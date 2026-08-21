@@ -184,11 +184,12 @@ Near-term implementation focuses on a single-user path without making future mul
 - [Requirements](docs/requirements.md)
 - [Architecture](docs/architecture.md)
 - [Core / External Responsibility Matrix](docs/responsibility-matrix.md)
+- [Key Use Cases](docs/use-cases/README.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
 ## Status
 
-**Stage 1 Core / External responsibility mapping is complete; Stage 2 key use cases are next.**
+**The Stage 2 key-use-case draft is complete and ready for consolidated review.**
 
-Top-level requirements, architecture, and per-domain ownership boundaries are now defined. The next step is to specify actors, triggers, normal flows, failure flows, durable state changes, external side effects, and acceptance criteria for key use cases.
+Eighteen use cases now cover admission, multi-device Web interaction, execution, continuity, Memory, World State, external actions, Store failure, migration, erasure, Integrations, on-demand asset access, and Semantic Pulse. After review, Stage 3 will freeze domain objects, relationships, aggregates, and state machines.
