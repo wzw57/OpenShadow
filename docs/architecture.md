@@ -17,43 +17,288 @@ OpenShadow 是一个**本地优先、运行时无关的个人 AI 连续性与控
 
 ---
 
-## 1. 宏观结构：五个逻辑域
+## 1. 总体架构
 
-Shadow Core 只划分为五个逻辑域：
+OpenShadow 需要同时从两个视角理解：
 
-```text
-                 User / Apps / Event Sources
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────┐
-│                    SHADOW CORE                      │
-│                                                     │
-│  1. Task & Continuity                              │
-│  2. Memory & Personal Assets                       │
-│  3. Control & Governance                           │
-│  4. World State & Scheduler                        │
-│  5. Integration & Runtime Bridge                   │
-└───────────────────────┬─────────────────────────────┘
-                        │
-          ┌─────────────┼──────────────┐
-          ▼             ▼              ▼
-       Runtime        Engines       Providers
-     Hermes / DSH   Mem0/LangMem   Gmail/GitHub
-     Claude/Codex   Graphiti/...   Home/Server/...
-```
+- **Shadow 裸核**：只包含持久化、连续性、治理、事件调度和稳定 Contract，不绑定任何外部智能或执行实现；
+- **完整系统**：在稳定 Contract 之外接入可插拔 Adapter，再连接 Runtime、Memory Engine、Skill System、Provider、Model 和外部存储。
 
-这五个域是**代码与责任边界，不是五个微服务**。
+五个逻辑域是**并列的责任与代码边界**，不是串行执行流水线，也不是五个微服务。实际 Adapter 实现位于稳定内核之外；外部组件只能通过版本化 Port 与 Shadow 通信，不能直接访问 Shadow 的权威数据库。
+
+### 1.1 Shadow 裸核
+
+裸核不接 Runtime、Memory Engine、Provider 或外部模型。它能够保存状态、监督 Task、处理 Event、执行确定性治理并完成数据升级，但不能独立进行复杂 AI 推理或外部动作。
+
+~~~mermaid
+flowchart TB
+    USER["用户 / CLI / 本地应用 / 本地事件"]
+
+    subgraph SHADOW["Shadow Core"]
+        direction TB
+
+        INGRESS["Ingress & Admission<br/>命令、事件、身份、信任、请求校验"]
+
+        subgraph DOMAINS["四个并列的核心领域"]
+            direction LR
+
+            TASK["Task & Continuity<br/>Durable Task<br/>Supervisor<br/>Checkpoint / Handoff<br/>Runtime Binding"]
+
+            ASSET["Personal Assets<br/>Raw Evidence<br/>Memory Claims<br/>Canonical Skill<br/>Artifact / Working Set"]
+
+            CONTROL["Control & Governance<br/>Policy / Approval<br/>Capability Gateway<br/>Action Ledger<br/>Reconciliation"]
+
+            WORLD["Event & Trigger<br/>Event Log<br/>State Projection<br/>Scheduler / Condition<br/>Background Jobs"]
+        end
+
+        PORTS["Integration & Runtime Contracts<br/>Runtime / Memory / Skill / Provider / Model / Storage Ports<br/>当前全部未绑定"]
+
+        subgraph FOUNDATION["横切基础设施"]
+            direction LR
+            REGISTRY["Extension Registry<br/>版本 / 权限 / 兼容性"]
+            UPGRADE["Upgrade & Migration<br/>Schema / Snapshot / Restore"]
+            RELIABILITY["Reliability<br/>Transaction / Outbox / Lease"]
+            SECURITY["Security & Audit<br/>Secrets / Isolation / Logging"]
+        end
+
+        subgraph DATA["Shadow 权威数据"]
+            direction LR
+            DB[("PostgreSQL<br/>Canonical State")]
+            FILES[("Local Artifact Store<br/>Files / Reports")]
+            ARCHIVE[("Portable Archive<br/>Backup / Export")]
+        end
+    end
+
+    USER --> INGRESS
+
+    INGRESS --> TASK
+    INGRESS --> ASSET
+    INGRESS --> CONTROL
+    INGRESS --> WORLD
+
+    WORLD -->|"触发、唤醒、恢复"| TASK
+    ASSET -->|"任务上下文与产物"| TASK
+    TASK -->|"动作请求"| CONTROL
+    CONTROL -->|"授权结果"| TASK
+
+    TASK --> PORTS
+    ASSET --> PORTS
+    CONTROL --> PORTS
+    WORLD --> PORTS
+
+    TASK --> DB
+    ASSET --> DB
+    CONTROL --> DB
+    WORLD --> DB
+
+    ASSET --> FILES
+    DB --> ARCHIVE
+    FILES --> ARCHIVE
+
+    REGISTRY --> PORTS
+    UPGRADE --> DB
+    RELIABILITY --> DB
+    SECURITY --> DB
+~~~
+
+裸核可以独立完成：
+
+~~~text
+create / save / pause / resume task
+record event and maintain state projection
+run deterministic supervision
+schedule and wake waiting task
+store memory / skill / artifact
+apply policy and request approval
+record authoritative action state
+migrate / backup / restore / export
+~~~
+
+复杂推理、Agent Loop、Runtime Subtask、智能 Memory Retrieval 和外部 Provider 动作仍需要可插拔实现。
+
+### 1.2 完整可插拔架构
+
+完整版不改变 Shadow Core 的事实所有权，只在版本化 Contract Port 外安装 Adapter。
+
+~~~mermaid
+flowchart TB
+    subgraph ENTRY["交互与事件入口"]
+        direction LR
+        SHELL["Reference Shell<br/>Chat / Web / Mobile / Voice"]
+        ADMIN["Management Console<br/>CLI / Approval / Audit"]
+        APPS["Third-party Apps"]
+        EVENT_SOURCE["External Events<br/>Webhook / Device / Poller"]
+    end
+
+    subgraph SHADOW["Shadow Stable Core"]
+        direction TB
+
+        INGRESS["Ingress & Admission<br/>Identity / Trust / Validation / Admission"]
+
+        subgraph CORE_DOMAINS["并列核心领域"]
+            direction LR
+            TASK["Task & Continuity<br/>Task / Supervisor<br/>Checkpoint / Handoff<br/>Runtime Binding"]
+
+            ASSET["Personal Assets<br/>Evidence / Memory<br/>Skill / Artifact<br/>Working Set"]
+
+            CONTROL["Control & Governance<br/>Policy / Approval<br/>Capability Gateway<br/>Ledger / Reconciliation"]
+
+            WORLD["Event & Trigger<br/>Event Log / State<br/>Scheduler / Condition<br/>Background Jobs"]
+        end
+
+        subgraph BRIDGE["Integration & Runtime Bridge"]
+            direction LR
+            CONTEXT["Context Envelope<br/>授权上下文组装"]
+            RUNTIME_PORT{{"Runtime Port / SRI"}}
+            MEMORY_PORT{{"Memory Port"}}
+            SKILL_PORT{{"Skill Port"}}
+            PROVIDER_PORT{{"Provider Port"}}
+            MODEL_PORT{{"Model Port"}}
+            IO_PORT{{"Storage / Event Port"}}
+        end
+
+        subgraph FOUNDATION["横切基础设施"]
+            direction LR
+            REGISTRY["Extension Registry<br/>Manifest / Permission<br/>Version / Compatibility"]
+            UPGRADE["Migration / Backup<br/>Preflight / Snapshot<br/>Restore / Export"]
+            RELIABILITY["Transaction / Outbox<br/>Lease / Crash Recovery"]
+            SECURITY["Secrets / Isolation<br/>Audit / Observability"]
+        end
+
+        subgraph DATA["Shadow 权威数据层"]
+            direction LR
+            DB[("PostgreSQL<br/>Canonical State")]
+            ARTIFACT[("Artifact Metadata<br/>Content Hash")]
+            ARCHIVE[("Portable Archive")]
+        end
+    end
+
+    subgraph ADAPTERS["可插拔 Adapter 层：禁止直接访问 Shadow 数据库"]
+        direction LR
+        RUNTIME_ADAPTER(["Runtime Adapters<br/>Hermes / Claude / Codex / DSH"])
+        MEMORY_ADAPTER(["Memory Adapters<br/>Retrieval / Extraction / Graph"])
+        SKILL_ADAPTER(["Skill Projectors<br/>Runtime-native Format"])
+        PROVIDER_ADAPTER(["Provider Adapters<br/>MCP / REST / Local Tool"])
+        MODEL_ADAPTER(["Model Adapters<br/>Local / Cloud"])
+        IO_ADAPTER(["Storage & Event Adapters<br/>FS / NAS / Webhook / Poller"])
+    end
+
+    subgraph EXTERNAL["可替换的外部实现"]
+        direction LR
+        RUNTIMES["Agent Runtimes<br/>Planner / Subtask / Subagent<br/>Agent Loop / Session"]
+
+        MEMORY_ENGINE["Memory Intelligence<br/>Mem0 / LangMem / Graphiti<br/>Derived Indexes"]
+
+        SKILL_SYSTEM["Runtime Skill System<br/>Discovery / Activation<br/>Composition / Execution"]
+
+        PROVIDERS["Capability Providers<br/>Gmail / GitHub / Calendar<br/>Home / Server / Files"]
+
+        MODELS["Semantic Models<br/>Verifier / Classifier<br/>Extractor / Summarizer"]
+
+        EXTERNAL_IO["External I/O<br/>NAS / Object Store<br/>Devices / Webhooks"]
+    end
+
+    SHELL --> INGRESS
+    ADMIN --> INGRESS
+    APPS --> INGRESS
+    EVENT_SOURCE --> INGRESS
+
+    INGRESS --> TASK
+    INGRESS --> ASSET
+    INGRESS --> CONTROL
+    INGRESS --> WORLD
+
+    WORLD -->|"触发或恢复"| TASK
+    ASSET -->|"资产与上下文"| TASK
+    TASK -->|"动作请求"| CONTROL
+    CONTROL -->|"授权决定"| TASK
+
+    TASK --> CONTEXT
+    ASSET --> CONTEXT
+    CONTROL --> CONTEXT
+    WORLD --> CONTEXT
+
+    CONTEXT --> RUNTIME_PORT
+    ASSET --> MEMORY_PORT
+    ASSET --> SKILL_PORT
+    CONTROL --> PROVIDER_PORT
+    TASK --> MODEL_PORT
+    WORLD --> IO_PORT
+    ASSET --> IO_PORT
+
+    TASK --> DB
+    ASSET --> DB
+    CONTROL --> DB
+    WORLD --> DB
+    ASSET --> ARTIFACT
+
+    DB --> ARCHIVE
+    ARTIFACT --> ARCHIVE
+
+    REGISTRY --> RUNTIME_PORT
+    REGISTRY --> MEMORY_PORT
+    REGISTRY --> SKILL_PORT
+    REGISTRY --> PROVIDER_PORT
+    REGISTRY --> MODEL_PORT
+    REGISTRY --> IO_PORT
+
+    UPGRADE --> DB
+    RELIABILITY --> DB
+    SECURITY --> DB
+
+    RUNTIME_PORT <--> RUNTIME_ADAPTER
+    MEMORY_PORT <--> MEMORY_ADAPTER
+    SKILL_PORT <--> SKILL_ADAPTER
+    PROVIDER_PORT <--> PROVIDER_ADAPTER
+    MODEL_PORT <--> MODEL_ADAPTER
+    IO_PORT <--> IO_ADAPTER
+
+    RUNTIME_ADAPTER <--> RUNTIMES
+    MEMORY_ADAPTER <--> MEMORY_ENGINE
+    SKILL_ADAPTER --> SKILL_SYSTEM
+    SKILL_SYSTEM --> RUNTIMES
+    PROVIDER_ADAPTER <--> PROVIDERS
+    MODEL_ADAPTER <--> MODELS
+    IO_ADAPTER <--> EXTERNAL_IO
+
+    RUNTIMES -. "进度、Checkpoint、动作 Proposal" .-> RUNTIME_ADAPTER
+    MEMORY_ENGINE -. "Memory Candidates" .-> MEMORY_ADAPTER
+    MODELS -. "Semantic Suggestions" .-> MODEL_ADAPTER
+    PROVIDERS -. "Result / Failed / Unknown" .-> PROVIDER_ADAPTER
+    EXTERNAL_IO -. "Event / Observation" .-> IO_ADAPTER
+~~~
+
+完整系统遵循统一扩展模式：
+
+~~~text
+Shadow Contract
+      ↓
+Adapter Plugin
+      ↓
+Replaceable External Implementation
+~~~
+
+外部组件的提交边界：
+
+- Runtime 提出 progress、checkpoint、completion 和 action proposal；
+- Memory Engine 返回候选结果，不直接覆盖 Canonical Memory；
+- Model 返回语义建议，不直接修改 Task、Policy 或其他权威状态；
+- Skill System 消费可重建的 Runtime Projection，不直接修改 Canonical Skill；
+- Provider 执行经过授权的 Capability，并返回 success、failed 或 unknown outcome；
+- Storage 保存内容，Shadow 仍持有 metadata、content hash 和生命周期状态。
+
+最终权威状态始终由 Shadow 校验并提交。
 
 V0.1 可以仍然只是：
 
-```text
+~~~text
 1 Shadow process
 1 PostgreSQL
 1 artifact directory
 1 background worker
 1 primary Runtime
 several adapters
-```
+~~~
 
 ---
 
