@@ -7,11 +7,11 @@
 
 ## 1. 设计立场
 
-Shadow 的完整产品边界很大，但 Tiny Core 必须很小。
+Shadow 的完整产品边界很大，但 Tiny Kernel 必须很小。
 
 本模型遵守：
 
-1. Tiny Core 只理解身份、归属、版本、生命周期、Authority、工作连续性、Binding 和可移植性；
+1. Tiny Kernel 只理解身份、归属、版本、生命周期、Authority、工作连续性、Binding 和可移植性；
 2. Memory、State、Task、Action、Skill 等领域语义由版本化 typed Profile 定义；
 3. Canonical Envelope 不是无约束 JSON 容器，Profile 必须声明 Schema、不变量和迁移；
 4. Proposal 与已接受状态分离；
@@ -27,12 +27,12 @@ Shadow 的完整产品边界很大，但 Tiny Core 必须很小。
 
 | 等级 | 含义 | 典型内容 |
 |---|---|---|
-| KERNEL | Tiny Core 必须直接理解并执行 | Stable ID、Owner / Space、Version、Canonical Commit、Admission、Run / Attempt、Binding |
+| KERNEL | Tiny Kernel 必须直接理解并执行 | Stable ID、Owner / Space、Version、Canonical Commit、Admission、Run / Attempt、Binding |
 | CONTRACT-ONLY | Core 保留最小跨组件语义，不要求立即实现完整功能 | Durable Task continuity、Action safety、Export / Migration / Erasure Intent |
 | PROFILE / EXTENSION | Shadow 发布标准 Profile，具体语义和智能可独立演进 | Conversation、Memory、State、Skill、Integration、Capability |
 | LATER PHASE / DERIVED | 不进入当前稳定模型，按真实用例增加或重建 | Router Score、Embedding、Graph、Prompt、Runtime Planner、复杂 ACL、领域本体 |
 
-“Profile 属于 Shadow”与“Profile 不硬编码进 Tiny Core”不矛盾。官方 Profile 可以提供十年兼容承诺，但通过 Schema Registry、Migration 和 Commit Policy 接入同一 Kernel。
+“Profile 属于 Shadow”与“Profile 不硬编码进 Tiny Kernel”不矛盾。官方 Profile 可以提供十年兼容承诺，但通过 Schema Registry、Migration 和 Commit Policy 接入同一 Kernel。
 
 ## 3. Kernel Model
 
@@ -48,10 +48,10 @@ CanonicalEnvelope
 ├─ owner_ref / space_id / created_by
 ├─ data_classification
 ├─ provenance
-├─ version / expected_version
-├─ retention_policy
-├─ lifecycle_state
-├─ created_at / updated_at
+├─ version
+├─ retention_policy_ref
+├─ record_state
+├─ created_at / committed_at
 └─ typed_payload
 ~~~
 
@@ -59,12 +59,12 @@ Kernel 保证：
 
 - Stable ID 不因 Adapter、Runtime、数据库或 Profile 实现替换而改变；
 - owner_ref 与 space_id 从第一版存在；
-- expected_version 防止静默覆盖；
+- expected_version 属于 Mutation Input，并在 Commit 时防止静默覆盖；
 - schema_ref 可以定位验证器和 Migration；
 - erased 内容只留下不含原文的最小 Tombstone；
 - Secret 内容不进入普通 Envelope。
 
-Kernel 不解释 typed_payload 的领域含义。Profile Validator 负责类型不变量，Core 在 Commit 前调用已绑定且受信任的 Validator。
+Kernel 不解释 typed_payload 的领域含义。Profile Validator 负责类型不变量，Kernel 在 Commit 前调用已绑定且受信任的 Validator。
 
 ### 3.2 Canonical Commit
 
@@ -184,7 +184,7 @@ portable_export_rules
 compatibility
 ~~~
 
-Profile Validator 可以由 Shadow 官方包、可信 Extension 或纯确定性 Schema 实现，但最终 Commit 仍由 Core 完成。Profile 不能给自己增加写权限。
+Profile Validator 可以由 Shadow 官方包、可信 Extension 或纯确定性 Schema 实现，但最终 Commit 仍由 Kernel 完成。Profile 不能给自己增加写权限。
 
 ### 4.2 Conversation Profile
 
@@ -204,15 +204,16 @@ Conversation / Message 是官方 Profile：
 Memory Profile 定义：
 
 - Memory stable identity；
-- current version pointer；
-- 不可变 MemoryVersion；
+- Canonical Envelope 的不可变版本；
 - Claim / content；
 - owner / space / scope；
 - provenance / Evidence refs；
 - validity / lifecycle；
-- source_dependency：independent / dependent / unknown；
+- source_dependency：independent / dependent / review_required；
 - correction / merge / supersede；
 - logical delete / physical erase / anti-resurrection Tombstone。
+
+Memory 不建立平行的 `MemoryVersion` 实体或第二套 current-version pointer。精确历史版本使用 `(record_id, version)` 引用；同一 Memory 的 correction 创建新的 Canonical Envelope Version，跨 Memory merge 在一个 Commit Batch 中创建新 Memory 并 supersede 输入记录。
 
 MemoryCandidate 不是 Memory。Memory Intelligence 负责 extraction、consolidation、deduplication、retrieval、reranking、embedding、graph 和 summary，只能提交 Candidate / Recall Result。
 
@@ -364,16 +365,17 @@ Execution / Intelligence Port 可以返回 Result、Proposal、Observation、Pro
 最小 AdapterDescriptor：
 
 ~~~text
-adapter_id
+descriptor_id / descriptor_version
 adapter_family
-contract_versions
+implementation_ref / implementation_version
+supported_contracts
+supported_target_kinds
 capabilities
 config_schema_ref
-implementation_ref
-health
+descriptor_digest
 ~~~
 
-权限、Secret、Checkpoint、Migration、Data Boundary 与 Reconciliation 是 Family Capability，不是所有 Adapter 的必填字段。
+Descriptor 只描述实现。安装实例由 AdapterRegistration 表达；配置与 Secret 分离；实时健康由带 TTL 的 HealthObservation 表达。权限、Secret、Checkpoint、Migration、Data Boundary 与 Reconciliation 是 Family Capability，不是所有 Adapter 的必填字段。
 
 Runtime Port 基础能力：
 

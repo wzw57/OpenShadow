@@ -28,7 +28,7 @@
 | Integration / Skill install | 对应 Profile |
 | OperationJob | portability / erasure implementation |
 
-Tiny Core 不为每种 Profile 建立永久 enum switch。Profile Descriptor 声明 lifecycle contract，Core 调用对应 Validator。
+Tiny Kernel 不为每种 Profile 建立永久 enum switch。Profile Descriptor 声明 lifecycle contract，Kernel 调用对应 Validator。
 
 ## 3. Run
 
@@ -36,9 +36,12 @@ Tiny Core 不为每种 Profile 建立永久 enum switch。Profile Descriptor 声
 stateDiagram-v2
     [*] --> created
     created --> queued
+    created --> waiting
     queued --> running
+    queued --> waiting
     running --> waiting
     waiting --> running
+    waiting --> queued
     running --> paused
     paused --> queued
     running --> completed
@@ -48,10 +51,15 @@ stateDiagram-v2
     paused --> cancelling
     cancelling --> cancelled
     cancelling --> cancellation_unknown
+    cancellation_unknown --> cancelled: reconciled
+    cancellation_unknown --> completed: reconciled
+    cancellation_unknown --> failed: reconciled
+    cancellation_unknown --> cancelled: reconciled
+    cancellation_unknown --> completed: reconciled
+    cancellation_unknown --> failed: reconciled
     completed --> [*]
     failed --> [*]
     cancelled --> [*]
-    cancellation_unknown --> [*]
 ~~~
 
 规则：
@@ -61,6 +69,7 @@ stateDiagram-v2
 - cancel request 只进入 cancelling；
 - Target acknowledgement 后才能进入 cancelled；
 - 无法确认时进入 cancellation_unknown；
+- cancellation_unknown 不是永久终态，后续 reconciliation 可以提交 cancelled、completed 或 failed；
 - 没有 cancel Capability 的 Adapter 返回 unsupported，Core 决定是否等待、隔离或标记 unknown；
 - completed 不自动完成 Durable Task；
 - ephemeral interaction 不是 Canonical Run。
@@ -75,17 +84,18 @@ stateDiagram-v2
     dispatching --> rejected
     running --> succeeded
     running --> failed
-    running --> timed_out
+    running --> outcome_unknown: timeout or lost response
     running --> cancellation_requested
     cancellation_requested --> cancelled
-    cancellation_requested --> cancellation_unknown
+    cancellation_requested --> outcome_unknown
     created --> incompatible
+    outcome_unknown --> succeeded: reconciled
+    outcome_unknown --> failed: reconciled
+    outcome_unknown --> cancelled: reconciled
     rejected --> [*]
     succeeded --> [*]
     failed --> [*]
-    timed_out --> [*]
     cancelled --> [*]
-    cancellation_unknown --> [*]
     incompatible --> [*]
 ~~~
 
@@ -96,6 +106,8 @@ stateDiagram-v2
 - 未知 target kind 不自动 incompatible，先验证 Descriptor / Capability；
 - 终态 Attempt 不可覆盖；
 - Retry 创建新 Attempt；
+- deadline 超过但无法证明 Target 已停止时进入 outcome_unknown，不能把 timeout 当成已失败；
+- outcome_unknown 可以通过 reconciliation 转为 succeeded、failed 或 cancelled；
 - 外部 progress 不等于 Canonical lifecycle commit。
 
 ## 5. Memory Profile
@@ -104,16 +116,12 @@ stateDiagram-v2
 stateDiagram-v2
     [*] --> active
     active --> superseded
-    active --> logically_deleted
-    superseded --> logically_deleted
-    logically_deleted --> active: restore when allowed
-    logically_deleted --> erased
-    superseded --> erased
-    active --> erased
-    erased --> [*]
+    active --> invalidated
+    invalidated --> active: accepted correction
+    superseded --> [*]
 ~~~
 
-MemoryVersion 不可变。Correction / merge 创建新 Version 并更新 Root current_version_ref。
+Memory 直接使用 Canonical Envelope 的不可变版本，不建立平行的 MemoryVersion 或 Root current_version_ref。Correction 创建同一 Memory ID 的新 Version；merge 原子创建新 Memory 并为输入 Memory 提交 superseded Version。logical delete 与 erased 属于 Envelope `record_state`，不与 Profile `memory_state` 混用。
 
 规则：
 
@@ -148,7 +156,6 @@ stateDiagram-v2
     rejected --> [*]
     completed --> [*]
     cancelled --> [*]
-    cancellation_unknown --> [*]
     failed --> [*]
 ~~~
 
@@ -283,6 +290,7 @@ installed / disabled → removed
 ~~~text
 planned → running → waiting | completed | failed
 running / waiting → cancelling → cancelled | cancellation_unknown
+cancellation_unknown → cancelled | completed | failed: reconciled
 ~~~
 
 OperationJob 不用于普通 Memory Maintenance、Workflow、Pulse 或通用后台任务。
@@ -311,7 +319,7 @@ Event 只能描述已经 Commit 的事实或明确的通知状态。Canonical Re
 Stage 4 冻结：
 
 - Run / Attempt 核心状态；
-- cancellation_unknown；
+- reconcilable cancellation_unknown / outcome_unknown；
 - Memory correction / delete / erase 基础语义；
 - Task CompletionProposal / Commit；
 - State fresh / stale / unknown；

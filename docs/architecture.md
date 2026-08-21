@@ -6,7 +6,7 @@
 
 ## 1. 系统定义
 
-Shadow 是用户长期使用的完整个人 Agent。Shadow Core 不是“所有 Agent 功能的实现中心”，而是一个主权与连续性内核：
+Shadow 是用户长期使用的完整个人 Agent。Tiny Kernel 不是“所有 Agent 功能的实现中心”，而是一个主权与连续性内核：
 
 > Core 尽可能不理解领域内容，但必须知道对象属于谁、谁可以修改、修改是否合法、版本如何演化、工作如何继续，以及如何迁移和删除。
 
@@ -23,10 +23,10 @@ Shadow 是用户长期使用的完整个人 Agent。Shadow Core 不是“所有 
 | PROFILE / EXTENSION | 需要 Shadow 兼容，但业务语义或实现会快速变化 |
 | LATER PHASE / DERIVED | 当前没有必要固化，或可以重建 |
 
-Tiny Core 只保留：
+Tiny Kernel 只保留：
 
 ~~~text
-Tiny Core
+Tiny Kernel
 ├─ Identity & Ownership
 ├─ Canonical Record & Lifecycle
 ├─ Proposal / Validate / Commit
@@ -37,7 +37,7 @@ Tiny Core
 └─ Portability & Erasure Intent
 ~~~
 
-不进入 Tiny Core：
+不进入 Tiny Kernel：
 
 - Memory 提取、整理和检索；
 - State 融合、预测、本体和查询；
@@ -67,7 +67,7 @@ flowchart TB
         DISCLOSURE["Data Boundary"]
     end
 
-    subgraph KERNEL["Tiny Core"]
+    subgraph KERNEL["Tiny Kernel"]
         ID["Identity / Ownership"]
         RECORD["Canonical Record / Lifecycle"]
         AUTH["Proposal / Validate / Commit"]
@@ -133,8 +133,8 @@ CanonicalEnvelope
 ├─ record_id / record_type / schema_ref
 ├─ owner_ref / space_id / created_by
 ├─ classification / provenance
-├─ version / expected_version
-├─ retention / lifecycle
+├─ version / created_at / committed_at
+├─ retention_policy_ref / record_state
 └─ typed_payload
 ~~~
 
@@ -147,6 +147,8 @@ Kernel 负责：
 - 来源和生命周期；
 - 通用删除与 Tombstone；
 - Commit 原子语义。
+
+`expected_version` 是 Mutation Input 的并发前置条件，不存入 Canonical Envelope。Profile 生命周期位于 typed payload；通用 `record_state` 仅使用 active、logically_deleted 与 erased。
 
 Profile 负责：
 
@@ -325,14 +327,17 @@ Skill、Executable、Extension、Integration、MCP Connection 和 Runtime / Mode
 最小 AdapterDescriptor：
 
 ~~~text
-adapter_id
+descriptor_id / descriptor_version
 adapter_family
-contract_versions
+implementation_ref / implementation_version
+supported_contracts
+supported_target_kinds
 capabilities
 config_schema_ref
-implementation_ref
-health
+descriptor_digest
 ~~~
+
+Descriptor 只描述实现，不代表安装、配置、授权或实时健康。`AdapterRegistration` 保存 adapter_id、Descriptor snapshot、普通 config ref、Secret refs、Host / Trust Binding 与兼容状态；带 TTL 的 `HealthObservation` 单独表达 healthy / degraded / unavailable / unknown。
 
 Family-specific Capability 再声明：
 

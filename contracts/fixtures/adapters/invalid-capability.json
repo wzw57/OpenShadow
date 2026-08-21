@@ -1,0 +1,18 @@
+{
+  "descriptor_id": "shadow.adapter.invalid",
+  "descriptor_version": "1.0",
+  "adapter_family": "runtime",
+  "implementation_ref": "invalid",
+  "implementation_version": "0",
+  "supported_contracts": [],
+  "supported_target_kinds": [],
+  "capabilities": [
+    {
+      "capability_id": "cancel",
+      "capability_version": "latest",
+      "contract_ref": "not a uri"
+    }
+  ],
+  "config_schema_ref": "not a uri",
+  "descriptor_digest": "abc"
+}

@@ -1,0 +1,42 @@
+{
+  "commit_request_id": "commit-request-001",
+  "idempotency_scope": "principal-user-001:conversation-001",
+  "idempotency_key": "turn-001",
+  "request_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "actor_ref": "principal-user-001",
+  "correlation_id": "correlation-001",
+  "operations": [
+    {
+      "operation_id": "operation-001",
+      "operation": "create",
+      "record_id": "message-001",
+      "record_type": "shadow.profile.message",
+      "target_schema_ref": "https://schemas.openshadow.dev/contracts/profiles/1.0.0#/$defs/MessagePayload",
+      "owner_ref": "principal-user-001",
+      "space_id": "space-personal-001",
+      "created_by": "principal-user-001",
+      "data_classification": "personal",
+      "provenance": {
+        "origin_type": "shadow.origin.user-command",
+        "origin_ref": "submission-001"
+      },
+      "retention_policy_ref": { "record_id": "retention-default-001" },
+      "record_state": "active",
+      "typed_payload": {
+        "conversation_ref": { "record_id": "conversation-001" },
+        "sequence": 1,
+        "message_type": "shadow.message.user",
+        "author_ref": "principal-user-001",
+        "content_blocks": [
+          {
+            "block_type": "shadow.content.text",
+            "content_schema_ref": "https://schemas.openshadow.dev/content/text/1.0.0",
+            "typed_content": { "text": "Hello" }
+          }
+        ],
+        "finalized_at": "2026-08-21T12:00:00Z"
+      }
+    }
+  ],
+  "prepared_at": "2026-08-21T12:00:00Z"
+}

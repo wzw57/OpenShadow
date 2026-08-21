@@ -1,0 +1,8 @@
+{
+  "conversation_ref": { "record_id": "conversation-001" },
+  "sequence": 0,
+  "message_type": "user",
+  "author_ref": "principal-user-001",
+  "content_blocks": [],
+  "finalized_at": "2026-08-21T12:00:00Z"
+}

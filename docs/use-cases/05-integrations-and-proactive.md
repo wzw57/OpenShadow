@@ -128,7 +128,7 @@ Asset access provenance、Usage summary、Source availability，以及可选 Art
 
 ### Actor
 
-Scheduler；Semantic Pulse Worker；Shadow Core；User。
+Scheduler；Semantic Pulse Worker；Tiny Kernel；User。
 
 ### Trigger
 

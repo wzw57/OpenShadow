@@ -1,0 +1,10 @@
+{
+  "digest_format": "shadow.skill-bundle-digest.v1",
+  "files": [
+    {
+      "relative_path": "SKILL.md",
+      "byte_length": 140,
+      "sha256": "sha256:3dc4b5401b18622932571994d430951c6890899c147d512c9799f4609d94b9df"
+    }
+  ]
+}

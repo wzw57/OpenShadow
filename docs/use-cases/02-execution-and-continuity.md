@@ -10,7 +10,7 @@ Shadow 对分类、提取、摘要等受限任务直接调用 Model Worker，不
 
 ### Actor
 
-User 或内部受授权流程；Shadow Core；Router；Model Adapter。
+User 或内部受授权流程；Tiny Kernel；Router；Model Adapter。
 
 ### Trigger
 
@@ -62,7 +62,7 @@ Shadow 执行一个已登记脚本、函数或固定程序，并保持身份、�
 
 ### Actor
 
-User、Schedule、Runtime 或 Semantic Pulse；Shadow Core；Runner Adapter。
+User、Schedule、Runtime 或 Semantic Pulse；Tiny Kernel；Runner Adapter。
 
 ### Trigger
 
@@ -116,7 +116,7 @@ Shadow 将具有明确步骤、等待和补偿语义的工作绑定到外部 Wor
 
 ### Actor
 
-User、Shadow Core、Workflow Adapter、External Workflow Engine。
+User、Tiny Kernel、Workflow Adapter、External Workflow Engine。
 
 ### Trigger
 
@@ -143,7 +143,7 @@ User、Shadow Core、Workflow Adapter、External Workflow Engine。
 ### Failure Flow
 
 - Workflow Engine 不兼容时，在创建 Attempt 前拒绝 Binding；
-- Workflow 启动超时或失败时，Attempt 进入 failed 或 timed_out；
+- Workflow 启动超时且无法确认是否已执行时，Attempt 进入 outcome_unknown；只有能确认未开始或已失败时才进入 rejected / failed；
 - 取消未被外部引擎确认时，状态保持 cancellation_unknown；
 - Workflow 返回未知字段时按版本策略处理，未知关键 Capability 必须拒绝；
 - Engine 结果不明确或外部副作用未知时进入 reconciliation，不能伪造完成；
@@ -162,7 +162,7 @@ Request、Run、Execution Binding、Attempt、Workflow definition reference、ex
 ### Acceptance Criteria
 
 - Workflow 与其他 Execution Mode 使用相同 Run / Binding / Attempt 模型；
-- Shadow Core 不实现通用 Workflow Engine；
+- Tiny Kernel 不实现通用 Workflow Engine；
 - Workflow 私有实例 ID 不代替 Shadow Run ID 或 Durable Task ID；
 - Workflow 使用 Execution Family 的 typed Result / Proposal / Progress / Failure；
 - 更换 Workflow Engine 不改变 Canonical Asset identity；

@@ -1,0 +1,31 @@
+contract: contracts/openapi/openapi.yaml
+cases:
+  - case_id: api.turn.accepted
+    requirement_level: must
+    expected_outcome: http-202
+    invariants: [one-admission, one-request, one-root-run, atomic-turn]
+  - case_id: api.turn.replay
+    requirement_level: must
+    expected_outcome: http-200
+    invariants: [replayed-true, no-new-records]
+  - case_id: api.turn.version-conflict
+    requirement_level: must
+    expected_outcome: http-409
+  - case_id: api.turn.policy-deny
+    requirement_level: must
+    expected_outcome: http-403
+  - case_id: api.turn.rate-limit
+    requirement_level: must
+    expected_outcome: http-429
+    invariants: [retry-after-present]
+  - case_id: api.turn.store-unavailable
+    requirement_level: must
+    expected_outcome: http-503
+    invariants: [durable-false, no-canonical-run]
+  - case_id: api.sse.resume
+    requirement_level: must
+    expected_outcome: resumed
+    invariants: [event-id-deduplication]
+  - case_id: api.sse.disconnect
+    requirement_level: must
+    expected_outcome: run-continues

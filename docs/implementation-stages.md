@@ -34,7 +34,7 @@ OpenShadow 的完整目标覆盖长期记忆、任务连续性、State、能力�
 - Stable ID；
 - owner_ref / space_id / created_by；
 - schema_ref / profile_id；
-- version / expected_version；
+- Canonical version，以及 Mutation Input 的 expected_version；
 - Canonical Envelope；
 - Proposal / Commit identity；
 - work-bearing Admission；
@@ -157,7 +157,7 @@ flowchart LR
 
 ### 实现
 
-- MemoryVersion / correction / supersede；
+- Canonical Memory Envelope version / correction / supersede；
 - source_dependency；
 - logical delete / physical erase；
 - anti-resurrection Tombstone；
@@ -360,7 +360,7 @@ flowchart LR
 - SSE；
 - checked-in JSON Schema；
 - in-process Python Family Port；
-- isolated JSON-RPC-style Message Envelope over stdio；
+- isolated UTF-8 NDJSON Message Envelope over stdio；
 - SQLite WAL、SQLAlchemy、Alembic；
 - PostgreSQL 作为第二 Store Profile；
 - Deterministic Test、OpenAI Model 与 Process Runtime Adapters。

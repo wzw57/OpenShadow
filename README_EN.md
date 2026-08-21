@@ -12,7 +12,7 @@ Shadow does not rebuild the AI ecosystem. It combines external projects behind a
 
 ~~~text
 Shadow
-├─ Tiny Core
+├─ Tiny Kernel
 │  ├─ Identity & Ownership
 │  ├─ Canonical Record & Lifecycle
 │  ├─ Proposal / Validate / Commit Authority
@@ -40,7 +40,7 @@ Shadow
    └─ Bindings / Policies / Action History
 ~~~
 
-Shadow is the complete product. Tiny Core understands only control semantics required for sovereignty and continuity. Memory, state, task, and skill semantics are versioned Profiles rather than permanent kernel modules.
+Shadow is the complete product. Tiny Kernel understands only control semantics required for sovereignty and continuity. Memory, state, task, and skill semantics are versioned Profiles rather than permanent kernel modules.
 
 ## Core invariants
 
@@ -95,7 +95,7 @@ The envelope provides identity, ownership, versioning, provenance, and lifecycle
 
 Canonical Memory is a user-owned `memory` Profile and survives replacement of memory intelligence. External components perform extraction, consolidation, recall, deduplication, embedding, graph construction, and ranking; Shadow governs candidates, versions, provenance, correction, erasure, and commit.
 
-World State is an official `state` Profile, not a knowledge graph embedded in Tiny Core. Core provides identity, provenance, evidence, temporal validity, and commit. The Profile defines state keys, Observations, fresh / stale / unknown, and migrations. Collection, fusion, prediction, ontologies, and domain queries remain external.
+World State is an official `state` Profile, not a knowledge graph embedded in Tiny Kernel. Kernel provides identity, provenance, evidence, temporal validity, and commit. The Profile defines state keys, Observations, fresh / stale / unknown, and migrations. Collection, fusion, prediction, ontologies, and domain queries remain external.
 
 Accepted state is portable and recoverable but may expire. Shadow refreshes external sources when needed and explicitly represents stale or unknown information.
 
@@ -169,8 +169,9 @@ OpenShadow implements:
 - [Phased Implementation Plan](docs/implementation-stages.md)
 - [Reference Implementation Profile](docs/implementation-profile.md)
 - [Roadmap](docs/roadmap.md)
+- [Stage 4 Contract Baseline](docs/contract-baseline.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
 ## Status
 
-Stages 0–3 established the requirements, responsibility, use-case, and domain baselines. Stage 4 is now applying a Tiny Kernel, typed Profiles, Proposal / Commit, and capability-first adapters. The complete architecture remains phased through Phase 0–5 and is not constrained by a short-term MVP.
+Stages 0–3 established the requirements, responsibility, use-case, and domain baselines. Stage 4 decisions D1–D8 are frozen and now have field-level schemas, OpenAPI, fixtures, and declarative Contract Tests. The work remains Proposed until final PR review and merge are complete.

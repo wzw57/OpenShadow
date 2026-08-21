@@ -1,0 +1,11 @@
+{
+  "memory_kind": "preference",
+  "content_schema_ref": "not a uri",
+  "typed_content": { "text": "invalid" },
+  "applicability_scope": {},
+  "evidence_refs": [],
+  "source_refs": [],
+  "source_dependency": "maybe",
+  "memory_state": "active",
+  "supersedes_memory_refs": []
+}

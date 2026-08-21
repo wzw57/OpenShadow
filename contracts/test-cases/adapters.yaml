@@ -1,0 +1,28 @@
+contract: https://schemas.openshadow.dev/contracts/adapters/1.0.0
+cases:
+  - case_id: adapter.descriptor.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/adapters/valid-adapter.json]
+    expected_outcome: valid
+  - case_id: adapter.capability.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/adapters/invalid-capability.json]
+    expected_outcome: invalid
+  - case_id: adapter.required-capability.unknown
+    requirement_level: must
+    description: An unknown required Capability makes the Binding incompatible.
+    expected_outcome: incompatible
+    expected_error_code: shadow.binding.required-capability-unknown
+  - case_id: adapter.optional-capability.unknown
+    requirement_level: must
+    description: An unknown optional Capability is recorded and ignored.
+    expected_outcome: compatible
+  - case_id: adapter.health.expired
+    requirement_level: must
+    description: Expired health is treated as unknown.
+    expected_outcome: unknown
+  - case_id: adapter.binding.immutable
+    requirement_level: must
+    description: Adapter upgrade does not mutate an existing Attempt Binding.
+    expected_outcome: unchanged
+    invariants: [descriptor-digest-pinned, implementation-version-pinned]

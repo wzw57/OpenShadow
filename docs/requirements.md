@@ -8,7 +8,7 @@
 
 OpenShadow 是一个本地优先、Runtime 无关的个人 AI 资产与能力平台。
 
-用户面对的是统一的 Shadow Agent。Runtime、Memory Intelligence、数据库、搜索、Skill System、Provider、语音和交互界面都是 Shadow 的组成部分，但不必属于 Shadow Core。
+用户面对的是统一的 Shadow Agent。Runtime、Memory Intelligence、数据库、搜索、Skill System、Provider、语音和交互界面都是 Shadow 的组成部分，但不必属于 Tiny Kernel。
 
 Shadow 需要让用户在长期使用中持续积累和复用：
 
@@ -28,11 +28,11 @@ Shadow 需要让用户在长期使用中持续积累和复用：
 
 用户使用的完整 Agent 产品，包括 Core 和全部可替换组件。
 
-### 2.2 Shadow Core
+### 2.2 Tiny Kernel
 
 Shadow 中必须长期稳定的 Tiny Kernel。它负责 Identity / Ownership、Canonical Envelope 与生命周期、Proposal / Validate / Commit、工作准入与最小连续性、Extension Contract / Binding，以及 Portability / Erasure Intent。
 
-Memory、World State、Skill、Task 等业务概念通过官方 typed Profile 表达。Profile 属于 Shadow 产品与兼容性承诺，但不要求 Tiny Core 为每一种类型建立永久硬编码模块。
+Memory、World State、Skill、Task 等业务概念通过官方 typed Profile 表达。Profile 属于 Shadow 产品与兼容性承诺，但不要求 Tiny Kernel 为每一种类型建立永久硬编码模块。
 
 ### 2.3 Runtime
 
@@ -52,7 +52,7 @@ Canonical Record 是带 Stable ID、Owner / Space、Schema Reference、Version�
 
 Canonical Asset 是用户长期拥有或控制的 Canonical Record。不是所有控制面记录都属于用户资产，例如 AdmissionRecord 和 ExecutionAttempt 是 Shadow 连续性事实。
 
-Profile 为一类 Canonical Record 定义类型化 Schema、合法状态转换、迁移与导出语义。Memory、State、Task、Action、Skill 和 Integration 可以使用官方 Profile 演进，而不被写死成 Tiny Core 的永久模块。
+Profile 为一类 Canonical Record 定义类型化 Schema、合法状态转换、迁移与导出语义。Memory、State、Task、Action、Skill 和 Integration 可以使用官方 Profile 演进，而不被写死成 Tiny Kernel 的永久模块。
 
 ### 2.6 Derived State
 
@@ -60,13 +60,13 @@ Profile 为一类 Canonical Record 定义类型化 Schema、合法状态转换�
 
 ### 2.7 Observation
 
-外部来源对现实状态的一次带来源、时间和证据的信息。Observation 是 State Profile 接受的一类 typed Proposal / Evidence Record，不等于 Shadow 已接受的当前状态，也不是 Tiny Core 的通用实体要求。
+外部来源对现实状态的一次带来源、时间和证据的信息。Observation 是 State Profile 接受的一类 typed Proposal / Evidence Record，不等于 Shadow 已接受的当前状态，也不是 Tiny Kernel 的通用实体要求。
 
 ### 2.8 World State
 
 Shadow 当前认为与判断和行动相关的现实状态投影。它由官方 State Profile 定义 state key、source、observed_at、expires_at、fresh / stale / unknown、Evidence 与迁移规则。
 
-Tiny Core 只提供 Canonical Envelope、通用时间有效性、Proposal / Commit 和权限机制；来源采集、冲突融合、预测、领域本体与查询全部外置。
+Tiny Kernel 只提供 Canonical Envelope、通用时间有效性、Proposal / Commit 和权限机制；来源采集、冲突融合、预测、领域本体与查询全部外置。
 
 ### 2.9 Execution Target
 
@@ -124,7 +124,7 @@ Chat、CLI、API Command、Voice、Event、Schedule、Condition 和 Semantic Pul
 
 ### R-006 小而稳定的 Core
 
-Core 只保留如果外包就会破坏资产所有权、主权、连续性或可迁移性的控制语义。一个概念只有在未来 AI 范式完全变化后仍必然需要时，才进入 Tiny Core。
+Kernel 只保留如果外包就会破坏资产所有权、主权、连续性或可迁移性的控制语义。一个概念只有在未来 AI 范式完全变化后仍必然需要时，才进入 Tiny Kernel。
 
 领域语义优先进入 typed Profile，智能算法和具体执行进入 Extension，未验证能力进入后续 Phase，而不是预建空模块。
 
@@ -132,7 +132,7 @@ Core 只保留如果外包就会破坏资产所有权、主权、连续性或可
 
 Shadow 提供最小 AdapterDescriptor、按 Family 划分的 Port、Capability Negotiation、版本协商、健康检查和 Contract Test。
 
-通用 Descriptor 只包含 adapter_id、family、contract_versions、capabilities、config_schema_ref、implementation_ref 和 health。权限、Secret、Checkpoint、Migration、Data Boundary 与 Reconciliation 通过 Family-specific Capability 声明，不形成万能 Manifest。
+通用 Descriptor 只包含 descriptor identity/version、family、implementation identity/version、supported contracts、supported target kinds、capabilities、config schema 与 digest。安装实例由 AdapterRegistration 表达，实时健康由带 TTL 的 HealthObservation 表达；权限、Secret、Checkpoint、Migration、Data Boundary 与 Reconciliation 通过 Family-specific Capability 声明，不形成万能 Manifest。
 
 ### R-008 长期可升级
 
@@ -166,7 +166,7 @@ Model、Runtime、Runner 和 Provider Binding 必须声明可处理的数据等�
 
 ### R-015 Profile 与 Kernel 分离
 
-Canonical Envelope 提供统一治理，但不能退化为无语义 JSON 容器。Memory、State、Task、Action、Skill 等 Profile 必须提供版本化 Schema、状态不变量和迁移规则，同时不进入 Tiny Core 的硬编码类型分支。
+Canonical Envelope 提供统一治理，但不能退化为无语义 JSON 容器。Memory、State、Task、Action、Skill 等 Profile 必须提供版本化 Schema、状态不变量和迁移规则，同时不进入 Tiny Kernel 的硬编码类型分支。
 
 ## 4. 功能需求
 
@@ -187,6 +187,7 @@ Run 最小状态机为：
 
 ~~~text
 created → queued → running
+       ↘ waiting → queued
                     ├─ waiting → running
                     ├─ paused → queued
                     ├─ completed
@@ -194,9 +195,10 @@ created → queued → running
                     └─ cancelling
                          ├─ cancelled
                          └─ cancellation_unknown
+                              └─ reconciled → cancelled | completed | failed
 ~~~
 
-Shadow 必须校验状态转换。用户请求取消不等于外部执行已停止；只有获得 Target 确认后才能提交 cancelled，无法确认时提交 cancellation_unknown。
+Shadow 必须校验状态转换。用户请求取消不等于外部执行已停止；只有获得 Target 确认后才能提交 cancelled，无法确认时提交 cancellation_unknown。该状态不是永久终态，后续 reconciliation 必须能够提交真实的 cancelled、completed 或 failed。
 
 最小记录保存身份、时间、状态、Binding、费用、结果摘要和必要审计引用。完整对话、Prompt、模型输出和 Tool Trace 按 Retention Policy 与 Data Classification 保存；Runtime 私有推理不要求保存。
 
@@ -278,7 +280,7 @@ Shadow 不要求实时同步全部外部知识库。
 
 Shadow 必须持久化用户在长期使用中形成的 Memory，使其不随 Memory Intelligence 替换而丢失。
 
-Memory 由官方 typed Profile 定义稳定身份、版本、Scope、Provenance、Evidence、source_dependency、纠正、supersede、删除和迁移语义。Tiny Core 不理解 Memory 内容，不实现提取、整理、召回或融合算法。
+Memory 由官方 typed Profile 定义稳定身份、版本、Scope、Provenance、Evidence、source_dependency、纠正、supersede、删除和迁移语义。Tiny Kernel 不理解 Memory 内容，不实现提取、整理、召回或融合算法。
 
 Memory Candidate 只有经过 Proposal / Validate / Commit 才成为 Canonical Memory Record。
 
@@ -348,7 +350,7 @@ Event 表示发生过什么，Memory 表示值得长期保留的知识，Task �
 
 State Profile 必须支持 source、observed_at、expires_at、Evidence、fresh / stale / unknown、source unavailable 和版本迁移。Accepted State 是可恢复、可迁移的 Canonical Record，但可以过期。
 
-Tiny Core 只执行 Schema、权限、Expected Version、通用时间有效性和 Commit。Source Adapter、Resolver、预测、融合、本体和领域查询外置。Domain Event 仅作为通知信封，不要求 Event Sourcing。
+Tiny Kernel 只执行 Schema、权限、Expected Version、通用时间有效性和 Commit。Source Adapter、Resolver、预测、融合、本体和领域查询外置。Domain Event 仅作为通知信封，不要求 Event Sourcing。
 
 ### 4.14 Execution Dispatch
 
@@ -508,7 +510,7 @@ Core 重启后，应能从 Durable Store 恢复已提交的长期状态。
 
 ### NFR-008 实现克制
 
-一个概念先按 CORE / CONTRACT-ONLY / PROFILE-EXTENSION / LATER-PHASE 分类。没有跨组件主权或连续性证据的概念不得进入 Tiny Core；没有真实实现需要的 Contract 不预建服务、表或万能抽象。
+一个概念先按 CORE / CONTRACT-ONLY / PROFILE-EXTENSION / LATER-PHASE 分类。没有跨组件主权或连续性证据的概念不得进入 Tiny Kernel；没有真实实现需要的 Contract 不预建服务、表或万能抽象。
 
 ### NFR-009 状态时效性
 

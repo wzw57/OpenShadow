@@ -30,7 +30,7 @@
 
 核心结论：
 
-- Tiny Core 只持有身份、归属、Canonical Envelope、Proposal / Commit、Admission、Run / Attempt、Binding 与可移植 Intent；
+- Tiny Kernel 只持有身份、归属、Canonical Envelope、Proposal / Commit、Admission、Run / Attempt、Binding 与可移植 Intent；
 - Memory、State、Task、Action、Skill 和 Integration 使用 typed Profile；
 - External Component 不能直接 Commit；
 - 复杂智能、执行、协议和基础设施外置；
@@ -99,6 +99,8 @@
 - [technical-architecture.md](technical-architecture.md)
 - [implementation-stages.md](implementation-stages.md)
 - [implementation-profile.md](implementation-profile.md)
+- [contract-baseline.md](contract-baseline.md)
+- [`contracts/`](../contracts/) JSON Schema、OpenAPI、fixtures 与声明式 Contract Tests
 - [ADR](adr/README.md)
 
 ### 已完成
@@ -116,19 +118,22 @@
 - narrow Event / Outbox / OperationJob；
 - 模块化单体参考部署；
 - Phase 0–5 实现顺序；
-- Python / FastAPI / React / SQLite 参考 Profile。
+- Python / FastAPI / React / SQLite 参考 Profile；
+- Phase 0–1 字段级 JSON Schema；
+- ProfileDescriptor / MutationInputEnvelope；
+- AdapterDescriptor / Capability / Binding / CapabilityEnvelope；
+- Runtime Message / Request / Event / Error；
+- Canonical Repository CommitPlan / Result；
+- Agent Skills fixtures 与 deterministic digest contract；
+- 声明式 Contract Test cases；
+- OpenAPI 3.1。
 
 ### Stage 4 剩余工程化工作
 
-1. 冻结 Phase 0–1 字段级 JSON Schema；
-2. 冻结 ProfileDescriptor / ProposalEnvelope；
-3. 冻结 AdapterDescriptor / Capability；
-4.定义 Runtime base Port 消息；
-5.定义 Canonical Repository Capability；
-6.提供 Agent Skills fixture；
-7.提供 Contract Test cases；
-8.生成 OpenAPI；
-9.完成 PR review 并合并。
+1.完成 Schema、offline references、fixtures 与 OpenAPI 的工件验证；
+2.完成全仓术语与语义一致性复核；
+3.完成 PR review 并合并；
+4.合并时将 Stage 4 ADR 与 Implementation Profile 从 Proposed 改为 Accepted。
 
 完成后不再继续扩展概念清单，进入实现。
 

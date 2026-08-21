@@ -1,0 +1,22 @@
+{
+  "execution_request_id": "execution-request-001",
+  "run_ref": { "record_id": "run-001", "version": 3 },
+  "attempt_ref": { "record_id": "attempt-001", "version": 1 },
+  "binding_ref": { "record_id": "binding-001", "version": 1 },
+  "idempotency_key": "attempt-001-execute",
+  "capability_envelope_snapshot": {
+    "envelope_ref": { "record_id": "capability-envelope-001" },
+    "version": 1,
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "effective_constraints": {
+      "network": false,
+      "allowed_side_effects": []
+    }
+  },
+  "input_schema_ref": "https://schemas.openshadow.dev/input/chat/1.0.0",
+  "typed_input": { "text": "Hello" },
+  "context_items": [],
+  "artifact_refs": [],
+  "correlation_id": "correlation-001",
+  "submitted_at": "2026-08-21T12:00:00Z"
+}

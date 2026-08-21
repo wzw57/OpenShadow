@@ -1,6 +1,6 @@
-# ADR-0003: Tiny Core、Typed Profile 与 Capability-first Extension
+# ADR-0003: Tiny Kernel、Typed Profile 与 Capability-first Extension
 
-- Status: Accepted
+- Status: Proposed — pending final PR review and merge
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
 

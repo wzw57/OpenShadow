@@ -1,0 +1,31 @@
+contract: https://schemas.openshadow.dev/contracts/profiles/1.0.0
+cases:
+  - case_id: profile.conversation.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/profiles/valid-conversation.json]
+    expected_outcome: valid
+    invariants: [message-order-explicit, one-foreground-run]
+  - case_id: profile.message.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/profiles/invalid-message.json]
+    expected_outcome: invalid
+    invariants: [sequence-positive, message-type-namespaced, content-nonempty]
+  - case_id: profile.memory.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/profiles/valid-memory.json]
+    expected_outcome: valid
+    invariants: [canonical-envelope-is-memory-version, derived-confidence-excluded]
+  - case_id: profile.memory.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/profiles/invalid-memory.json]
+    expected_outcome: invalid
+  - case_id: profile.memory.merge.atomic
+    requirement_level: must
+    description: A merge creates one Memory and supersedes all inputs atomically.
+    expected_outcome: committed
+    invariants: [all-or-nothing, expected-version-on-every-input]
+  - case_id: profile.memory.proposal-rejected
+    requirement_level: must
+    description: Rejecting a candidate creates a decision but no Memory asset.
+    expected_outcome: rejected
+    invariants: [proposal-is-not-memory]

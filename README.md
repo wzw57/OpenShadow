@@ -12,7 +12,7 @@ Shadow 不重新实现所有 AI 基础设施。它用一个小而稳定的主权
 
 ~~~text
 Shadow
-├─ Tiny Core
+├─ Tiny Kernel
 │  ├─ Identity & Ownership
 │  ├─ Canonical Record & Lifecycle
 │  ├─ Proposal / Validate / Commit Authority
@@ -40,7 +40,7 @@ Shadow
    └─ Bindings / Policies / Action History
 ~~~
 
-Shadow 是完整产品。Tiny Core 只理解长期主权和连续性所必需的控制语义；Memory、World State、Task、Skill 等由版本化 Profile 定义，不被硬编码成不可演进的内核模块。
+Shadow 是完整产品。Tiny Kernel 只理解长期主权和连续性所必需的控制语义；Memory、World State、Task、Skill 等由版本化 Profile 定义，不被硬编码成不可演进的内核模块。
 
 ## 核心不变量
 
@@ -97,7 +97,7 @@ Envelope 负责身份、归属、版本、来源和生命周期。各 Profile �
 
 Canonical Memory 是 `memory` Profile 的用户资产，必须在更换 Memory Intelligence 后继续存在。外部组件负责提取、整理、召回、去重、Embedding、Graph 和排序；Shadow 只治理 Candidate、版本、来源、纠正、删除和提交。
 
-World State 是官方 `state` Profile，不是 Tiny Core 内建知识图谱。Core 只提供通用身份、来源、证据、时间有效性和提交机制；State Profile 定义 state key、Observation、fresh / stale / unknown 与迁移语义；采集、融合、预测、本体和领域查询全部外置。
+World State 是官方 `state` Profile，不是 Tiny Kernel 内建知识图谱。Kernel 只提供通用身份、来源、证据、时间有效性和提交机制；State Profile 定义 state key、Observation、fresh / stale / unknown 与迁移语义；采集、融合、预测、本体和领域查询全部外置。
 
 ~~~text
 Source Adapter / State Resolver
@@ -181,8 +181,9 @@ OpenShadow 自行实现的范围收紧为：
 - [分阶段实现计划](docs/implementation-stages.md)
 - [参考实现 Profile](docs/implementation-profile.md)
 - [开发路线](docs/roadmap.md)
+- [Stage 4 Contract 基线](docs/contract-baseline.md)
 - [架构决策记录](docs/adr/README.md)
 
 ## 当前状态
 
-Stage 0–3 已形成需求、责任、用例和领域基线。Stage 4 正在用 Tiny Kernel、typed Profile、Proposal / Commit 和 capability-first Adapter 完成架构收紧；完整目标架构仍按 Phase 0–5 分阶段实现，不以短期 MVP 限制长期边界。
+Stage 0–3 已形成需求、责任、用例和领域基线。Stage 4 的 D1–D8 决策已经冻结，并已加入字段级 Schema、OpenAPI、fixtures 与声明式 Contract Tests；当前状态仍是 Proposed，等待 PR 最终评审与合并后才能进入 Stage 5。

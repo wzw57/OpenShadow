@@ -1,0 +1,10 @@
+{
+  "digest_format": "shadow.skill-bundle-digest.v1",
+  "bundle_digests": {
+    "allowed-tools-untrusted": "sha256:10892c700c244a26b300cb384b7b52393274361dfc68c24612f13ec29bdb476d",
+    "complete-valid": "sha256:a492d1a24b9032c7c728d8fe6c644d454936e2226e6009efbea936068e793d1d",
+    "digest-changed-after": "sha256:027aaa8a4b2496319d277952c8f19e14e892abdfc4608e83d2ca5a617831756c",
+    "digest-changed-before": "sha256:630d15242089982bbb87f39e08cca6aa9cb686965700201456a1ebccbce01a12",
+    "minimal-valid": "sha256:430812684d7eb33aece994b0e15f407f28b16366a428b9d92c0467c7d1b7329d"
+  }
+}

@@ -1,10 +1,11 @@
 # OpenShadow 参考实现 Profile
 
-- 状态：Stage 4 Accepted
+- 状态：Stage 4 Proposed — D1–D8 已冻结，等待 PR 最终评审与合并
 - 作用：定义 OpenShadow 第一套官方实现使用的技术组合
 - 约束：本文件不是 Shadow Domain Contract；具体技术可以通过兼容实现或 Adapter 替换
 - 上位文档：[完整技术架构](technical-architecture.md)
 - 实现顺序：[分阶段实现计划](implementation-stages.md)
+- Contract 基线：[Stage 4 Contract Baseline](contract-baseline.md)
 
 ## 1. 决策原则
 
@@ -42,7 +43,7 @@
 | Future voice transport | WebSocket | Interaction Port |
 | Contract source | Checked-in JSON Schema + OpenAPI | Compatibility and Contract Tests |
 | In-process Adapter | Python Port / Protocol | Adapter Contract |
-| Isolated Adapter | JSON-RPC-style messages over stdio | Transport-neutral Adapter Envelope |
+| Isolated Adapter | UTF-8 NDJSON Message Envelope over stdio | Transport-neutral Adapter Envelope |
 | Primary local Store | SQLite file database with WAL | Canonical Repository Capability |
 | Relational access | SQLAlchemy | Repository / Unit of Work boundary |
 | Schema migration | Alembic | Shadow Migration Semantics |
@@ -187,7 +188,7 @@ Runtime 基础 Port 只有 `describe`、`execute`、`events`。其他 Family 使
 
 ### 6.2 进程外
 
-第一种隔离 Transport 使用 JSON-RPC-style Message Envelope over stdio。
+第一种隔离 Transport 使用 UTF-8 NDJSON Message Envelope over stdio：每行一个完整 Envelope，stdout 只承载协议，stderr 只承载清洗后的日志，大对象通过 ArtifactRef 传递。
 
 所有 Adapter 支持：
 
@@ -334,7 +335,7 @@ Fixture 验证 Bundle 可以离开 Shadow 被标准客户端读取，且 Shadow 
 3. React Client 不能直接写 Canonical Repository。
 4. Memory、State、Skill 等 Profile 不得反向扩张 Kernel 依赖。
 5. SQLite 只实现已声明 Store Capability，不被当成唯一 Store。
-6. JSON-RPC-style stdio 是第一种隔离 Transport，不是永久唯一 Transport。
+6. UTF-8 NDJSON stdio 是第一种隔离 Transport，不是永久唯一 Transport。
 7. Adapter 只承诺已声明 Capability，不能伪造 cancel、checkpoint 或 resume。
 8. namespaced target kind 不是封闭 enum。
 9. OpenAI Model Adapter 是参考实现，不是 Shadow 模型依赖。

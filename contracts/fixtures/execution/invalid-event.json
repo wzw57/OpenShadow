@@ -1,0 +1,11 @@
+{
+  "event_id": "event-001",
+  "execution_ref": "runtime-execution-001",
+  "sequence": 0,
+  "cursor": "cursor-0",
+  "event_type": "progress",
+  "payload_schema_ref": "not a uri",
+  "occurred_at": "2026-08-21T20:00:00+08:00",
+  "correlation_id": "correlation-001",
+  "typed_payload": {}
+}

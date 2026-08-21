@@ -1,0 +1,34 @@
+contract: https://schemas.openshadow.dev/contracts/skills/1.0.0
+cases:
+  - case_id: skills.minimal.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/agent-skills/minimal-valid/minimal-valid]
+    expected_outcome: valid
+  - case_id: skills.complete.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/agent-skills/complete-valid/complete-valid]
+    expected_outcome: valid
+  - case_id: skills.allowed-tools.no-authority
+    requirement_level: must
+    input_fixture_refs: [../fixtures/agent-skills/allowed-tools-untrusted/allowed-tools-untrusted]
+    expected_outcome: format-valid-authorization-denied
+  - case_id: skills.name-mismatch.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/agent-skills/invalid-name-mismatch/directory-name]
+    expected_outcome: invalid
+  - case_id: skills.frontmatter.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/agent-skills/invalid-frontmatter/invalid-frontmatter]
+    expected_outcome: invalid
+  - case_id: skills.path-traversal.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/agent-skills/invalid-path-traversal/manifest.json]
+    expected_outcome: invalid
+  - case_id: skills.digest.changed
+    requirement_level: must
+    input_fixture_refs: [../fixtures/agent-skills/digest-changed/before, ../fixtures/agent-skills/digest-changed/after]
+    expected_outcome: different-digest
+    invariants: [trust-invalidated, high-risk-permission-invalidated]
+  - case_id: skills.projection.rebuild
+    requirement_level: must
+    expected_outcome: rebuilt-from-canonical-bundle

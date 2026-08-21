@@ -1,0 +1,20 @@
+{
+  "descriptor_id": "shadow.adapter.deterministic-test",
+  "descriptor_version": "1.0.0",
+  "adapter_family": "shadow.adapter-family.runtime",
+  "implementation_ref": "pkg:openshadow/deterministic-test",
+  "implementation_version": "0.1.0",
+  "supported_contracts": [
+    { "contract_id": "shadow.contract.runtime", "version_range": ">=1.0.0 <2.0.0" }
+  ],
+  "supported_target_kinds": ["shadow.target.deterministic-test"],
+  "capabilities": [
+    {
+      "capability_id": "shadow.runtime.cancel",
+      "capability_version": "1.0.0",
+      "contract_ref": "https://schemas.openshadow.dev/contracts/execution/1.0.0"
+    }
+  ],
+  "config_schema_ref": "https://schemas.openshadow.dev/config/deterministic-test/1.0.0",
+  "descriptor_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}

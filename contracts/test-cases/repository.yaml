@@ -1,0 +1,34 @@
+contract: https://schemas.openshadow.dev/contracts/repository/1.0.0
+cases:
+  - case_id: repository.commit-plan.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/repository/valid-commit-plan.json]
+    expected_outcome: valid
+  - case_id: repository.commit-plan.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/repository/invalid-commit-plan.json]
+    expected_outcome: invalid
+  - case_id: repository.batch.atomic
+    requirement_level: must
+    description: One conflict prevents every operation in the batch.
+    expected_outcome: conflict
+    invariants: [no-partial-write]
+  - case_id: repository.idempotency.replay
+    requirement_level: must
+    description: Same scope, key, and digest returns the original result.
+    expected_outcome: idempotent-replay
+  - case_id: repository.idempotency.digest-conflict
+    requirement_level: must
+    description: Same scope and key with a different digest is rejected.
+    expected_outcome: conflict
+  - case_id: repository.response-lost
+    requirement_level: must
+    description: Retrying with the original key discovers a possibly committed result.
+    expected_outcome: original-result
+  - case_id: repository.restart.durable
+    requirement_level: must
+    expected_outcome: retained
+  - case_id: repository.store-profiles.equivalent
+    requirement_level: must
+    description: SQLite and PostgreSQL produce the same canonical outcomes.
+    expected_outcome: equivalent

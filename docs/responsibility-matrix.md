@@ -1,4 +1,4 @@
-# OpenShadow Core / External 责任矩阵
+# OpenShadow Tiny Kernel / External 责任矩阵
 
 - 状态：Stage 1 基线 / Stage 4 Core Diet 修订
 - 输入：[需求基线](requirements.md)、[概要设计](architecture.md)与[ADR-0003](adr/0003-tiny-core-and-typed-profiles.md)
@@ -308,7 +308,7 @@ External：
 
 Semantic Pulse 可以提出 Recall、State、Run、Task 或 escalation Proposal，但不直接 Commit，也不是系统健康、TTL、Lease、Timeout 或恢复的依赖。
 
-## 13. 必须由 Tiny Core 实现
+## 13. 必须由 Tiny Kernel 实现
 
 1. Stable ID、Owner / Space、Version 与 Canonical Envelope；
 2. Schema / Profile Registry 与 ExpectedVersion；

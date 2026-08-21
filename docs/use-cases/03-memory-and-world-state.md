@@ -86,8 +86,8 @@ Memory 存在且用户有权管理其 Owner / Space。
 ### Main Flow：纠正
 
 1. 用户提交新值和可选原因。
-2. Core 创建新 Memory Version。
-3. 旧版本标记 superseded，并建立关系。
+2. Kernel 为同一 Memory ID 创建新的 Canonical Envelope Version，并保存 supersedes_version。
+3. 旧版本保持不可变；跨 Memory merge 才为输入 Memory 提交 superseded 状态并建立关系。
 4. Recall 默认排除旧版本。
 5. 派生组件收到 invalidation / rebuild。
 6. 敏感内容需要彻底擦除时进入 Erasure Flow。

@@ -6,7 +6,7 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 
 - [ADR-0001：完整目标架构与分阶段实现](0001-target-architecture-and-phased-delivery.md)
 - [ADR-0002：第一套参考实现 Profile](0002-reference-implementation-profile.md)
-- [ADR-0003：Tiny Core、Typed Profile 与 Capability-first Extension](0003-tiny-core-and-typed-profiles.md)
+- [ADR-0003：Tiny Kernel、Typed Profile 与 Capability-first Extension](0003-tiny-core-and-typed-profiles.md)
 - [ADR-0004：Agent Skills 原生兼容与 Shadow SkillAsset 治理](0004-agent-skills-compatibility.md)
 
 ## ADR 格式
@@ -139,7 +139,7 @@ NNNN-short-title.md
 61.逻辑边界不等于微服务；默认模块化单体。
 62. Phase 0–5 是同一目标架构的真子集。
 63.参考实现为 Python、FastAPI、React + TypeScript + Vite、OpenAPI / JSON Schema、SSE、SQLite WAL、SQLAlchemy、Alembic。
-64.进程内使用 Python Family Port；第一种隔离 Transport 是 JSON-RPC-style Message Envelope over stdio。
+64.进程内使用 Python Family Port；第一种隔离 Transport 是 UTF-8 NDJSON Message Envelope over stdio。
 65. PostgreSQL 是第二 Canonical Repository Profile。
 66.首批参考 Adapter 为 Deterministic Test、OpenAI Model 与 Process Runtime。
 67.具体 Framework / SDK 不进入 Kernel、Profile Canonical Schema 或 Stable ID。

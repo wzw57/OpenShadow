@@ -1,6 +1,6 @@
 # ADR-0001: 完整目标架构与分阶段实现
 
-- Status: Accepted
+- Status: Proposed — pending final PR review and merge
 - Refined by: [ADR-0003](0003-tiny-core-and-typed-profiles.md)
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
@@ -17,7 +17,7 @@ Shadow 的完整逻辑架构由以下责任平面组成：
 
 - Interaction；
 - Access & Admission；
-- Shadow Core；
+- Tiny Kernel；
 - Execution；
 - Adapter Control；
 - Canonical State；

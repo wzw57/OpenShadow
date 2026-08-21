@@ -1,13 +1,13 @@
 # ADR-0002: 第一套参考实现 Profile
 
-- Status: Accepted
+- Status: Proposed — pending final PR review and merge
 - Constrained by: [ADR-0003](0003-tiny-core-and-typed-profiles.md)、[ADR-0004](0004-agent-skills-compatibility.md)
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
 
 ## Context
 
-完整技术架构已经冻结，但开始 Phase 0–1 开发仍需要选择 Core 语言、Server、Web Client、Contract 事实源、Adapter Transport、Primary Store 和参考 Execution Adapter。
+Stage 4 的 D1–D8 架构决策已经冻结，但字段级工件仍需完成验证与最终 PR review。开始 Phase 0–1 开发仍需要选择 Kernel 语言、Server、Web Client、Contract 事实源、Adapter Transport、Primary Store 和参考 Execution Adapter。
 
 这些选择需要支持快速开发和 AI 生态接入，同时不能成为长期 Domain 依赖。
 
@@ -23,7 +23,7 @@
 - WebSocket 仅为未来双向音频和实时 Endpoint 保留；
 - checked-in JSON Schema 与 OpenAPI 作为跨语言 Contract 事实源；
 - Python Family Port / Protocol 作为可信进程内 Adapter 接口；
-- JSON-RPC-style Message Envelope over stdio 作为第一种隔离 Adapter Transport；
+- UTF-8 NDJSON Message Envelope over stdio 作为第一种隔离 Adapter Transport；
 - SQLite 文件数据库与 WAL 作为默认 Canonical Repository 实现；
 - SQLAlchemy 作为关系持久化实现；
 - Alembic 作为参考物理 Schema Migration 工具；

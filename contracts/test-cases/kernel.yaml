@@ -1,0 +1,29 @@
+contract: https://schemas.openshadow.dev/contracts/kernel/1.0.0
+cases:
+  - case_id: kernel.canonical.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/canonical/valid-envelope.json]
+    expected_outcome: valid
+    invariants: [stable-id-opaque, immutable-version, expected-version-not-stored]
+  - case_id: kernel.canonical.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/canonical/invalid-envelope.json]
+    expected_outcome: invalid
+    invariants: [owner-required, version-positive, timestamp-utc]
+  - case_id: kernel.proposal.no-authority
+    requirement_level: must
+    description: A valid Proposal cannot directly create a Canonical Version.
+    preconditions: [proposal-schema-valid]
+    expected_outcome: validation-required
+    invariants: [proposal-never-commits, validator-has-no-write-authority]
+  - case_id: kernel.expected-version.conflict
+    requirement_level: must
+    description: An update against an old version returns conflict and creates no version.
+    expected_outcome: conflict
+    expected_error_code: shadow.repository.expected-version-conflict
+    invariants: [no-last-write-wins, revalidation-required]
+  - case_id: kernel.tombstone.no-sensitive-payload
+    requirement_level: must
+    description: An erased envelope accepts only the minimal Tombstone payload.
+    expected_outcome: valid
+    invariants: [erased-content-unrecoverable]

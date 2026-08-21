@@ -1,0 +1,33 @@
+contract: https://schemas.openshadow.dev/contracts/execution/1.0.0
+cases:
+  - case_id: execution.request.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/execution/valid-request.json]
+    expected_outcome: valid
+  - case_id: execution.event.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/execution/invalid-event.json]
+    expected_outcome: invalid
+  - case_id: execution.events.duplicate
+    requirement_level: must
+    description: At-least-once duplicate events are deduplicated by event ID.
+    expected_outcome: one-logical-event
+  - case_id: execution.events.gap
+    requirement_level: must
+    description: An unrecoverable cursor gap is explicit and triggers snapshot recovery.
+    expected_outcome: cursor-expired
+  - case_id: execution.timeout.unknown
+    requirement_level: must
+    description: Timeout after possible acceptance is not reported as rejected.
+    expected_outcome: outcome-unknown
+  - case_id: execution.cancel.unsupported
+    requirement_level: must
+    expected_outcome: unsupported
+  - case_id: execution.cancel.reconcile
+    requirement_level: must
+    description: cancellation_unknown can reconcile to a truthful terminal state.
+    expected_outcome: reconciled
+  - case_id: execution.authorization.boundary
+    requirement_level: must
+    description: Runtime stops before using a capability outside its Envelope.
+    expected_outcome: authorization-required

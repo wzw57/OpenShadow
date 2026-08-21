@@ -1,10 +1,11 @@
 # OpenShadow 完整技术架构
 
-- 状态：Stage 4 目标架构 / Core Diet 修订基线
+- 状态：Stage 4 Proposed — D1–D8 已冻结，等待 PR 最终评审与合并
 - 适用范围：完整 Shadow 产品，不等同于某一实现 Phase
 - 核心方法：冻结 Tiny Kernel、typed Profile 与 Extension Contract，再按阶段实现
 - 非目标：不冻结 Runtime、模型、Memory 项目、数据库、消息队列、云平台或 Target Kind 全集
 - 参考实现：[Stage 4 Implementation Profile](implementation-profile.md)
+- 字段级 Contract：[Stage 4 Contract Baseline](contract-baseline.md)
 - 决策记录：[ADR-0003](adr/0003-tiny-core-and-typed-profiles.md)、[ADR-0004](adr/0004-agent-skills-compatibility.md)
 
 ## 1. 架构目标
@@ -130,14 +131,14 @@ schema_ref
 owner_ref / space_id / created_by
 data_classification
 provenance
-version / expected_version
-retention_policy
-lifecycle_state
-created_at / updated_at
+version
+retention_policy_ref
+record_state
+created_at / committed_at
 typed_payload
 ~~~
 
-Kernel 不解释 typed payload，但要求 Schema 可定位、Version 可比较、Lifecycle 可审计、Erasure 可追踪。
+Kernel 不解释 typed payload，但要求 Schema 可定位、Version 可比较、Lifecycle 可审计、Erasure 可追踪。`expected_version` 属于 Mutation Input，不属于已提交 Envelope。
 
 ### 3.3 Proposal / Validate / Commit Authority
 
@@ -373,16 +374,17 @@ typed_payload | structured_error
 ### 6.1 Minimal AdapterDescriptor
 
 ~~~text
-adapter_id
+descriptor_id / descriptor_version
 adapter_family
-contract_versions
+implementation_ref / implementation_version
+supported_contracts
+supported_target_kinds
 capabilities
 config_schema_ref
-implementation_ref
-health
+descriptor_digest
 ~~~
 
-通用字段保持最小。以下通过 Family Capability 提供：
+Descriptor 是不可变实现声明，不包含安装 ID、配置值、Secret、授权或实时健康。`AdapterRegistration` 记录一个安装实例及其 config / secret / host / trust refs；`HealthObservation` 带 observed_at 与 valid_until，过期后按 unknown 处理。以下通过 Family Capability 提供：
 
 - permissions；
 - secrets；
@@ -400,11 +402,10 @@ Adapter Registry 记录：
 
 - installed / enabled / disabled；
 - compatible / incompatible；
-- healthy / degraded / unavailable；
 - active bindings；
 - source and pinned implementation revision；
 - config reference；
-- health observation。
+- 独立 health observation reference。
 
 升级流程：
 
@@ -427,7 +428,7 @@ Activate / rollback
 Contract 不冻结 Transport。参考实现支持：
 
 - trusted in-process Python Port；
-- isolated JSON-RPC-style Envelope over stdio。
+- isolated UTF-8 NDJSON Envelope over stdio；stdout 只承载协议，stderr 只承载清洗后的日志。
 
 未来可以增加本机 socket、container RPC 或 remote transport，但不得改变 Domain Contract。
 

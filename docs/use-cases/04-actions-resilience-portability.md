@@ -74,7 +74,7 @@ Provider 执行真实查询、写入、消息、设备控制或费用操作。
 
 ### Actor
 
-Shadow Core；Provider Adapter；Scheduler；User。
+Tiny Kernel；Provider Adapter；Scheduler；User。
 
 ### Trigger
 
@@ -124,7 +124,7 @@ Primary Durable Store 暂时不可用时，Shadow 保持有限可用，同时不
 
 ### Actor
 
-User；Shadow Core；Store Adapter；Health / Scheduler；紧急 Capability Provider。
+User；Tiny Kernel；Store Adapter；Health / Scheduler；紧急 Capability Provider。
 
 ### Trigger
 
@@ -141,7 +141,7 @@ Shadow 已知当前 Primary Store Binding 和 Capability。
 3. 允许：
    - 读取仍可安全读取的已有 Snapshot；
    - 明确标记的临时对话；
-   - 不产生长期状态和副作用的 Ephemeral Run。
+   - 不产生长期状态和副作用、也没有 Canonical Run ID 的 EphemeralExecution。
 4. 暂停：
    - Canonical Commit；
    - Durable Task 创建与完成；
@@ -163,13 +163,13 @@ Shadow 已知当前 Primary Store Binding 和 Capability。
 
 - Store 反复抖动时保持 restricted，避免部分提交；
 - 只读 Snapshot 已过期时明确显示 stale；
-- Shadow 进程重启会丢失普通 Ephemeral Run；
+- Shadow 进程重启会丢失普通 EphemeralExecution；
 - Emergency Action outcome unknown 时按 UC-012；
 - Outbox 只用于需要可靠跨边界提交的副作用，不接管普通 Request。
 
 ### Durable State Changes
 
-Store availability、restricted-mode transition、health evidence、Outbox entry、import / dedup / reconciliation state。普通 Ephemeral Run 不承诺形成 Durable State。
+Store availability、restricted-mode transition、health evidence、Outbox entry、import / dedup / reconciliation state。普通 EphemeralExecution 不承诺形成 Durable State。
 
 ### External Side Effects
 
@@ -179,7 +179,7 @@ Store availability、restricted-mode transition、health evidence、Outbox entry
 
 - Store 故障不会产生未记录现实副作用；
 - 用户清楚知道临时结果不保证保存；
-- Ephemeral Run 不自动变成伪造的 Canonical 历史；
+- EphemeralExecution 不自动变成伪造的 Canonical 历史；
 - Outbox 先于紧急副作用持久化；
 - 恢复后完成幂等导入和 reconciliation。
 

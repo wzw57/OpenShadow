@@ -1,6 +1,6 @@
 # ADR-0004: Agent Skills 原生兼容与 Shadow SkillAsset 治理
 
-- Status: Accepted
+- Status: Proposed — pending final PR review and merge
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
 
