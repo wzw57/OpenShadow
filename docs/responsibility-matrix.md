@@ -19,7 +19,7 @@
 统一规则：
 
 1. Core 可以定义稳定语义、状态机、权限点和 Port，但不因此实现对应算法或基础设施。
-2. External Component 可以返回 Proposal、Result、Checkpoint Reference 和 Usage，但不能绕过 Core 提交权威状态。
+2. External Component 可以返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 和 Usage，但不能绕过 Core 提交权威状态。
 3. Canonical State 通过 Durable Store Port 持久化；数据库物理模型不定义领域语义。
 4. Derived State 可以删除重建，不作为组件替换的阻塞条件。
 5. 用户界面中的统一体验不要求所有能力位于同一个实现组件。
@@ -159,6 +159,7 @@ External Execution：
 - Agent Runtime 执行开放式多步骤任务；
 - Model Worker 执行单次受限推理；
 - Deterministic Runner 执行登记程序；
+- Workflow Target 通过外部 Workflow Engine 执行明确步骤、等待和补偿流程；
 - Capability Provider 完成外部查询和现实动作。
 
 边界：
@@ -481,7 +482,7 @@ External Intelligence 与 Execution：
 
 ## 14. 必须外置
 
-1. Agent Runtime、Planner、Subagent 和 Tool Loop；
+1. Agent Runtime、Planner、Subagent、Tool Loop 和通用 Workflow Engine；
 2. Model Provider、推理和智能 Router；
 3. Memory 提取、整理、召回、Embedding、Graph 和 Index；
 4. State Source、语义 Resolver、预测和数字孪生；
