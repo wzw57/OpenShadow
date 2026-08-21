@@ -44,10 +44,21 @@ def test_personal_shadow_loop_and_replay() -> None:
     assert len(client.get(f"/v1/conversations/{conversation_id}/messages").json()["records"]) == 2
 
     run_id = first.json()["root_run_ref"]["record_id"]
+    retry = client.post(
+        f"/v1/runs/{run_id}/retry", headers={"Idempotency-Key": "retry-1"}
+    )
+    retry_replay = client.post(
+        f"/v1/runs/{run_id}/retry", headers={"Idempotency-Key": "retry-1"}
+    )
+    assert retry.status_code == retry_replay.status_code == 202
+    assert retry.json()["replayed"] is False
+    assert retry_replay.json()["replayed"] is True
     run = client.get(f"/v1/runs/{run_id}").json()["record"]["typed_payload"]
     assert run["lifecycle"] == "completed"
+    assert len(run["attempt_refs"]) == 2
     events = client.get(f"/v1/runs/{run_id}/events").text
-    assert "shadow.run.started" in events and "shadow.run.completed" in events
+    assert events.count("event: shadow.run.started") == 2
+    assert events.count("event: shadow.run.completed") == 2
 
 
 def test_store_outage_does_not_claim_durable_success() -> None:

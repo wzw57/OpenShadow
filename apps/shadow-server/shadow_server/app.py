@@ -234,6 +234,35 @@ def create_app(database_url: str | None = None) -> FastAPI:
     async def get_run(run_id: str) -> dict[str, Any]:
         return await _get_record(repository, run_id)
 
+    @app.post("/v1/runs/{run_id}/retry", status_code=status.HTTP_202_ACCEPTED)
+    async def retry_run(
+        run_id: str,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        idempotency_key: Annotated[str | None, Header()] = None,
+    ) -> dict[str, Any]:
+        result = conversations.retry_run(
+            run_id=run_id,
+            principal_ref=_principal(x_principal_ref),
+            idempotency_key=idempotency_key or f"retry-{run_id}",
+        )
+        return {
+            "admission_ref": {
+                "record_id": result.admission["record_id"],
+                "version": result.admission["version"],
+            },
+            "message_ref": {
+                "record_id": result.assistant_message["record_id"],
+                "version": result.assistant_message["version"],
+            },
+            "request_ref": {
+                "record_id": result.run["typed_payload"]["request_ref"]["record_id"],
+                "version": result.run["typed_payload"]["request_ref"]["version"],
+            },
+            "root_run_ref": {"record_id": result.run["record_id"], "version": result.run["version"]},
+            "replayed": result.replayed,
+            "durable": True,
+        }
+
     @app.get("/v1/runs/{run_id}/events")
     async def stream_run_events(
         run_id: str, last_event_id: Annotated[str | None, Header(alias="Last-Event-ID")] = None

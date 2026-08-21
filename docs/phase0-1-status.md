@@ -59,6 +59,6 @@ uvicorn shadow_server.app:app --reload
 
 Phase 0–1 继续开发前，新增实现必须保持：所有 Canonical write 经过 Commit、所有
 work-bearing input 经过 Admission、Adapter 不能直接写 Store、Store 故障不伪造持久成功。
-在进入 Phase 2 前，先补齐 retry → Attempt、export fixture 和更换 Runtime Adapter 的
-Contract Test；Alembic migration / rollback 与 restart recovery 的 Phase 0–1 基线已具备。在这些证据具备前，
+在进入 Phase 2 前，先补齐 export fixture 和更换 Runtime Adapter 的 Contract Test；
+Alembic migration / rollback、restart recovery 与 retry → Attempt 的 Phase 0–1 基线已具备。在这些证据具备前，
 Phase 2–5 只维护文档。

@@ -460,24 +460,263 @@ class ConversationService:
                     typed_details=result.structured_error,
                 )
             )
-        for event_type, payload in (
-            ("shadow.run.started", {"run_id": ids["run"], "attempt_id": ids["attempt"]}),
-            (
-                "shadow.run.completed",
-                {
-                    "run_id": ids["run"],
-                    "result_message_id": ids["message-assistant"],
-                    "usage": output.usage,
-                },
-            ),
-        ):
-            self.repository.append_event(ids["run"], event_type, payload)
+        if result.outcome != "idempotent_replay":
+            for event_type, payload in (
+                ("shadow.run.started", {"run_id": ids["run"], "attempt_id": ids["attempt"]}),
+                (
+                    "shadow.run.completed",
+                    {
+                        "run_id": ids["run"],
+                        "result_message_id": ids["message-assistant"],
+                        "usage": output.usage,
+                    },
+                ),
+            ):
+                self.repository.append_event(ids["run"], event_type, payload)
         return TurnResult(
             conversation=self.repository.get(conversation_id) or {},
             run=self.repository.get(ids["run"]) or {},
             user_message=self.repository.get(ids["message-user"]) or {},
             assistant_message=self.repository.get(ids["message-assistant"]) or {},
             admission=self.repository.get(ids["admission"]) or {},
+            ephemeral=False,
+            replayed=result.outcome == "idempotent_replay",
+        )
+
+    def retry_run(
+        self,
+        *,
+        run_id: str,
+        principal_ref: str,
+        idempotency_key: str,
+    ) -> TurnResult:
+        """Re-execute an existing Request while appending a new Attempt."""
+        if not self.repository.available:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.repository.unavailable",
+                    category="unavailable",
+                    message="Canonical Repository is unavailable; retry was not recorded.",
+                    retryable=True,
+                )
+            )
+        run_record = self.repository.get(run_id)
+        if not run_record:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.not-found",
+                    category="validation",
+                    message=f"Run {run_id} was not found.",
+                )
+            )
+        run_payload = RunPayload.model_validate(run_record["typed_payload"])
+        request_record = self.repository.get(run_payload.request_ref.record_id, run_payload.request_ref.version)
+        if not request_record:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.request.not-found",
+                    category="internal",
+                    message="Run request could not be recovered.",
+                )
+            )
+        request = RequestPayload.model_validate(request_record["typed_payload"])
+        if not isinstance(request.work_input, RecordVersionRef):
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-input-unsupported",
+                    category="unsupported",
+                    message="Retry requires a durable message input reference.",
+                )
+            )
+        user_record = self.repository.get(request.work_input.record_id, request.work_input.version)
+        if not user_record:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-input-missing",
+                    category="internal",
+                    message="Retry input message could not be recovered.",
+                )
+            )
+        user_payload = MessagePayload.model_validate(user_record["typed_payload"])
+        block = user_payload.content_blocks[0].typed_content
+        text = block.get("text") if isinstance(block, dict) else block
+        if not isinstance(text, str) or not text:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-input-invalid",
+                    category="validation",
+                    message="Retry input message does not contain text.",
+                )
+            )
+        conversation_id = user_payload.conversation_ref.record_id
+        conversation = self.repository.get(conversation_id)
+        if not conversation:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.conversation.not-found",
+                    category="internal",
+                    message="Retry conversation could not be recovered.",
+                )
+            )
+        current_payload = ConversationPayload.model_validate(conversation["typed_payload"])
+        token = sha256_digest({"run": run_id, "key": idempotency_key})[7:31]
+        assistant_id = f"message-assistant-retry-{token}"
+        attempt_id = f"attempt-retry-{token}"
+        now = utc_timestamp()
+        output = self.deterministic.execute(text)
+        run_version = run_record["version"] + 1
+        assistant_message = MessagePayload(
+            conversation_ref=StableRecordRef(record_id=conversation_id),
+            sequence=len(current_payload.message_refs) + 1,
+            message_type="shadow.message.assistant",
+            author_ref="shadow.deterministic-runner",
+            content_blocks=[
+                ContentBlock(
+                    block_type="shadow.content.text",
+                    content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
+                    typed_content={"text": output.text},
+                )
+            ],
+            finalized_at=now,
+            source_request_ref=RecordVersionRef(
+                record_id=run_payload.request_ref.record_id, version=run_payload.request_ref.version
+            ),
+            produced_by_run_ref=RecordVersionRef(record_id=run_id, version=run_version),
+        )
+        if not run_payload.binding_refs:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-binding-missing",
+                    category="internal",
+                    message="Retry requires the original execution binding.",
+                )
+            )
+        attempt = ExecutionAttemptPayload(
+            run_ref=StableRecordRef(record_id=run_id),
+            binding_ref=run_payload.binding_refs[0],
+            lifecycle="succeeded",
+            attempt_number=len(run_payload.attempt_refs) + 1,
+            execution_ref=f"deterministic:{token}",
+            result_ref=RecordVersionRef(record_id=assistant_id, version=1),
+            started_at=now,
+            finished_at=now,
+        )
+        updated_run = RunPayload(
+            request_ref=run_payload.request_ref,
+            lifecycle="completed",
+            requirements_ref=run_payload.requirements_ref,
+            binding_refs=run_payload.binding_refs,
+            attempt_refs=run_payload.attempt_refs + [RecordVersionRef(record_id=attempt_id, version=1)],
+            active_attempt_ref=StableRecordRef(record_id=attempt_id),
+            result_ref=RecordVersionRef(record_id=assistant_id, version=1),
+            usage_summary=output.usage,
+            started_at=run_payload.started_at or now,
+            terminal_at=now,
+            last_event_cursor=run_payload.last_event_cursor,
+        )
+        updated_conversation = ConversationPayload(
+            title=current_payload.title,
+            conversation_state=current_payload.conversation_state,
+            message_refs=current_payload.message_refs + [RecordVersionRef(record_id=assistant_id, version=1)],
+            queued_run_refs=current_payload.queued_run_refs,
+            foreground_run_ref=StableRecordRef(record_id=run_id),
+            profile_settings=current_payload.profile_settings,
+        )
+        provenance = Provenance(origin_type="shadow.origin.user-command", origin_ref=f"retry-{token}")
+        owner_ref = conversation["owner_ref"]
+        space_id = conversation["space_id"]
+        operations = [
+            self._operation(
+                f"operation-{assistant_id}",
+                "create",
+                assistant_id,
+                "shadow.profile.message",
+                f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+                owner_ref,
+                space_id,
+                "shadow.deterministic-runner",
+                assistant_message.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-{attempt_id}",
+                "create",
+                attempt_id,
+                "shadow.kernel.execution-attempt",
+                f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                attempt.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-update-{run_id}-{token}",
+                "update",
+                run_id,
+                "shadow.kernel.run",
+                f"{KERNEL_SCHEMA}#/$defs/RunPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                updated_run.model_dump(mode="json", exclude_none=True),
+                provenance,
+                expected_version=run_record["version"],
+            ),
+            self._operation(
+                f"operation-conversation-retry-{token}",
+                "update",
+                conversation_id,
+                "shadow.profile.conversation",
+                f"{PROFILE_SCHEMA}#/$defs/ConversationPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                updated_conversation.model_dump(mode="json", exclude_none=True),
+                provenance,
+                expected_version=conversation["version"],
+            ),
+        ]
+        plan = CommitPlan(
+            commit_request_id=f"commit-request-retry-{token}",
+            idempotency_scope=f"retry:{run_id}",
+            idempotency_key=idempotency_key,
+            request_digest=sha256_digest({"run_id": run_id, "text": text}),
+            actor_ref=principal_ref,
+            operations=operations,
+            prepared_at=now,
+            correlation_id=f"correlation-retry-{token}",
+            causation_id=run_payload.request_ref.record_id,
+        )
+        result = self.authority.commit(plan)
+        if result.outcome in {"failed", "conflict"}:
+            category = "conflict" if result.outcome == "conflict" else "validation"
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-commit-failed",
+                    category=category,
+                    message="Retry could not append a new Attempt.",
+                    typed_details=result.model_dump(mode="json", exclude_none=True),
+                )
+            )
+        if result.outcome != "idempotent_replay":
+            self.repository.append_event(
+                run_id, "shadow.run.started", {"run_id": run_id, "attempt_id": attempt_id}
+            )
+            self.repository.append_event(
+                run_id,
+                "shadow.run.completed",
+                {"run_id": run_id, "result_message_id": assistant_id, "usage": output.usage},
+            )
+        return TurnResult(
+            conversation=self.repository.get(conversation_id) or {},
+            run=self.repository.get(run_id) or {},
+            user_message=user_record,
+            assistant_message=self.repository.get(assistant_id) or {},
+            admission=self.repository.get(
+                request.admission_ref.record_id, request.admission_ref.version
+            )
+            or {},
             ephemeral=False,
             replayed=result.outcome == "idempotent_replay",
         )

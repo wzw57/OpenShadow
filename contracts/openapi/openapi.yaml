@@ -230,6 +230,24 @@ paths:
           $ref: "#/components/responses/Conflict"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/runs/{run_id}/retry:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+    post:
+      operationId: retryRun
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Retry accepted and appended as a new Attempt on the existing Run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkAccepted"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/memories:
     get:
       operationId: listMemories
