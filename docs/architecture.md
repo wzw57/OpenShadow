@@ -220,31 +220,43 @@ flowchart TB
 
 外部实现不能绕过 Port 直接修改 Shadow 权威状态。Adapter 可以由 OpenShadow 官方提供，也可以由第三方提供，但必须遵守相同 Contract。
 
-## 4. Request、Run、Task 与 Execution
+## 4. Admission、Request、Run、Attempt 与 Task
 
-所有请求经过 Shadow，但持久化程度和执行路径可以不同。
+所有输入先经过 Shadow Admission。被拒绝的输入只产生最小 Admission Record；被接受的 Request 是不可变准入记录，并创建一个 Root Run。
 
-~~~text
-Incoming Request
-      ↓
-Shadow creates minimal Run
-      ↓
-Execution Requirements + Binding
-      ├─ Agent Runtime       open-ended, multi-step work
-      ├─ Model Worker        one bounded inference
-      ├─ Deterministic Runner script, function or fixed program
-      └─ Capability Provider external query or real-world action
-      ↓
-Result / Proposal returns to Shadow
-      ├─ remain ephemeral
-      ├─ produce Canonical Memory or World State proposal
-      ├─ produce Artifact or governed Action
-      └─ promote to Durable Task
+~~~mermaid
+flowchart TB
+    INPUT["Incoming Input"]
+    ADMISSION["Admission"]
+    REJECT["Admission Record<br/>rejected / invalid / replay"]
+    REQUEST["Accepted Request<br/>immutable"]
+    RUN["Root Run"]
+    ATTEMPT1["Execution Attempt 1"]
+    ATTEMPT2["Execution Attempt 2"]
+    TARGETS["Runtime / Model / Runner / Provider"]
+    RESULT["Result / Proposal"]
+    TASK["Durable Task"]
+
+    INPUT --> ADMISSION
+    ADMISSION -->|"rejected"| REJECT
+    ADMISSION -->|"accepted"| REQUEST --> RUN
+    RUN --> ATTEMPT1
+    ATTEMPT1 -->|"retry"| ATTEMPT2
+    ATTEMPT1 --> TARGETS
+    ATTEMPT2 --> TARGETS
+    TARGETS --> RESULT
+    RESULT -->|"Task Proposal validated by Core"| TASK
 ~~~
 
-最小 Run 记录用于身份、绑定、状态和审计。完整 Prompt、输出和工具过程是否长期保存，由用户策略决定。
+重试在同一 Run 下创建新的 Execution Attempt，不能覆盖原 Attempt，也不创建重复 Root Run。
 
-Durable Task 只表示需要跨 Session、Execution Target、等待条件或长期时间存在的工作。Runtime 内部 Subtask、Planner 和 Agent Loop 保持私有。
+Run 的最小状态包含 created、queued、running、waiting、paused、cancelling、cancelled、cancellation_unknown、completed 和 failed。用户请求取消只是进入 cancelling；只有 Target 确认停止后才能提交 cancelled，无法确认时提交 cancellation_unknown。
+
+最小记录用于身份、时间、状态、Binding、费用、结果摘要和审计引用。完整 Prompt、输出和工具过程按 Retention Policy 与 Data Classification 保存；Runtime 私有推理不进入 Canonical State。
+
+Durable Task 只表示需要跨 Session、Execution Target、重启、等待条件或长期时间存在的工作。用户可以直接创建；Runtime、Semantic Pulse 和规则只能提交 Task Proposal。一个 Durable Task 可以产生多个 Run。Run 成功不自动代表 Task 完成，Core 根据 Completion Proposal、完成条件、外部结果和 reconciliation 提交最终状态。
+
+Runtime 内部 Subtask、Planner 和 Agent Loop 保持私有。
 
 ## 5. Execution Plane
 
