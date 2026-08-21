@@ -24,7 +24,7 @@ Shadow 的完整产品边界很大，但第一版实现必须小。
 
 ## 2. 实现分层
 
-### MVP-1：第一条纵向闭环
+### Phase 0–1：工程基础与个人 Shadow 闭环
 
 必须实现：
 
@@ -46,7 +46,7 @@ Memory Candidate / Canonical Memory
 One Primary Durable Store
 ~~~
 
-MVP-1 不要求：
+Phase 0–1 不要求立即实现：
 
 - 多用户；
 - 完整 Home Space；
@@ -60,9 +60,9 @@ MVP-1 不要求：
 - 分布式音频；
 - 微服务或消息队列。
 
-### MVP-2：持久助理能力
+### Phase 2–3：记忆、能力资产、连续性与 World State
 
-在 MVP-1 稳定后增加：
+在 Phase 0–1 稳定后分阶段增加：
 
 - Durable Task；
 - Minimal World State；
@@ -105,8 +105,8 @@ MVP-1 不要求：
 |---|---|---|
 | Interaction | Conversation、Message、Endpoint | Conversation / Message |
 | Execution | Admission、Request、Run、Attempt、Binding | 必须 |
-| Continuity | Durable Task、Checkpoint、Trigger refs | MVP-2 |
-| Knowledge | Memory、Observation、World State | Memory 必须，World State MVP-2 |
+| Continuity | Durable Task、Checkpoint、Trigger refs | Phase 3 |
+| Knowledge | Memory、Observation、World State | Memory Phase 2，World State Phase 3 |
 | Capability | Skill、Executable、Integration、Profiles | 最小 Integration / Profile |
 | Authority | Policy、Envelope、Approval、Action | 最小 Envelope；Action Later |
 | Portability | Store、Export、Erasure、Migration | Store 必须，其余 Contract-only |
@@ -121,12 +121,12 @@ MVP-1 不要求：
 
 | Aggregate | 作用 | 交付层 |
 |---|---|---|
-| Conversation | 有序交互与单前台 Run 约束 | MVP-1 |
-| Run | 一次顶层执行及其 Attempts | MVP-1 |
-| DurableTask | 跨时间工作承诺 | MVP-2 |
-| Memory | Canonical Memory 与版本头 | MVP-1 |
-| WorldStateProjection | 一个状态键的当前投影 | MVP-2 |
-| Integration | 已配置外部连接 | MVP-2 |
+| Conversation | 有序交互与单前台 Run 约束 | Phase 1 |
+| Run | 一次顶层执行及其 Attempts | Phase 1 |
+| DurableTask | 跨时间工作承诺 | Phase 3 |
+| Memory | Canonical Memory 与版本头 | Phase 2 |
+| WorldStateProjection | 一个状态键的当前投影 | Phase 3 |
+| Integration | 已配置外部连接 | Phase 2 |
 | Action | 一个现实副作用 | Later |
 | OperationJob | Export、Import、Migration、Backup、Erasure | Contract-only / Later |
 
@@ -266,7 +266,7 @@ Message 采用已确认方案：
 - 删除 Conversation 不自动删除独立 Memory；
 - Runtime Session 不属于 Conversation。
 
-MVP-1 只需要 localhost Web 和单 Endpoint。配对、Standard / Trusted 和离线缓存进入 MVP-2。
+Phase 1 只实现 localhost Web 和单 Endpoint。配对、Standard / Trusted、离线缓存和多设备能力进入 Phase 5。
 
 ## 8. Execution
 
@@ -302,7 +302,7 @@ Ephemeral Run 在 Store 故障期间只存在于内存，不是 Canonical Run，
 - Router 只提出 Binding；
 - Target 不能扩大 Envelope。
 
-MVP-1 只需静态 Binding 和最小 Envelope：
+Phase 1 只需静态 Binding 和最小 Envelope：
 
 ~~~text
 target
@@ -317,7 +317,7 @@ policy_version
 
 ## 9. DurableTask
 
-MVP-2 Aggregate，持有 goal、completion criteria、lifecycle、Semantic Checkpoint、optional Runtime Checkpoint refs、related Run refs、Artifact / Trigger refs、deadline / retry 和 completion commit。
+Phase 3 Aggregate，持有 goal、completion criteria、lifecycle、Semantic Checkpoint、optional Runtime Checkpoint refs、related Run refs、Artifact / Trigger refs、deadline / retry 和 completion commit。
 
 不变量：
 
@@ -348,7 +348,7 @@ MemoryCandidate 不是 Memory。Embedding、Index 和 Graph 不属于聚合。
 
 ## 11. World State
 
-WorldStateProjection 是 MVP-2 Aggregate，以 StateKey 为边界：
+WorldStateProjection 是 Phase 3 Aggregate，以 StateKey 为边界：
 
 ~~~text
 StateKey
@@ -387,7 +387,7 @@ Observation committed
 
 CapabilityAsset 使用共同 Envelope + typed payload，覆盖 Skill、Executable、Extension 与 Runtime / Model / Runner Profile。
 
-Integration 作为 MVP-2 Aggregate，持有配置元数据、Permission、Secret Reference、Binding、Health 和 Lifecycle。
+Integration 作为 Phase 2 Aggregate，持有配置元数据、Permission、Secret Reference、Binding、Health 和 Lifecycle。
 
 Secret 内容外置。Adapter 更换不改变 Integration ID。
 
@@ -404,7 +404,7 @@ Later Aggregate。采用已确认方案：
 - uncertain delivery 进入 unknown；
 - unknown 不盲目 Retry。
 
-MVP-1 不实现现实 Action。
+现实 Action 在 Phase 4 实现。
 
 ### OperationJob
 
@@ -423,7 +423,7 @@ failure
 
 kind 可以是 export、import、migration、backup、erasure。每种 kind 使用不同 Schema 和 Policy。
 
-MVP-1 只保留 Store Export Contract；复杂 Job Orchestration Later 实现。
+Phase 0–1 建立 Export Contract 与基础导出；复杂 Job Orchestration 在 Phase 3–4 实现。
 
 ## 14. Domain Event
 
@@ -457,7 +457,7 @@ Canonical Aggregate 仍是事实源。普通内部通知可以短期保存或重
 7. UI Event Stream 是投影，不是事实源；
 8. Store restricted mode 阻止新的 Canonical Commit；
 9. OperationJob 管理长时间 Export / Migration / Erasure；
-10. MVP-1 不引入消息队列；模块化单体可以在提交后同步分发 Domain Event，并保留未来 Outbox 接口。
+10. Phase 0–1 不引入消息队列；模块化单体可以在提交后同步分发 Domain Event，并保留未来 Outbox 接口。
 
 ## 16. 首条实现闭环
 
@@ -496,10 +496,10 @@ flowchart LR
 不再继续扩展候选对象。只需要：
 
 1. 校验上述聚合是否足以覆盖 19 个用例；
-2. 冻结 MVP-1 对象的最小字段；
+2. 冻结 Phase 0–1 对象的最小字段；
 3. 冻结 Run 和 Memory 必需状态；
 4. 定义最小 Domain Event Envelope；
 5. 把 Later / Contract-only 项目明确留到后续；
-6. 为 Stage 4 Port Contract 提供对象引用和一致性要求。
+6. 为 Stage 4 字段级 Port Contract 提供对象引用和一致性要求。
 
-多用户 ACL、复杂 Task、Action、Erasure、Portability、Pulse 和家庭设备细节不阻塞 MVP-1。
+多用户 ACL、复杂 Task、Action、Erasure、Portability、Pulse 和家庭设备细节按 Phase 3–5 实现，不阻塞 Phase 0–1。
