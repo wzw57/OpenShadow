@@ -106,7 +106,6 @@ flowchart TB
     INGRESS --> INTERACTION_PORT
 
     PORTABILITY --> STORE_PORT
-    EXTENSIONS --> PORTS
 ~~~
 
 裸核只有 Contract 和 Port。没有绑定 Durable Store 时，Shadow 不承诺持久状态；没有绑定 Runtime 时，Shadow 不能执行智能任务。
