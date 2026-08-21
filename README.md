@@ -192,6 +192,6 @@ OpenShadow 必须自行定义和实现：
 
 ## 当前状态
 
-**Stage 2 已完成，Stage 3 领域模型与状态机设计进行中。**
+**Stage 2 已完成，Stage 3 正在收紧最小领域模型。**
 
-19 个关键用例已经合并为正式基线。当前正在从用例中提取最小 Aggregate Root、Canonical Record、Proposal、Value Object、关系、一致性边界和状态转换。
+19 个关键用例已经合并为正式基线。领域模型按 MVP-1、MVP-2、Later 和 Contract-only 分层：第一条实现闭环只包含本地 Web、Conversation、Run、静态 Binding、一个执行 Adapter、Canonical Memory 和一个 Primary Store。
