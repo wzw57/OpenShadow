@@ -192,4 +192,4 @@ OpenShadow 必须自行定义和实现：
 
 **Stage 2 关键用例草案已完成，等待集中审阅。**
 
-18 个用例已经覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse。审阅通过后进入 Stage 3，冻结领域对象、关系和状态机。
+19 个用例已经覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse。审阅通过后进入 Stage 3，冻结领域对象、关系和状态机。
