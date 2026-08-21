@@ -57,7 +57,7 @@ flowchart TB
     A2["Execution Attempt 2"]
     PROPOSAL["Durable Task Proposal"]
     TASK["Durable Task"]
-    LATER["Later Runs"]
+    FOLLOWUP["Follow-up Runs"]
 
     INPUT --> ADMISSION
     ADMISSION -->|"rejected"| REJECTED
@@ -67,7 +67,7 @@ flowchart TB
     A1 -->|"retry"| A2
     RUN --> PROPOSAL
     PROPOSAL -->|"Core validates"| TASK
-    TASK --> LATER
+    TASK --> FOLLOWUP
 ~~~
 
 确定边界：
