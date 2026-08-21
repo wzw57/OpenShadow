@@ -1,6 +1,6 @@
 # OpenShadow 开发路线
 
-- 状态：Stage 2 关键用例草案完成，等待集中审阅
+- 状态：Stage 2 已完成，Stage 3 领域模型与状态机设计进行中
 - 原则：先明确完整需求，再决定 Core 与 External 的边界，最后选择具体实现
 
 OpenShadow 不按外部项目名称制定路线，也不因为某项能力可能有用就提前实现。每个阶段都必须产生可审阅的工程产物和退出条件。
@@ -85,7 +85,7 @@ Execution
 - External Component 统一通过 Proposal / Result 返回，不持有权威提交路径；
 - Stage 2 用例可以直接引用责任矩阵确定参与者。
 
-## Stage 2：关键用例（草案完成，待审阅）
+## Stage 2：关键用例（已完成）
 
 正式产物：[关键用例目录](use-cases/README.md)
 
@@ -145,11 +145,24 @@ Execution
 - 19 个用例覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse；
 - 每个用例均包含 Actor、Trigger、Preconditions、正常流程、失败流程、持久状态、外部副作用、Policy 与验收条件；
 - 用例直接引用 Stage 1 责任边界，不选择具体数据库、模型、Runtime 或 Provider；
-- 审阅通过后进入 Stage 3，提取领域对象、关系、聚合与状态机。
+- 已审阅并合并为 Stage 2 正式基线。
 
-## Stage 3：领域模型与状态机（下一阶段）
+## Stage 3：领域模型与状态机（进行中）
+
+初始产物：
+
+- [领域模型](domain-model.md)
+- [状态机基线](state-machines.md)
 
 根据用例冻结最小领域对象和状态机。
+
+本阶段采用反过度设计约束：
+
+- MVP-1 只覆盖 Local Web → Run → One Target → Memory → Primary Store；
+- MVP-2 增加 Durable Task、World State、Integration 和多端；
+- Action、复杂 Erasure、Full Backup、Outbox、Router 和 Pulse 标记为 Later；
+- 未来兼容对象可以 Contract-only，不要求第一版实现；
+- 不为每个 Record 创建 Aggregate、Repository、Service 或状态机。
 
 优先顺序：
 
@@ -173,7 +186,10 @@ Execution
 - 对象只包含长期稳定语义；
 - Runtime、Model、Runner 和 Memory Engine 私有状态不进入 Canonical Model；
 - 状态转换具有明确提交者和失败语义；
-- World State 明确 fresh、stale 和 unknown，而不假设实时一致。
+- World State 明确 fresh、stale 和 unknown，而不假设实时一致；
+- Aggregate 数量经过收紧，不把分析候选直接变成实现模块；
+- MVP-1 可以在不实现 Router、Pulse、Action、World State 或多用户的情况下闭环；
+- Later 与 Contract-only 能力不阻塞 Stage 4。
 
 ## Stage 4：Port Contract 与 Adapter SDK
 

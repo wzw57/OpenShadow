@@ -185,11 +185,13 @@ Near-term implementation focuses on a single-user path without making future mul
 - [Architecture](docs/architecture.md)
 - [Core / External Responsibility Matrix](docs/responsibility-matrix.md)
 - [Key Use Cases](docs/use-cases/README.md)
+- [Domain Model](docs/domain-model.md)
+- [State Machine Baseline](docs/state-machines.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
 ## Status
 
-**The Stage 2 key-use-case draft is complete and ready for consolidated review.**
+**Stage 2 is complete, and Stage 3 is narrowing the minimal domain model.**
 
-Nineteen use cases now cover admission, multi-device Web interaction, execution, continuity, Memory, World State, external actions, Store failure, migration, erasure, Integrations, on-demand asset access, and Semantic Pulse. After review, Stage 3 will freeze domain objects, relationships, aggregates, and state machines.
+The nineteen key use cases are an accepted baseline. The domain model is split into MVP-1, MVP-2, Later, and Contract-only layers. The first implementation slice contains only local Web, Conversation, Run, static Binding, one execution adapter, Canonical Memory, and one Primary Store.

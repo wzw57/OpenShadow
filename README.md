@@ -185,11 +185,13 @@ OpenShadow 必须自行定义和实现：
 - [概要设计](docs/architecture.md)
 - [Core / External 责任矩阵](docs/responsibility-matrix.md)
 - [关键用例](docs/use-cases/README.md)
+- [领域模型](docs/domain-model.md)
+- [状态机基线](docs/state-machines.md)
 - [开发路线](docs/roadmap.md)
 - [架构决策记录](docs/adr/README.md)
 
 ## 当前状态
 
-**Stage 2 关键用例草案已完成，等待集中审阅。**
+**Stage 2 已完成，Stage 3 正在收紧最小领域模型。**
 
-19 个用例已经覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse。审阅通过后进入 Stage 3，冻结领域对象、关系和状态机。
+19 个关键用例已经合并为正式基线。领域模型按 MVP-1、MVP-2、Later 和 Contract-only 分层：第一条实现闭环只包含本地 Web、Conversation、Run、静态 Binding、一个执行 Adapter、Canonical Memory 和一个 Primary Store。
