@@ -165,6 +165,14 @@ Shadow 已知当前 Primary Store Binding 和 Capability。
 - Emergency Action outcome unknown 时按 UC-012；
 - 不允许把普通所有请求都写入 Outbox。
 
+### Durable State Changes
+
+Store availability、restricted-mode transition、health evidence、Outbox entry、import / dedup / reconciliation state。普通 Ephemeral Run 不承诺形成 Durable State。
+
+### External Side Effects
+
+只允许预配置紧急 Capability 在可靠 Outbox 成功后执行；其他现实动作暂停。
+
 ### Acceptance Criteria
 
 - Store 故障不会产生未记录现实副作用；
@@ -223,6 +231,14 @@ User；Shadow Portability Authority；Store / Secret / Adapter；目标 Shadow �
 - Stable ID 冲突进入显式 merge / replace / abort，不静默覆盖；
 - Migration 失败不修改现有目标状态，或通过 Store transaction 回滚。
 
+### Durable State Changes
+
+Export / Backup Plan、Manifest、Integrity Report、Migration decision、Import mapping、compatibility result 和恢复审计。
+
+### External Side Effects
+
+读取 Store / Secret / Adapter 数据，生成加密包，在目标环境创建或迁移资产；标准导出不读取 Secret 内容。
+
 ### Acceptance Criteria
 
 - 标准导出不依赖具体 Store 或 Engine 私有格式；
@@ -270,6 +286,14 @@ User；Shadow Erasure Authority；Store、Memory、Index、Cache、Backup 和 In
 - 组件恢复后继续处理同一 Erasure Request；
 - 新组件重建索引时必须消费 Tombstone / erase marker；
 - 用户删除 Conversation 不自动删除已独立提交且策略允许保留的 Memory，除非 Erasure Scope 明确包含。
+
+### Durable State Changes
+
+Erasure Request、affected-object set、erase intent、Adapter status、Backup schedule、completion decision 和最小 Tombstone。
+
+### External Side Effects
+
+删除或计划删除 Store、Memory Engine、Index、Cache、Backup 和其他受管 Adapter 中的副本；外部来源原始数据除非另有授权不受影响。
 
 ### Acceptance Criteria
 
