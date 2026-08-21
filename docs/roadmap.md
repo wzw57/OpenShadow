@@ -1,6 +1,6 @@
 # OpenShadow 开发路线
 
-- 状态：Stage 2 关键用例草案完成，等待集中审阅
+- 状态：Stage 2 已完成，Stage 3 领域模型与状态机设计进行中
 - 原则：先明确完整需求，再决定 Core 与 External 的边界，最后选择具体实现
 
 OpenShadow 不按外部项目名称制定路线，也不因为某项能力可能有用就提前实现。每个阶段都必须产生可审阅的工程产物和退出条件。
@@ -85,7 +85,7 @@ Execution
 - External Component 统一通过 Proposal / Result 返回，不持有权威提交路径；
 - Stage 2 用例可以直接引用责任矩阵确定参与者。
 
-## Stage 2：关键用例（草案完成，待审阅）
+## Stage 2：关键用例（已完成）
 
 正式产物：[关键用例目录](use-cases/README.md)
 
@@ -145,9 +145,14 @@ Execution
 - 19 个用例覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse；
 - 每个用例均包含 Actor、Trigger、Preconditions、正常流程、失败流程、持久状态、外部副作用、Policy 与验收条件；
 - 用例直接引用 Stage 1 责任边界，不选择具体数据库、模型、Runtime 或 Provider；
-- 审阅通过后进入 Stage 3，提取领域对象、关系、聚合与状态机。
+- 已审阅并合并为 Stage 2 正式基线。
 
-## Stage 3：领域模型与状态机（下一阶段）
+## Stage 3：领域模型与状态机（进行中）
+
+初始产物：
+
+- [领域模型](domain-model.md)
+- [状态机基线](state-machines.md)
 
 根据用例冻结最小领域对象和状态机。
 
