@@ -156,6 +156,14 @@ Execution
 
 根据用例冻结最小领域对象和状态机。
 
+本阶段采用反过度设计约束：
+
+- MVP-1 只覆盖 Local Web → Run → One Target → Memory → Primary Store；
+- MVP-2 增加 Durable Task、World State、Integration 和多端；
+- Action、复杂 Erasure、Full Backup、Outbox、Router 和 Pulse 标记为 Later；
+- 未来兼容对象可以 Contract-only，不要求第一版实现；
+- 不为每个 Record 创建 Aggregate、Repository、Service 或状态机。
+
 优先顺序：
 
 1. Request / Run；
@@ -178,7 +186,10 @@ Execution
 - 对象只包含长期稳定语义；
 - Runtime、Model、Runner 和 Memory Engine 私有状态不进入 Canonical Model；
 - 状态转换具有明确提交者和失败语义；
-- World State 明确 fresh、stale 和 unknown，而不假设实时一致。
+- World State 明确 fresh、stale 和 unknown，而不假设实时一致；
+- Aggregate 数量经过收紧，不把分析候选直接变成实现模块；
+- MVP-1 可以在不实现 Router、Pulse、Action、World State 或多用户的情况下闭环；
+- Later 与 Contract-only 能力不阻塞 Stage 4。
 
 ## Stage 4：Port Contract 与 Adapter SDK
 
