@@ -1,5 +1,7 @@
 # 执行与连续性用例
 
+> 用例中的五个 Target 是首批 well-known target kinds，不是封闭枚举；Binding 以 namespaced target_kind、Descriptor 和 Capability 为准。
+
 ## UC-003 直接 Model Worker 执行
 
 ### 目标
@@ -35,7 +37,7 @@ Accepted Request 的 Execution Requirements 可以由一次受限推理满足。
 - transient timeout 在同一 Run 下创建新 Attempt；
 - 输出不符合 Schema 时可在预算内重试一次修复，或返回 structured-output failure；
 - 无合规 Model 时询问用户，不自动发送给权限更宽的远程模型；
-- Model 返回的 Memory、State 或 Task 内容只能作为 Proposal。
+- Model 返回的 Memory、State 或 Task 内容只能作为对应 Profile 的 typed Proposal。
 
 ### Durable State Changes
 
@@ -48,7 +50,7 @@ Request、Run、Binding、Attempt summary、Usage 和 Result reference。模型 
 ### Acceptance Criteria
 
 - 不启动 Agent Runtime；
-- Model 无权直接提交 Memory、World State 或 Task；
+- Model 无权直接提交 Memory、Accepted State 或 Task；
 - 不合规模型不能接收超出 Binding 的数据；
 - 重试和费用可以追踪。
 
@@ -162,9 +164,9 @@ Request、Run、Execution Binding、Attempt、Workflow definition reference、ex
 - Workflow 与其他 Execution Mode 使用相同 Run / Binding / Attempt 模型；
 - Shadow Core 不实现通用 Workflow Engine；
 - Workflow 私有实例 ID 不代替 Shadow Run ID 或 Durable Task ID；
-- Workflow 只能返回允许的 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage；
+- Workflow 使用 Execution Family 的 typed Result / Proposal / Progress / Failure；
 - 更换 Workflow Engine 不改变 Canonical Asset identity；
-- Workflow 不直接写 Canonical Memory、World State、Task 或 Action。
+- Workflow 不直接写 Memory、State、Task 或 Action Profile Record。
 
 ## UC-005 Run 晋升为 Durable Task
 
