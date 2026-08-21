@@ -84,7 +84,7 @@ Accepted World State is portable Canonical State. Shadow retains the current pro
 
 ## Flexible execution plane
 
-Shadow supports four replaceable Execution Targets:
+Shadow supports five replaceable Execution Targets:
 
 | Target | Purpose |
 |---|---|
