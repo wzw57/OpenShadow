@@ -82,7 +82,7 @@ Execution
 - 13 个能力域已分别明确 Authority、Canonical State、Intelligence 和 Execution；
 - 已列出 Core 必须实现与必须外置的完整清单；
 - Request / Run / Attempt / Durable Task 关系和取消语义已经冻结；
-- External Component 统一通过 Proposal / Result 返回，不持有权威提交路径；
+- External Component 统一返回 Result、Proposal、Observation、Progress、Failure、Checkpoint Reference 或 Usage，不持有权威提交路径；
 - Stage 2 用例可以直接引用责任矩阵确定参与者。
 
 ## Stage 2：关键用例（已完成）
@@ -142,7 +142,7 @@ Execution
 
 草案完成结论：
 
-- 19 个用例覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse；
+- Stage 2 的 19 个用例覆盖交互准入、Web 多端、执行、连续性、Memory、World State、外部动作、Store 故障、迁移、Erasure、Integration、按需资产访问和 Semantic Pulse；Stage 4 另增 1 个 Workflow Target 用例；
 - 每个用例均包含 Actor、Trigger、Preconditions、正常流程、失败流程、持久状态、外部副作用、Policy 与验收条件；
 - 用例直接引用 Stage 1 责任边界，不选择具体数据库、模型、Runtime 或 Provider；
 - 已审阅并合并为 Stage 2 正式基线。
