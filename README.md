@@ -46,7 +46,7 @@ Shadow 是完整产品；Shadow Core 只是其中必须长期稳定的最小内�
 
 > **所有请求都经过 Shadow，但不必都经过 Agent Runtime。**
 
-每个请求至少形成一个最小 Run 记录。Shadow 根据明确的 Execution Binding，将工作交给 Agent Runtime、单次 Model Worker、Deterministic Runner 或 Capability Provider。完整输入、输出和工具过程是否长期保存，由用户策略和产生的长期价值决定。需要跨 Session、执行目标或时间继续存在的工作才成为 Durable Task。
+每个被 Shadow 接受的 Request 形成一个 Root Run；准入失败只形成最小 Admission Record。Shadow 根据明确的 Execution Binding，将工作交给 Agent Runtime、单次 Model Worker、Deterministic Runner 或 Capability Provider。完整输入、输出和工具过程是否长期保存，由用户策略和产生的长期价值决定。需要跨 Session、执行目标或时间继续存在的工作才成为 Durable Task。
 
 > **Shadow owns assets, continuity, current state and authority.**
 
