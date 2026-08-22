@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/integrations/1.0.0",
+  "title": "OpenShadow Integration Profile Contracts",
+  "$defs": {
+    "IntegrationPayload": {
+      "type": "object",
+      "required": [
+        "integration_id", "format", "provider_kind", "external_ref", "config_ref",
+        "secret_refs", "adapter_ref", "adapter_descriptor_digest", "status", "lifecycle"
+      ],
+      "properties": {
+        "integration_id": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableId" },
+        "format": { "const": "shadow.integration" },
+        "provider_kind": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/NamespacedIdentifier" },
+        "external_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "config_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "secret_refs": {
+          "type": "array",
+          "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+          "uniqueItems": true
+        },
+        "adapter_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "adapter_descriptor_digest": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Digest" },
+        "status": { "enum": ["enabled", "disabled", "unavailable", "needs_reauth"] },
+        "lifecycle": { "enum": ["active", "retired"] },
+        "health_observation_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

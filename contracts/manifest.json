@@ -17,6 +17,11 @@
       "sha256": "b09665d57d6082081e052ccacefb17aae7c50fe1b3339b014fb885d1392f4c12"
     },
     {
+      "schema_id": "https://schemas.openshadow.dev/contracts/integrations/1.0.0",
+      "path": "schemas/integrations/1.0.0/schema.json",
+      "sha256": "3a186c870c1bcdc21e5bca98cb4e6c9b041da6571c9255ac5c1be1283ff64214"
+    },
+    {
       "schema_id": "https://schemas.openshadow.dev/contracts/kernel/1.0.0",
       "path": "schemas/kernel/1.0.0/schema.json",
       "sha256": "5f84a6760940fb4232841c37a124d8834520d323d1fca1b368fca783dcc08359"

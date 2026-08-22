@@ -160,6 +160,21 @@ def test_skillasset_implementation_surface_and_status_are_documented() -> None:
     assert "数据库表" in status
 
 
+def test_integration_gate_and_contract_are_accepted_before_implementation() -> None:
+    gate = _read("docs/phase2-integration-design-gate.md")
+    adr = _read("docs/adr/0010-phase2-integration-profile.md")
+    schema = _read("contracts/schemas/integrations/1.0.0/schema.json")
+    index = _read("docs/adr/README.md")
+
+    assert "Accepted / Phase 2 第六切片获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "shadow.profile.integration" in gate
+    assert "secret_refs" in gate
+    assert "IntegrationPayload" in schema
+    assert "ADR-0010" in index
+    assert "不读取 Secret" in gate
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")
