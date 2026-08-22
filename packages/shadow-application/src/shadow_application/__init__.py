@@ -1,4 +1,11 @@
 from .conversation import ConversationService, TurnResult
+from .erase import (
+    ErasureAdapter,
+    PhysicalEraseRequest,
+    PhysicalEraseResult,
+    PhysicalEraseService,
+    physical_erase_result_digest,
+)
 from .index import (
     MemoryIndexAdapter,
     MemoryIndexBuildArtifact,
@@ -52,6 +59,7 @@ from .skillasset import (
 
 __all__ = [
     "ConversationService",
+    "ErasureAdapter",
     "IntegrationRegistrationRequest",
     "IntegrationRegistrationResult",
     "IntegrationService",
@@ -83,6 +91,10 @@ __all__ = [
     "PortableImportResult",
     "PortableImportService",
     "portable_import_result_digest",
+    "PhysicalEraseRequest",
+    "PhysicalEraseResult",
+    "PhysicalEraseService",
+    "physical_erase_result_digest",
     "SkillAssetRegistrationRequest",
     "SkillAssetRegistrationResult",
     "SkillAssetService",

@@ -8,7 +8,7 @@ from typing import Any
 from shadow_kernel.errors import RepositoryUnavailable, ShadowError
 from shadow_kernel.ids import new_id, sha256_digest, utc_timestamp
 from shadow_kernel.models import CanonicalEnvelope, CommitBatchResult, CommitPlan, OperationResult
-from sqlalchemy import DateTime, Integer, String, Text, create_engine, event, func, select
+from sqlalchemy import DateTime, Integer, String, Text, create_engine, delete, event, func, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -321,6 +321,27 @@ class SqliteCanonicalRepository:
                 "outcome": prior.outcome,
                 "result": CommitBatchResult.model_validate(json.loads(prior.result_json)),
             }
+
+    def erase_history(self, record_id: str, keep_version: int) -> int:
+        """Physically remove prior Canonical rows while retaining the Tombstone head."""
+        if not self._available:
+            raise RepositoryUnavailable()
+        with self._session_factory.begin() as session:
+            kept = session.scalar(
+                select(RecordVersionRow).where(
+                    RecordVersionRow.record_id == record_id,
+                    RecordVersionRow.version == keep_version,
+                )
+            )
+            if kept is None:
+                raise RepositoryUnavailable()
+            result = session.execute(
+                delete(RecordVersionRow).where(
+                    RecordVersionRow.record_id == record_id,
+                    RecordVersionRow.version != keep_version,
+                )
+            )
+            return int(result.rowcount or 0)
 
     def _created_at(self, record_id: str, session: Session) -> str:
         row = session.scalar(
