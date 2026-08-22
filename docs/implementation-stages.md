@@ -216,10 +216,10 @@ flowchart LR
 
 ### 当前交付切片
 
-Phase 3 首个 State Profile 生命周期切片已按 ADR-0013 实现并合并到 `main`，覆盖
-State/Observation/StateProposal Contract、TTL/freshness、source unavailable、
-Proposal/Commit、State 查询和确定性 Source Adapter。Durable Task、Checkpoint/Handoff、
-Schedule/Clock、Migration/Integrity 和真实 Integration 联动仍需后续独立设计闸门。
+Phase 3 全部当前范围已按 ADR-0013 与 ADR-0014 实现并合并到 `main`，覆盖
+State/Observation/StateProposal Contract、TTL/freshness、Durable Task 生命周期、
+Checkpoint/Handoff、Schedule/Clock、State condition Admission、Migration/Integrity、
+Proposal/Commit、重启恢复和确定性 Adapter。真实外部 Integration 联动仍不在本阶段。
 
 ### 保留但不提前实现
 

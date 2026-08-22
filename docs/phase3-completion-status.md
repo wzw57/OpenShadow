@@ -1,19 +1,21 @@
 # Phase 3 完成状态
 
-状态：**设计闸门 Accepted；剩余实现进行中**
+状态：**已实现 / 已合并**
 
 ## 已完成切片
 
 - State Profile 生命周期已按 ADR-0013 合并：State、Observation、StateProposal、TTL/freshness、
   source unavailable、Owner/Space、CAS、幂等和 State read API。
+- Durable Task 生命周期已按 ADR-0014 合并：Task Proposal、waiting/pause/resume、deadline、
+  completion_pending、complete/cancel/fail、Run refs 和重启恢复。
+- Semantic Checkpoint/Handoff 已合并：checkpoint 原子提交、native resume capability 校验、
+  replay 和 all-or-nothing 语义。
+- Schedule/Clock、State condition Admission、Migration Adapter 与 Integrity manifest 已合并，
+  并保持 Adapter 只产生 Observation/Proposal、不能绕过 Commit 的边界。
 
 ## 本闸门授权切片
 
-- Durable Task Profile 与 Task/Run/Checkpoint/Artifact/Trigger refs；
-- waiting、pause、resume、deadline、completion_pending、complete/cancel/fail；
-- Semantic Checkpoint/Handoff 与 native resume 诚实声明；
-- deterministic Schedule/Clock/State Resolver boundary 和 State condition Admission；
-- Migration/Integrity Store capability、manifest digest、round-trip 和篡改拒绝。
+- 上述连续性、Schedule/Clock、State condition 和 Migration/Integrity 切片已全部实现。
 
 ## 明确不在 Phase 3
 
@@ -24,6 +26,7 @@
 
 ## 完成证据
 
-实现完成后必须同时通过 Task lifecycle、checkpoint atomicity、handoff capability、restart
-recovery、schedule trigger admission、State condition、migration compatibility、integrity
-digest/tamper、Store outage、replay 和 all-or-nothing 测试，并更新本文件为已合并状态。
+完成证据：Task lifecycle、checkpoint atomicity、handoff capability、restart recovery、
+schedule trigger admission、State condition、migration compatibility、integrity digest/tamper、
+Store outage、replay 和 all-or-nothing 测试均已通过；全量 pytest、Ruff 与 Alembic upgrade/
+downgrade 作为合并闸门执行。

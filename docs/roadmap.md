@@ -172,8 +172,8 @@ Portable Import/restore 第七切片已按 ADR-0011 接受并合并实现，详�
 Phase 3 首个 State Profile 切片已按 ADR-0013 完成设计闸门接受并实现，详见
 [Phase 3 State Profile 状态](phase3-state-profile-status.md)。Durable Task、Checkpoint/Handoff
 和其他 Phase 3 能力仍未授权实现。
-Phase 3 完成闸门已按 ADR-0014 接受，剩余连续性、Schedule/Clock 和 Migration/Integrity
-切片正在实现，详见 [Phase 3 完成状态](phase3-completion-status.md)。
+Phase 3 完成闸门已按 ADR-0014 接受，连续性、Schedule/Clock 和 Migration/Integrity
+切片已实现并合并，详见 [Phase 3 完成状态](phase3-completion-status.md)。
 
 ## 延后实现与重新评估
 

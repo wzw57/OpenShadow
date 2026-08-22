@@ -60,6 +60,20 @@
       ],
       "unevaluatedProperties": false
     },
+    "TaskProposalRecordPayload": {
+      "type": "object",
+      "required": ["proposal_type", "status", "proposer_ref", "owner_ref", "space_id", "proposal"],
+      "properties": {
+        "proposal_type": { "const": "shadow.durable-task-proposal" },
+        "status": { "enum": ["pending", "accepted", "rejected"] },
+        "proposer_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "owner_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "proposal": { "$ref": "#/$defs/TaskProposalPayload" },
+        "resulting_task_ref": { "$ref": "#/$defs/Ref" }
+      },
+      "unevaluatedProperties": false
+    },
     "CheckpointPayload": {
       "type": "object",
       "required": ["task_ref", "checkpoint_kind", "checkpoint_digest", "runtime_target_kind", "runtime_capabilities", "artifact_refs", "created_at"],

@@ -395,6 +395,101 @@ paths:
           $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/tasks:
+    get:
+      operationId: listTasks
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Durable Task heads
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/tasks/{task_id}:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    get:
+      operationId: getTask
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      responses:
+        "200":
+          description: Durable Task head
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/tasks/{task_id}/checkpoints:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    post:
+      operationId: createTaskCheckpoint
+      parameters:
+        - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckpointCommand"
+      responses:
+        "200":
+          description: Checkpoint and updated Task committed atomically
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/tasks/{task_id}/completion:
+    parameters:
+      - $ref: "#/components/parameters/TaskId"
+    post:
+      operationId: completeTask
+      parameters:
+        - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompletionCommand"
+      responses:
+        "200":
+          description: Completion Proposal accepted and Task committed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/proposals:
     get:
       operationId: listProposals
@@ -419,7 +514,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/StateProposalCommand"
+              oneOf:
+                - $ref: "#/components/schemas/StateProposalCommand"
+                - $ref: "#/components/schemas/TaskProposalCommand"
       responses:
         "202":
           description: State Proposal accepted for explicit Commit decision
@@ -581,6 +678,12 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/StableId"
+    TaskId:
+      name: task_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
   schemas:
     StableId:
       $ref: "../schemas/common/1.0.0/schema.json#/$defs/StableId"
@@ -694,6 +797,69 @@ components:
         proposal_reason:
           type: string
           maxLength: 4000
+      unevaluatedProperties: false
+    TaskProposalCommand:
+      type: object
+      required: [input_type, proposed_operation, task_key, goal, completion_criteria]
+      properties:
+        input_type:
+          type: string
+          const: shadow.durable-task-proposal
+        proposed_operation:
+          enum: [create, activate, wait, pause, resume, completion_pending, complete, fail, cancel]
+        target_ref:
+          $ref: "#/components/schemas/StableRecordRef"
+        expected_version:
+          type: integer
+          minimum: 1
+        task_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        goal:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        completion_criteria: {}
+        waiting_condition: {}
+        deadline:
+          type: string
+          format: date-time
+        result_ref:
+          $ref: "#/components/schemas/StableRecordRef"
+        failure_summary: {}
+        proposal_reason:
+          type: string
+          maxLength: 4000
+      unevaluatedProperties: false
+    CheckpointCommand:
+      type: object
+      required: [checkpoint_kind, checkpoint_digest, runtime_target_kind]
+      properties:
+        checkpoint_kind:
+          enum: [semantic, native, handoff]
+        checkpoint_digest:
+          type: string
+          pattern: "^sha256:[a-f0-9]{64}$"
+        runtime_target_kind:
+          type: string
+        runtime_capabilities:
+          type: array
+          items:
+            type: string
+        artifact_refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/StableRecordRef"
+        native_resume:
+          type: boolean
+          default: false
+      unevaluatedProperties: false
+    CompletionCommand:
+      type: object
+      properties:
+        result_ref:
+          $ref: "#/components/schemas/StableRecordRef"
       unevaluatedProperties: false
     CanonicalRecordResponse:
       type: object
