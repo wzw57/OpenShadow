@@ -70,6 +70,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/pulse/1.0.0",
       "path": "schemas/pulse/1.0.0/schema.json",
       "sha256": "3813ce43ce68025901994c4612947712c86826bfe523fcff4157ff7b736dd29b"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/erasure/1.0.0",
+      "path": "schemas/erasure/1.0.0/schema.json",
+      "sha256": "94362fa2207fa934ff96a620f0b3a2d7d4cce643646c6c80f53ad5e9946424a4"
     }
   ]
 }

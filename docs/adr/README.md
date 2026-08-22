@@ -210,6 +210,15 @@ ADR-0018：Phase 4 Semantic Pulse Proposal Producer 边界。
 87. Pulse 是可关闭、可替换的可选 producer；budget、deadline、cooldown、evidence、source
     unavailable 和 dedup 状态必须诚实表达，不承诺跨进程 exactly-once。
 
+### Phase 4 Erasure / Backup Metadata
+
+ADR-0019：Phase 4 跨组件 Erasure 与 Backup Metadata 边界。
+
+88. ErasureRequest 使用 scope、逐组件状态和 evidence 表达 quiesce/erase/失败/恢复；未确认
+    组件不得被显示为 completed，Tombstone 不包含敏感原文。
+89. Backup 只冻结加密 Export metadata、digest、manifest、opaque key ref、retention 和
+    erase schedule；不保存 Secret、Provider 私有状态或不可重建索引。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

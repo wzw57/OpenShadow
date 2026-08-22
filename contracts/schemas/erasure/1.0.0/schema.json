@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/erasure/1.0.0",
+  "title": "OpenShadow Cross-component Erasure and Backup Metadata Contracts",
+  "$defs": {
+    "ComponentStatus": {
+      "type": "object",
+      "required": ["component_ref", "capability_family", "state", "updated_at", "evidence_refs"],
+      "properties": {
+        "component_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "capability_family": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "state": { "enum": ["pending", "quiesced", "erased", "failed", "unreachable", "unknown"] },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "evidence_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "failure_code": { "type": "string", "maxLength": 255 },
+        "retention_until": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    },
+    "ErasureRequest": {
+      "type": "object",
+      "required": ["request_id", "owner_ref", "space_id", "scope_ref", "target_refs", "policy_ref", "requested_at", "idempotency_key", "lifecycle", "component_statuses"],
+      "properties": {
+        "request_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "owner_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "scope_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "target_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "minItems": 1, "uniqueItems": true },
+        "policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "requested_at": { "type": "string", "format": "date-time" },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "lifecycle": { "enum": ["pending", "dispatching", "partially_completed", "completed", "failed", "unknown"] },
+        "component_statuses": { "type": "array", "items": { "$ref": "#/$defs/ComponentStatus" }, "minItems": 1, "uniqueItems": true }
+      },
+      "unevaluatedProperties": false
+    },
+    "BackupMetadata": {
+      "type": "object",
+      "required": ["backup_id", "format_version", "owner_ref", "space_id", "export_digest", "manifest_digest", "encrypted", "key_ref", "created_at", "retention_until", "excluded_content_classes", "erase_schedule_ref"],
+      "properties": {
+        "backup_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "format_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "owner_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "export_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "manifest_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "encrypted": { "const": true },
+        "key_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "created_at": { "type": "string", "format": "date-time" },
+        "retention_until": { "type": "string", "format": "date-time" },
+        "excluded_content_classes": { "type": "array", "items": { "enum": ["secret", "provider-private-state", "session", "derived-index", "cache", "graph"] }, "minItems": 3, "uniqueItems": true },
+        "erase_schedule_ref": { "type": "string", "minLength": 1, "maxLength": 1000 }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "backup_id": "backup-invalid",
+  "format_version": "1.0.0",
+  "owner_ref": "principal-erasure",
+  "space_id": "space-erasure",
+  "export_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "manifest_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "encrypted": false,
+  "key_ref": "vault-key-ref-opaque",
+  "created_at": "2026-08-22T08:00:00Z",
+  "retention_until": "2099-01-01T00:00:00Z",
+  "excluded_content_classes": ["secret"],
+  "erase_schedule_ref": "erasure-request-1"
+}

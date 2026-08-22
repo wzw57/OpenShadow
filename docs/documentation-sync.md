@@ -62,3 +62,8 @@ Phase 4 Semantic Pulse 必须同步 `phase4-semantic-pulse-design-gate.md`、ADR
 Trigger/Observation/Proposal fixtures 和 `phase4-semantic-pulse-status.md`。设计接受前禁止实现
 Pulse Service、持久化 cooldown、通用 worker 或公开路由；Pulse 产生的 work-bearing Proposal
 必须重新进入 Admission。
+
+Phase 4 Erasure/Backup 必须同步 `phase4-erasure-backup-design-gate.md`、ADR-0019、Erasure Schema、
+ErasureRequest/BackupMetadata fixtures 和 `phase4-erasure-backup-status.md`。设计接受前禁止实现
+跨组件 Erasure、Backup Service、真实 Adapter、密钥/备份内容或公开路由；未确认组件不得报告
+completed。

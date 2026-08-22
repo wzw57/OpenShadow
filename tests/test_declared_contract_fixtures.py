@@ -66,6 +66,9 @@ FIXTURE_SCHEMA_REFS = {
     "pulse/valid-observation-unavailable.json": "pulse#/$defs/PulseObservation",
     "pulse/valid-proposal.json": "pulse#/$defs/PulseProposal",
     "pulse/valid-trigger.json": "pulse#/$defs/PulseTrigger",
+    "erasure/invalid-unencrypted-backup.json": "erasure#/$defs/BackupMetadata",
+    "erasure/valid-backup-metadata.json": "erasure#/$defs/BackupMetadata",
+    "erasure/valid-erasure-request.json": "erasure#/$defs/ErasureRequest",
 }
 
 
@@ -92,6 +95,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "outbox/invalid",
             "routing/invalid",
             "pulse/invalid",
+            "erasure/invalid",
             "repository/invalid",
         )
     )
