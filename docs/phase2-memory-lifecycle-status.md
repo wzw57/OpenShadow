@@ -5,11 +5,13 @@
 设计闸门与 [ADR-0005](adr/0005-phase2-memory-lifecycle.md) 已接受。本文件记录获准
 实现的首个切片，不扩大 Phase 2 的授权范围。
 
+交付状态：已通过 PR [#8](https://github.com/wzw57/OpenShadow/pull/8) 普通合并到 `main`。
+
 ## 当前已实现
 
 | 能力 | 状态 | 主要证据 |
 | --- | --- | --- |
-| Correction | 已实现 | `MemoryService.propose_correction` / `commit_correction`；稳定 `record_id`、新版本和 `supersedes_version` |
+| Correction | 已实现 | `MemoryService.propose_correction` / `MemoryService.commit_correction`；稳定 `record_id`、新版本和 `supersedes_version` |
 | Merge | 已实现（Service / Contract only） | `propose_merge` / `commit_merge`；单个 Commit Batch 原子创建新 Memory 并 supersede 所有 target；无新增 HTTP 路由 |
 | Logical delete | 已实现 | `logical_delete`、`DELETE /v1/memories/{memory_id}`；Envelope 使用 `record_state=logically_deleted` |
 | Anti-resurrection | 已实现 | active-head、CAS、旧 Candidate、重复命令和 list head 过滤测试 |

@@ -46,7 +46,7 @@ Contract；Phase 2–5 的设计仍以[分阶段实现计划](implementation-sta
 | Store unavailable / explicit degradation | 已实现 | `test_store_outage_does_not_claim_durable_success`、Admission outage test |
 | Alembic migration / rollback | 已实现 | CI isolated SQLite migration step |
 
-OpenAPI 中的 Memory correction/delete 已在 Phase 2 首个切片获准并进入独立实现分支；
+OpenAPI 中的 Memory correction/delete 已在 Phase 2 首个切片获准并合并到 `main`；
 Proposal decision、Portable Import/restore、Backup、Outbox 和 Erasure Job 仍是后续
 Contract-only 能力。本阶段的 Export 仍仅作为 Store Adapter fixture，不提供公开 HTTP
 Export API。

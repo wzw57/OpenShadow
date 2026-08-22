@@ -93,11 +93,13 @@ Envelope 的 owner / space 一致。读 ACL 和完整多用户权限推迟到 Ph
 - Merge 在公开 API 中暂不可用，只能通过 Application/Contract service 使用；
 - 读 ACL 仍是本地单用户边界，完整多用户授权延后 Phase 5。
 
-## Acceptance evidence required before implementation
+## Acceptance evidence and delivery record
+
+PR [#8](https://github.com/wzw57/OpenShadow/pull/8) 已记录并交付以下证据：
 
 - correction、merge、logical delete 的 valid / invalid fixtures；
 - 每个 merge target 独立 expected-version 的 all-or-nothing 测试；
 - stable ID、旧版本不可变、deleted-head anti-resurrection、owner/space 拒绝测试；
 - idempotent replay、Store unavailable、restart recovery 和 API status/error 测试；
 - Tombstone schema/fixture 完整性验证，但不执行 physical erase；
-- maintainer 明确接受本 ADR 后，才创建 Phase 2 implementation branch。
+- 本 ADR 已接受，Phase 2 首个切片已合并到 `main`。
