@@ -1,6 +1,6 @@
 # OpenShadow 参考实现 Profile
 
-- 状态：Stage 4 Proposed — D1–D8 已冻结，等待 PR 最终评审与合并
+- 状态：Stage 4 Accepted — D1–D8 已冻结并合并；Phase 0–1 参考切片已实现并持续验收
 - 作用：定义 OpenShadow 第一套官方实现使用的技术组合
 - 约束：本文件不是 Shadow Domain Contract；具体技术可以通过兼容实现或 Adapter 替换
 - 上位文档：[完整技术架构](technical-architecture.md)

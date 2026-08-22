@@ -181,9 +181,10 @@ OpenShadow 自行实现的范围收紧为：
 - [分阶段实现计划](docs/implementation-stages.md)
 - [参考实现 Profile](docs/implementation-profile.md)
 - [开发路线](docs/roadmap.md)
+- [Phase 0–1 实现状态](docs/phase0-1-status.md)
 - [Stage 4 Contract 基线](docs/contract-baseline.md)
 - [架构决策记录](docs/adr/README.md)
 
 ## 当前状态
 
-Stage 0–3 已形成需求、责任、用例和领域基线。Stage 4 的 D1–D8 决策已经冻结，并已加入字段级 Schema、OpenAPI、fixtures 与声明式 Contract Tests；当前状态仍是 Proposed，等待 PR 最终评审与合并后才能进入 Stage 5。
+Stage 0–3 已形成需求、责任、用例和领域基线。Stage 4 的 D1–D8 决策已经冻结，并已加入字段级 Schema、OpenAPI、fixtures 与声明式 Contract Tests；Stage 4 已合并并 Accepted，当前进入 Stage 5 的 Phase 0–1 实现。

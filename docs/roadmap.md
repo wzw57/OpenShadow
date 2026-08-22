@@ -92,7 +92,7 @@
 - 数据库物理模型；
 - 微服务拓扑。
 
-## Stage 4：完整技术架构与 Contract（进行中）
+## Stage 4：完整技术架构与 Contract（已完成）
 
 产物：
 
@@ -128,14 +128,14 @@
 - 声明式 Contract Test cases；
 - OpenAPI 3.1。
 
-### Stage 4 剩余工程化工作
+### Stage 4 完成条件
 
-1.完成 Schema、offline references、fixtures 与 OpenAPI 的工件验证；
-2.完成全仓术语与语义一致性复核；
-3.完成 PR review 并合并；
-4.合并时将 Stage 4 ADR 与 Implementation Profile 从 Proposed 改为 Accepted。
+- Schema、offline references、fixtures 与 OpenAPI 的工件验证已完成；
+- 全仓术语与语义一致性复核已完成；
+- Stage 4 PR 已 review 并合并；
+- Stage 4 ADR 与 Implementation Profile 已切换为 Accepted。
 
-完成后不再继续扩展概念清单，进入实现。
+Stage 4 不再继续扩展概念清单，进入 Phase 0–1 实现。
 
 ## Stage 5：实现启动与分阶段交付
 
@@ -149,6 +149,13 @@ Stage 5 不是重新设计完整架构，而是按[分阶段实现计划](implem
 6. Phase 5：Multi-endpoint & Multi-user。
 
 首个开发目标是 Phase 0–1 纵向闭环，但代码结构服务完整目标架构，不把短期范围冻结为长期内核。
+
+当前交付状态：Phase 0–1 的 Python reference slice 已在
+`stage5/phase0-1-implementation` 分支实现并通过本地 Contract / Repository / API
+测试。已覆盖 Kernel Port、SQLite Store Adapter、Commit / Admission、Binding、
+Deterministic Adapter、Conversation / Message、Run / Attempt、SSE、幂等重放与 Store
+不可用路径，以及最小 Memory Candidate → Commit。Phase 2–5 继续只维护已接受的
+Contract 与退出条件，暂不实现业务能力。
 
 ## 延后实现与重新评估
 

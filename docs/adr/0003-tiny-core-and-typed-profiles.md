@@ -1,6 +1,6 @@
 # ADR-0003: Tiny Kernel、Typed Profile 与 Capability-first Extension
 
-- Status: Proposed — pending final PR review and merge
+- Status: Accepted — merged in Stage 4 PR
 - Date: 2026-08-21
 - Owners: OpenShadow maintainers
 

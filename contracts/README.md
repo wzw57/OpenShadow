@@ -1,9 +1,8 @@
 # Stage 4 Contract Artifacts
 
 This directory contains the machine-readable Stage 4 contract candidate. It is
-normative together with `docs/contract-baseline.md`, but remains **Proposed**
-until the Stage 4 validation and review gates are complete and the pull request
-is merged.
+normative together with `docs/contract-baseline.md`; Stage 4 validation and
+review gates are complete and the contract baseline is **Accepted**.
 
 ## Layout
 
