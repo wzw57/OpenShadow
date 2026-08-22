@@ -174,4 +174,4 @@ OpenShadow implements:
 
 ## Status
 
-Stages 0–3 established the requirements, responsibility, use-case, and domain baselines. Stage 4 decisions D1–D8 are frozen and now have field-level schemas, OpenAPI, fixtures, and declarative Contract Tests. The work remains Proposed until final PR review and merge are complete.
+Stages 0–3 established the requirements, responsibility, use-case, and domain baselines, and the Phase 4 Action slices are implemented. The repository now has the Phase 0–4 core baseline plus an optional Hermes Agent Runtime Adapter. The default runtime remains deterministic; setting `SHADOW_RUNTIME_KIND=hermes` routes text through Hermes to the online DeepSeek `deepseek-v4-flash` provider. Shadow does not implement its own Agent Loop or call the model provider directly. A Web UI, fine-grained runtime SSE/session resume, and governed tool bridge remain future slices.

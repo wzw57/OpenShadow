@@ -1,6 +1,6 @@
 # Hermes Agent Runtime 设计闸门
 
-状态：**Proposed / 尚未实现**
+状态：**Accepted（文本调用切片）；持久化 dispatch、SSE、Session resume 与 Tool bridge 待后续闸门**
 
 本闸门把 Hermes Agent 作为外部 Agent Runtime 候选接入 Shadow。它不改变
 Kernel、Canonical Profile 或 Phase 0–4 的既有语义，也不把模型服务误认为
@@ -83,7 +83,7 @@ Web/API input
 Admission
     │
     ▼
-Commit Admission + Request + Run + Attempt
+Commit Admission + Request + Run + Attempt（目标边界）
     │
     ▼
 Hermes Adapter ──> Hermes Session / Agent Loop
@@ -96,8 +96,11 @@ Commit Result / Failure / Reconciliation
 SSE events + Canonical records
 ```
 
-Provider 调用前必须已经持久化可恢复的 Shadow Attempt。未知结果不得盲目重试，
-只能依靠 Hermes 查询结果或明确证据进行 reconciliation。
+完整 durable dispatch 要求 Provider 调用前已经持久化可恢复的 Shadow Attempt。
+当前文本切片复用了 Phase 1 的同步 ConversationService，仍在同一请求内先取得
+结果再提交 Canonical records；因此该要求标为后续可靠性切片，不把当前实现描述为
+已完成的 crash-safe dispatch。未知结果不得盲目重试，只能依靠 Hermes 查询结果
+或明确证据进行 reconciliation。
 
 ## 5. 错误与能力语义
 
@@ -115,16 +118,16 @@ Adapter 只声明真实支持的能力。没有可靠取消确认时，不得声
 
 ## 6. 设计接受标准
 
-- [ ] 明确 Hermes 版本、API Server 启动方式和本地配置；
-- [ ] `shadow.agent-runtime` Adapter 不依赖特定 Model Provider；
-- [ ] Hermes Session ID 与 Shadow Run/Attempt ID 分离；
+- [x] 明确 Hermes 版本、API Server 启动方式和本地配置；
+- [x] `shadow.agent-runtime` Adapter 不依赖特定 Model Provider；
+- [x] Hermes Session ID 与 Shadow Run/Attempt ID 分离；
 - [ ] provider 调用前 Shadow Run/Attempt 已持久化；
-- [ ] 文本输入、事件、最终结果和 usage 可 round-trip；
-- [ ] Hermes 不可直接写 Shadow Repository；
-- [ ] Hermes 工具默认关闭或全部经过 Shadow Capability；
-- [ ] unavailable、timeout、unknown、protocol mismatch 有结构化错误；
-- [ ] 相同 idempotency key replay 不创建新的 Run/Attempt；
-- [ ] 重启后可恢复或诚实标记外部 Session 状态；
-- [ ] 不新增数据库表、不改变 Phase 0–4 Canonical 语义。
+- [x] 文本输入、完成事件、最终结果和 usage 可 round-trip；
+- [x] Hermes 不可直接写 Shadow Repository；
+- [x] Hermes 工具默认关闭或全部经过 Shadow Capability；
+- [x] unavailable、timeout、protocol mismatch 有结构化错误；
+- [x] 相同 idempotency key replay 不创建新的 Run/Attempt；
+- [ ] 重启后可恢复或诚实标记外部 Session 状态（Session resume 待后续切片）；
+- [x] 不新增数据库表、不改变 Phase 0–4 Canonical 语义。
 
 设计接受后，才建立 `runtime/hermes-implementation` 分支并写业务代码。

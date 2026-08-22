@@ -1,6 +1,6 @@
 # ADR-0021：Hermes Agent Runtime Adapter
 
-- Status: Proposed
+- Status: Accepted (text adapter slice; event/session/tool extensions remain separate)
 - Date: 2026-08-22
 - Deciders: OpenShadow maintainers
 - Related: ADR-0002、ADR-0003、ADR-0015

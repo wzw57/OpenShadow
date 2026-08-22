@@ -31,8 +31,9 @@ where = [
   "adapters/test-deterministic/src",
   "adapters/store-sqlite/src",
   "apps/shadow-server",
+  "adapters/hermes-agent/src",
 ]
-include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_store*", "shadow_server*"]
+include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_store*", "shadow_server*", "shadow_hermes*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -42,6 +43,7 @@ pythonpath = [
   "adapters/test-deterministic/src",
   "adapters/store-sqlite/src",
   "apps/shadow-server",
+  "adapters/hermes-agent/src",
 ]
 addopts = "-ra"
 

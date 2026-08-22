@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -15,12 +16,14 @@ from shadow_application import (
     StateService,
     TaskService,
 )
+from shadow_hermes import HermesAgentRuntimeAdapter
 from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest
 from shadow_kernel.registry import ContractRegistry
 from shadow_kernel.repository import CanonicalRepository
+from shadow_kernel.runtime import RuntimeAdapter
 from shadow_store import SqliteCanonicalRepository
 
 
@@ -156,7 +159,18 @@ def _error_response(error: ShadowDomainError) -> JSONResponse:
     )
 
 
-def create_app(database_url: str | None = None) -> FastAPI:
+def _runtime_from_environment() -> RuntimeAdapter | None:
+    runtime_kind = os.getenv("SHADOW_RUNTIME_KIND", "deterministic").strip().lower()
+    if runtime_kind == "deterministic":
+        return None
+    if runtime_kind == "hermes":
+        return HermesAgentRuntimeAdapter.from_environment()
+    raise ValueError(f"Unsupported SHADOW_RUNTIME_KIND: {runtime_kind}")
+
+
+def create_app(
+    database_url: str | None = None, runtime_adapter: RuntimeAdapter | None = None
+) -> FastAPI:
     root = _repo_root()
     registry = ContractRegistry(root)
     if database_url is None:
@@ -166,7 +180,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
     repository = SqliteCanonicalRepository(database_url)
     authority = CommitAuthority(repository, registry)
     admission = AdmissionService(repository, authority)
-    conversations = ConversationService(repository, authority)
+    selected_runtime = runtime_adapter if runtime_adapter is not None else _runtime_from_environment()
+    conversations = ConversationService(repository, authority, runtime_adapter=selected_runtime)
     memories = MemoryService(repository, authority, registry)
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
@@ -181,6 +196,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.state.admission = admission
     app.state.actions = actions
     app.state.outbox = outbox
+    app.state.runtime_adapter = conversations.runtime_adapter
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:

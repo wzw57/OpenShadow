@@ -14,13 +14,13 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 - [ADR-0010：Phase 2 Integration Profile 注册边界](0010-phase2-integration-profile.md)
 - [ADR-0011：Phase 2 Portable Import / restore snapshot 边界](0011-phase2-portable-import-restore.md)
 - [ADR-0012：Phase 2 Physical erase 与 Tombstone 边界](0012-phase2-physical-erase-tombstone.md)
+- [ADR-0021：Hermes Agent Runtime Adapter](0021-hermes-agent-runtime-adapter.md)
 
 ## 待接受 ADR
 
 - [ADR-0006：Phase 2 第二切片的 Recall / Maintenance Adapter 边界](0006-phase2-recall-maintenance.md)
 - [ADR-0007：Phase 2 派生 Memory Index 重建边界](0007-phase2-derived-index-rebuild.md)
 - [ADR-0008：Phase 2 source-dependent Memory invalidation 边界](0008-phase2-source-dependent-invalidation.md)
-- [ADR-0021：Hermes Agent Runtime Adapter](0021-hermes-agent-runtime-adapter.md)
 
 ## ADR 格式
 

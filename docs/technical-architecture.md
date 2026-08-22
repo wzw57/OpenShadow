@@ -8,6 +8,11 @@
 - 字段级 Contract：[Stage 4 Contract Baseline](contract-baseline.md)
 - 决策记录：[ADR-0003](adr/0003-tiny-core-and-typed-profiles.md)、[ADR-0004](adr/0004-agent-skills-compatibility.md)
 
+当前可运行参考实现已经包含 `shadow.agent-runtime` 的 Hermes Adapter：
+`FastAPI → ConversationService → Hermes Adapter → Hermes API Server →
+DeepSeek (deepseek-v4-flash)`。Shadow 默认仍使用 Deterministic Adapter；Hermes
+工具、Session 私有状态和模型 Provider 均不进入 Shadow Canonical Store。
+
 ## 1. 架构目标
 
 Shadow 必须允许 Runtime、模型、Memory Intelligence、Router、Runner、数据库、语音和设备能力持续升级，同时保持用户身份、资产、工作和治理记录连续。

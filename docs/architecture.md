@@ -124,6 +124,38 @@ flowchart TB
 
 这些是责任边界，不是微服务边界。早期实现是模块化单体加少量进程外 Adapter。
 
+### 3.1 当前可运行参考部署
+
+当前仓库的可运行参考路径是文本 Conversation：默认使用确定性 Adapter；设置
+`SHADOW_RUNTIME_KIND=hermes` 后，Shadow 通过独立 `shadow.agent-runtime`
+Adapter 连接本地 Hermes API Server，再由 Hermes 使用已配置的在线模型提供者。
+当前联调使用 DeepSeek `deepseek-v4-flash`，不建立 Shadow 到 DeepSeek 的直连，
+也不把 Hermes 的内部 Agent Loop、Session 或 Memory 写入 Shadow Store。
+
+```text
+HTTP Client / curl
+        │ REST
+        ▼
+FastAPI Shadow Server
+        │
+        ▼
+ConversationService / Application Services
+        ├──────────────► Admission + CommitAuthority ───► SQLite Canonical Store
+        │                         ▲
+        │                         │ Run / Attempt / Message / Event
+        ▼                         │
+Hermes Agent Runtime Adapter ─────┘
+        │ HTTP (OpenAI-compatible)
+        ▼
+Hermes API Server
+        │ Agent Loop / Session / Planner（外部拥有）
+        ▼
+DeepSeek API（deepseek-v4-flash）
+```
+
+Web UI 尚未实现；Hermes 联调 profile 的工具集全部关闭。细粒度 SSE、Session
+resume 和经过 Shadow Capability/Action 治理的工具桥接属于后续切片。
+
 ## 4. Canonical Record 与 Profile
 
 统一 Envelope：

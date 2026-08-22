@@ -304,7 +304,7 @@ class ConversationService:
             binding_ref=RecordVersionRef(record_id=ids["binding"], version=1),
             lifecycle="succeeded",
             attempt_number=1,
-            execution_ref=f"deterministic:{token}",
+            execution_ref=getattr(output, "execution_ref", None) or f"deterministic:{token}",
             result_ref=RecordVersionRef(record_id=ids["message-assistant"], version=1),
             started_at=now,
             finished_at=now,
