@@ -21,7 +21,7 @@
 ## 后续切片
 
 - Durable Outbox 已按 ADR-0016 实现并合并；状态见 [Phase 4 Durable Outbox](phase4-outbox-status.md)。
-- Router/Policy Engine Adapter；
+- Router/Policy Engine Adapter 已按 ADR-0017 实现并合并；状态见 [Router/Policy](phase4-router-policy-status.md)。
 - Semantic Pulse；
 - 跨组件 Erasure、encrypted Backup 内容和真实外部 Provider；
 - cancelling/cancelled、高风险自动执行、Secret 读取。

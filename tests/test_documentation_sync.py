@@ -81,7 +81,7 @@ def test_phase4_router_policy_gate_precedes_implementation() -> None:
 
     assert "Accepted / Phase 4 Router/Policy 获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "已实现 / 等待合并" in status
+    assert "已实现 / 已合并" in status
     assert "PolicyDecision" in schema
     assert "BindingProposal" in schema
     assert "ADR-0017" in index
