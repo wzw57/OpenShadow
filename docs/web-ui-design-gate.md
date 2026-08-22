@@ -70,6 +70,7 @@ endpoint_ref  = endpoint-local-web
 ### 4.1 Conversation
 
 - `GET /v1/conversations` 返回 `{ "records": [...] }`；
+- `GET /v1/runtime` 返回不含 Secret 的 Runtime descriptor、target kind 和可选 health；
 - `POST /v1/conversations` 返回 `201` 和 `{ "record": ... }`；
 - `GET /v1/conversations/{id}/messages` 返回 `{ "records": [...] }`；
 - `POST /v1/conversations/{id}/turns` 要求 `Idempotency-Key`，成功首次提交返回
@@ -108,4 +109,4 @@ endpoint_ref  = endpoint-local-web
 - [x] API 状态码、错误体和 SSE 语义已冻结；
 - [x] Provider secret 不进入浏览器；
 - [x] 不提前实现 Memory、Action、Task、Tool bridge 或多用户认证；
-- [ ] 前端构建、API 集成和真实浏览器验收在实现分支完成。
+- [x] 前端构建、API 集成和真实浏览器验收在实现分支完成。

@@ -7,6 +7,7 @@ from typing import Annotated, Any
 
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from shadow_application import (
     ActionService,
@@ -216,6 +217,29 @@ def create_app(
             "durable": repository.available,
         }
         return JSONResponse(status_code=200 if repository.available else 503, content=body)
+
+    @app.get("/v1/runtime")
+    async def runtime_status() -> dict[str, Any]:
+        """Expose a non-secret runtime descriptor for local clients."""
+        descriptor = conversations.runtime_descriptor.model_dump(mode="json", exclude_none=True)
+        health_fn = getattr(conversations.runtime_adapter, "health", None)
+        status = "configured"
+        health: dict[str, Any] | None = None
+        if callable(health_fn):
+            try:
+                health = health_fn()
+                status = "healthy"
+            except ShadowDomainError as exc:
+                status = "unavailable"
+                health = {"error": exc.error.as_dict()}
+        return {
+            "runtime": {
+                "status": status,
+                "target_kind": conversations.runtime_target_kind,
+                "descriptor": descriptor,
+                "health": health,
+            }
+        }
 
     @app.post("/v1/conversations", status_code=status.HTTP_201_CREATED)
     async def create_conversation(
@@ -711,6 +735,10 @@ def create_app(
                 )
             )
         )
+
+    web_dist = root / "apps" / "shadow-web" / "dist"
+    if web_dist.is_dir():
+        app.mount("/ui", StaticFiles(directory=web_dist, html=True), name="web-ui")
 
     return app
 

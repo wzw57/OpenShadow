@@ -32,6 +32,35 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/runtime:
+    get:
+      operationId: runtimeStatus
+      description: Non-secret runtime descriptor and optional provider health for local clients.
+      responses:
+        "200":
+          description: Runtime status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runtime]
+                properties:
+                  runtime:
+                    type: object
+                    required: [status, target_kind, descriptor]
+                    properties:
+                      status:
+                        type: string
+                        enum: [configured, healthy, unavailable]
+                      target_kind:
+                        type: string
+                      descriptor:
+                        type: object
+                        additionalProperties: true
+                      health:
+                        type: object
+                        nullable: true
+                        additionalProperties: true
   /v1/conversations:
     post:
       operationId: createConversation
