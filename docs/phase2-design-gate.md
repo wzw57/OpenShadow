@@ -1,6 +1,6 @@
 # Phase 2 设计闸门：Memory 与 Capability Profiles
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 2 首个切片获准实现**
 
 本文件不启动 Phase 2 业务实现。只有在 Phase 0–1 合并、下列边界得到维护者接受，
 并补齐对应 Contract / fixture / migration 方案后，才允许新增 Phase 2 代码。
@@ -22,8 +22,9 @@
   immutable snapshot / pinned revision 和确定性 digest，不修改 `SKILL.md` 或 bundle。
 - Integration 与外部资产默认按需读取；派生索引可删除并从 Canonical 记录重建。
 
-以上方向与 [ADR-0005](adr/0005-phase2-memory-lifecycle.md) 一致；在维护者接受前，
-它们是设计提案，不代表已经开始实现。
+以上方向与 [ADR-0005](adr/0005-phase2-memory-lifecycle.md) 一致，已获维护者接受。
+本文件只授权首个 Memory 生命周期切片，不授权 Physical erase、Recall、Maintenance、
+SkillAsset、Integration 或 Portable Import/restore 实现。
 
 ## 首个切片的操作契约
 
