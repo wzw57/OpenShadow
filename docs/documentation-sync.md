@@ -12,6 +12,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | 当前交付状态 | `docs/phase*-status.md`、`docs/roadmap.md` | PR description、CI evidence；不得保留已合并分支作为当前状态 |
 | Fixture coverage | JSON Schema 与 fixture map | `tests/test_declared_contract_fixtures.py`、对应 Contract test |
 | 未授权范围 | Accepted design gate / ADR | 状态文档和 PR body；未获闸门不得实现 |
+| Web UI 参考客户端范围 | `docs/web-ui-design-gate.md`、ADR-0022 | `apps/shadow-web`、`/ui` 静态托管、Web UI 状态文档和浏览器验收 |
 
 ## Change protocol
 

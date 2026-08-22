@@ -14,6 +14,7 @@
 | Ollama/vLLM/llama.cpp 直连 Shadow | 尚未实现，也不作为本切片目标 |
 | Shadow 内部 Agent Loop | 明确不实现 |
 | Hermes Tool/Capability 映射 | 尚未实现；联调配置全部关闭工具 |
+| 单用户 Web UI Conversation Client | 已实现；通过 `/ui/` 使用 Shadow API |
 
 ## 当前边界
 
@@ -44,4 +45,5 @@ ADR 见 [ADR-0021](adr/0021-hermes-agent-runtime-adapter.md)。
 1. 补充 Hermes SSE / Run Events 和 Session resume 映射；
 2. 另立 Tool/Capability 设计闸门；
 3. 让 Shadow Action / Outbox 接管获准的副作用；
-4. 再考虑 Web UI 的 Runtime 状态和流式展示。
+4. Web UI 已提供 Runtime 状态和有限 Run event 展示；待 Runtime SSE/session 契约
+   稳定后再扩展 token 级流式展示。

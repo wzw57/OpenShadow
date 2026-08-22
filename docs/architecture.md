@@ -153,8 +153,9 @@ Hermes API Server
 DeepSeek API（deepseek-v4-flash）
 ```
 
-Web UI 尚未实现；Hermes 联调 profile 的工具集全部关闭。细粒度 SSE、Session
-resume 和经过 Shadow Capability/Action 治理的工具桥接属于后续切片。
+首版单用户 Web UI 已实现并由 FastAPI 在 `/ui/` 提供；Hermes 联调 profile 的工具集
+全部关闭。细粒度 SSE、Session resume 和经过 Shadow Capability/Action 治理的工具
+桥接属于后续切片。
 
 ## 4. Canonical Record 与 Profile
 
