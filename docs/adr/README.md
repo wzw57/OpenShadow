@@ -16,6 +16,7 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 - [ADR-0012：Phase 2 Physical erase 与 Tombstone 边界](0012-phase2-physical-erase-tombstone.md)
 - [ADR-0021：Hermes Agent Runtime Adapter](0021-hermes-agent-runtime-adapter.md)
 - [ADR-0022：Web UI 作为 Shadow API 参考客户端](0022-web-ui-reference-client.md)
+- [ADR-0023：Runtime Reliability 与 Durable Dispatch](0023-runtime-reliability-and-durable-dispatch.md)
 
 ## 待接受 ADR
 
