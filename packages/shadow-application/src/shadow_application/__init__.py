@@ -56,6 +56,7 @@ from .skillasset import (
     skill_bundle_digest,
     skill_bundle_manifest,
 )
+from .state import StateProposalCandidate, StateService, StateSourceAdapter
 
 __all__ = [
     "ConversationService",
@@ -103,5 +104,8 @@ __all__ = [
     "skill_asset_result_digest",
     "skill_bundle_digest",
     "skill_bundle_manifest",
+    "StateProposalCandidate",
+    "StateService",
+    "StateSourceAdapter",
     "TurnResult",
 ]

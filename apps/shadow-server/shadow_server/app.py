@@ -7,7 +7,7 @@ from typing import Annotated, Any
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from shadow_application import ConversationService, MemoryService
+from shadow_application import ConversationService, MemoryService, StateService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest
@@ -47,6 +47,23 @@ class MemoryCommand(BaseModel):
     source_dependency: str = "independent"
 
 
+class StateProposalCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    input_type: str = "shadow.state-proposal"
+    proposed_operation: str
+    target_ref: dict[str, Any] | None = None
+    expected_version: int | None = Field(default=None, ge=1)
+    state_key: str
+    value_schema_ref: str
+    proposed_value: Any = None
+    evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
+    source_refs: list[str] = Field(default_factory=list)
+    observed_at: str
+    expires_at: str
+    source_status: str = "available"
+    proposal_reason: str | None = None
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -83,10 +100,12 @@ def create_app(database_url: str | None = None) -> FastAPI:
     authority = CommitAuthority(repository, registry)
     conversations = ConversationService(repository, authority)
     memories = MemoryService(repository, authority, registry)
+    states = StateService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
     app.state.conversations = conversations
     app.state.memories = memories
+    app.state.states = states
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:
@@ -207,6 +226,86 @@ def create_app(database_url: str | None = None) -> FastAPI:
             source_dependency=command.source_dependency,
         )
         return {"record": memories.commit_correction(candidate, idempotency_key=idempotency_key)}
+
+    @app.get("/v1/states")
+    async def list_states(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        state_key: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return {
+            "records": states.list_states(
+                owner_ref=x_principal_ref, space_id=x_space_id, state_key=state_key, limit=limit
+            )
+        }
+
+    @app.get("/v1/states/{state_id}")
+    async def get_state(
+        state_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        record = states.get_state(
+            state_id, principal_ref=x_principal_ref, space_id=x_space_id
+        )
+        if record is None:
+            raise HTTPException(404, detail="State not found")
+        return {"record": record}
+
+    @app.post("/v1/proposals", status_code=status.HTTP_202_ACCEPTED)
+    async def submit_proposal(
+        command: StateProposalCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        if command.input_type != "shadow.state-proposal":
+            raise HTTPException(422, detail="Only StateProposal is supported in this slice")
+        target_state_id = None
+        if command.target_ref is not None:
+            target_state_id = command.target_ref.get("record_id")
+        candidate = states.propose(
+            submitted_by=x_principal_ref,
+            owner_ref=x_principal_ref,
+            space_id=x_space_id,
+            operation=command.proposed_operation,
+            state_key=command.state_key,
+            value_schema_ref=command.value_schema_ref,
+            proposed_value=command.proposed_value,
+            evidence_refs=command.evidence_refs,
+            source_refs=command.source_refs,
+            observed_at=command.observed_at,
+            expires_at=command.expires_at,
+            source_status=command.source_status,
+            target_state_id=target_state_id,
+            expected_version=command.expected_version,
+            proposal_reason=command.proposal_reason,
+        )
+        return {"record": states.submit_proposal(candidate, idempotency_key=idempotency_key)}
+
+    @app.get("/v1/proposals/{proposal_id}")
+    async def get_proposal(proposal_id: str) -> dict[str, Any]:
+        record = repository.get(proposal_id)
+        if record is None:
+            raise HTTPException(404, detail="Proposal not found")
+        return {"record": record}
+
+    @app.post("/v1/proposals/{proposal_id}/accept")
+    async def accept_proposal(
+        proposal_id: str,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        return states.accept_proposal(
+            proposal_id=proposal_id,
+            proposal_expected_version=expected_version,
+            principal_ref=x_principal_ref,
+            space_id=x_space_id,
+            idempotency_key=idempotency_key,
+        )
 
     @app.get("/v1/conversations")
     async def list_conversations(
