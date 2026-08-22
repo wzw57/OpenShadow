@@ -1,0 +1,14 @@
+{
+  "skill_id": "skill-minimal",
+  "format": "agent-skills",
+  "source_ref": "file:///skills/minimal",
+  "pinned_revision": "rev-1",
+  "bundle_digest": "sha256:430812684d7eb33aece994b0e15f407f28b16366a428b9d92c0467c7d1b7329d",
+  "trust": "trusted",
+  "permission_policy_ref": { "record_id": "policy-default", "version": 1 },
+  "data_classification": "personal",
+  "install_state": "discovered",
+  "runtime_projection_refs": [],
+  "provider_external_refs": [],
+  "capability_grant": "shadow.capability.shell"
+}
