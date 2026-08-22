@@ -26,9 +26,7 @@ function formatTime(value?: string): string {
 
 function runtimeLabel(runtime: RuntimeStatus | null): string {
   if (!runtime) return "Runtime unknown";
-  if (runtime.target_kind === "shadow.agent-runtime") return "Hermes Agent Runtime";
-  if (runtime.target_kind === "shadow.deterministic-runner") return "Deterministic Runtime";
-  return runtime.target_kind;
+  return `Runtime · ${runtime.target_kind}`;
 }
 
 function runLabel(run: Run | null): string {

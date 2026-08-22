@@ -56,8 +56,9 @@ Provider 结果 Commit 失败时，不得把请求返回为成功；持久化的
 
 ### 1.3 Hermes SSE / Run Events
 
-Hermes Adapter 继续是独立 `shadow.agent-runtime` 边界，不导入 Hermes 内部对象。
-首个可靠性实现只做：
+External Runtime Adapter 继续是独立 `shadow.agent-runtime` 边界，不导入任何 Runtime
+内部对象。Hermes 只是当前参考 Adapter，不进入 Reliability Core 或 Web UI。首个
+可靠性实现只做：
 
 - 将 Hermes Chat/Run 事件解析为 Shadow normalized event：cursor、event type、
   execution reference、session reference、usage、terminal state；

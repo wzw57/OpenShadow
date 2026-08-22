@@ -12,7 +12,7 @@
 | Turn 提交和幂等 | 已实现 |
 | Run 状态与有限 SSE | 已实现 |
 | Retry | 已实现 |
-| Hermes/Deterministic 状态提示 | 已实现 |
+| 通用 Runtime descriptor/status 提示 | 已实现 |
 | Runtime descriptor/status API | 已实现 |
 | FastAPI `/ui` 生产静态托管 | 已实现 |
 | 多用户认证和 ACL | 明确不在本切片 |

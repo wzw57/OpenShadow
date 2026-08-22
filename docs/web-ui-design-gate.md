@@ -51,6 +51,13 @@ Shadow FastAPI
 
 Web UI 不拥有数据库连接、CommitAuthority、Hermes 凭据或 Canonical record。
 
+### 2.1 Runtime vendor neutrality
+
+Web UI 只理解 `/v1/runtime` 的通用 `status`、`target_kind` 和 opaque `descriptor`。
+它不得根据 `target_kind`、`descriptor_id` 或环境变量推断 Hermes、Ollama、DeepSeek
+或其他 Vendor。Vendor 显示名、配置和健康语义属于 Adapter/Server composition
+boundary；替换 Runtime 不应修改 `apps/shadow-web`。
+
 ## 3. 单用户身份
 
 当前 profile 固定使用：
@@ -108,5 +115,6 @@ endpoint_ref  = endpoint-local-web
 - [x] 同源生产部署与 Vite 开发 proxy 已冻结；
 - [x] API 状态码、错误体和 SSE 语义已冻结；
 - [x] Provider secret 不进入浏览器；
+- [x] UI 不包含任何具体 Runtime/Model Vendor 分支；
 - [x] 不提前实现 Memory、Action、Task、Tool bridge 或多用户认证；
 - [x] 前端构建、API 集成和真实浏览器验收在实现分支完成。
