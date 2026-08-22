@@ -1,0 +1,8 @@
+{
+  "record_ref": {"record_id": "memory-001", "version": 1},
+  "owner_ref": "principal-test",
+  "space_id": "space-test",
+  "payload_digest": "sha256:payload",
+  "index_revision": "deterministic-v1",
+  "derived_fields": {"typed_content": {"text": "secret"}}
+}

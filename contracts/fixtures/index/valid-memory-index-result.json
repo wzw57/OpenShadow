@@ -1,0 +1,11 @@
+{
+  "result_state": "complete",
+  "snapshot_digest": "sha256:snapshot",
+  "index_snapshot_ref": {"record_id": "memory-index-001"},
+  "index_schema_ref": "https://schemas.openshadow.dev/index/memory/1.0.0",
+  "index_revision": "deterministic-v1",
+  "entry_count": 0,
+  "entry_digests": [],
+  "entries": [],
+  "published": true
+}
