@@ -1,0 +1,11 @@
+{
+  "result_state": "committed",
+  "source_event_ref": "calendar-event-invalid",
+  "targets": [
+    {
+      "record_ref": {"record_id": "memory-source-001", "version": 1},
+      "action": "reactivated",
+      "reason_code": "invalid"
+    }
+  ]
+}

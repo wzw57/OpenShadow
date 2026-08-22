@@ -552,6 +552,8 @@ class MemoryService:
         typed_payload: dict[str, Any],
         expected_version: int | None = None,
         record_state: str = "active",
+        origin_type: str = "shadow.origin.user-command",
+        origin_ref: str | None = None,
     ) -> CommitOperation:
         return CommitOperation(
             operation_id=operation_id,
@@ -564,7 +566,7 @@ class MemoryService:
             created_by=created_by,
             data_classification="personal",
             provenance=Provenance(
-                origin_type="shadow.origin.user-command", origin_ref=operation_id
+                origin_type=origin_type, origin_ref=origin_ref or operation_id
             ),
             retention_policy_ref=RETENTION_REF,
             record_state=record_state,

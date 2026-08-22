@@ -1,0 +1,14 @@
+{
+  "result_state": "committed",
+  "source_event_ref": "calendar-event-001",
+  "targets": [
+    {
+      "record_ref": {"record_id": "memory-source-001", "version": 1},
+      "action": "invalidated",
+      "previous_version": 1,
+      "resulting_version": 2,
+      "reason_code": "source-dependent"
+    }
+  ],
+  "commit_id": "commit-source-001"
+}
