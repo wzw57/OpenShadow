@@ -1,10 +1,10 @@
 # Phase 2 第二切片设计闸门：Memory Maintenance / Recall Adapter
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 2 第二切片获准实现**
 
-本文件只冻结 Memory Maintenance、Recall 和派生索引的最小 Adapter 边界，不启动业务
-代码实现。只有本闸门和 [ADR-0006](adr/0006-phase2-recall-maintenance.md) 被接受后，
-才能创建实现分支。
+本文件已获维护者接受，授权 Memory Maintenance、Recall 和派生索引的最小 Adapter
+边界进入实现。它不授权 source-driven invalidation、Physical erase、SkillAsset、
+Integration、Portable Import/restore 或公开 Recall/Maintenance HTTP API。
 
 ## 目标与范围
 
@@ -120,4 +120,4 @@ Recall 是只读请求，不产生 Canonical idempotency row。Maintenance 的 `
 - restart 后 Canonical Memory 仍是 Recall 的权威输入；
 - Contract / OpenAPI 无新增 public route，现有 documentation-sync 检查保持通过。
 
-维护者接受本闸门和 ADR 后，才进入代码、fixture 与 CI 实现阶段。
+维护者已接受本闸门和 ADR；实现必须继续遵守本文件的范围、同步测试和交付闸门。

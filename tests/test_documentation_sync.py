@@ -25,14 +25,14 @@ def test_phase2_status_and_adr_are_delivered() -> None:
     assert "phase2/memory-lifecycle` 分支实现" not in roadmap
 
 
-def test_next_phase2_slice_remains_design_only() -> None:
+def test_next_phase2_slice_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-recall-maintenance-design-gate.md")
     adr = _read("docs/adr/0006-phase2-recall-maintenance.md")
     status = _read("docs/phase2-memory-lifecycle-status.md")
 
-    assert "Proposed / 等待维护者接受" in gate
-    assert "- Status: Proposed" in adr
-    assert "当前为 Proposed；在维护者接受前不实现代码" in status
+    assert "Accepted / Phase 2 第二切片获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "当前为 Accepted；实现分支将从最新 `main` 创建" in status
     assert "不新增 HTTP 路由" in gate
     assert "不新增数据库表" in gate
 

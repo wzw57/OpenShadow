@@ -1,6 +1,6 @@
 # ADR-0006: Phase 2 第二切片的 Recall / Maintenance Adapter 边界
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-22
 - Owners: OpenShadow maintainers
 
@@ -29,11 +29,12 @@ Recall score、索引或智能整理结果提升为第二套权威状态，也�
 - Maintenance 的智能结果仍需经过现有 Profile、owner / space、CAS 和幂等边界；
 - 首个实现不能直接提供完整全文检索、embedding、graph 或跨组件清除能力。
 
-## Acceptance evidence required before implementation
+## Acceptance gate and implementation evidence
 
 - Recall query/result、Maintenance request/result 和 error fixtures；
 - active-head、deleted/superseded、owner / space、stale / unavailable 测试；
 - proposal expected-version 与 CommitAuthority 边界测试；
 - derived index snapshot / digest / rebuild 完整性测试；
 - restart 后 Canonical remains authoritative 测试；
-- maintainer 明确接受本 ADR 和设计闸门后，才创建 implementation branch。
+- 本 ADR 和设计闸门已获维护者接受；实现分支必须在此基础上创建，并补齐上述证据后
+  才能提交实现 PR。
