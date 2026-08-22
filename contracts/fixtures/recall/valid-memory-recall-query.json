@@ -1,0 +1,9 @@
+{
+  "principal_ref": "principal-test",
+  "space_id": "space-test",
+  "query_text": "alpha preference",
+  "memory_kinds": ["shadow.memory.preference"],
+  "limit": 10,
+  "consistency": "canonical",
+  "request_id": "recall-request-001"
+}

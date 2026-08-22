@@ -32,7 +32,7 @@ def test_next_phase2_slice_is_accepted_before_implementation() -> None:
 
     assert "Accepted / Phase 2 第二切片获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "当前为 Accepted；实现分支将从最新 `main` 创建" in status
+    assert "已 Accepted；实现范围和验收证据见" in status
     assert "不新增 HTTP 路由" in gate
     assert "不新增数据库表" in gate
 
@@ -57,6 +57,31 @@ def test_phase2_service_surface_is_documented() -> None:
         "logical_delete",
     ):
         assert documented_name in status
+
+
+def test_recall_maintenance_surface_is_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/recall.py")
+    status = _read("docs/phase2-recall-maintenance-status.md")
+
+    for symbol in (
+        "class MemoryRecallQuery",
+        "class MemoryRecallResult",
+        "class MemoryRecallService",
+        "class MemoryMaintenanceRequest",
+        "class MemoryMaintenanceResult",
+        "class MemoryMaintenanceService",
+    ):
+        assert symbol in source
+    for documented_name in (
+        "MemoryRecallQuery",
+        "MemoryRecallResult",
+        "MemoryRecallService",
+        "MemoryMaintenanceService",
+        "DeterministicMemoryRecallAdapter",
+        "DeterministicMemoryMaintenanceAdapter",
+    ):
+        assert documented_name in status
+    assert "不新增 HTTP 路由、数据库表" in status
 
 
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:

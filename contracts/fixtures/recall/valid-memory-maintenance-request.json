@@ -1,0 +1,8 @@
+{
+  "principal_ref": "principal-test",
+  "space_id": "space-test",
+  "request_id": "maintenance-request-001",
+  "targets": [{"record_id": "memory-001", "version": 1}],
+  "reason": "quality-review",
+  "budget_limit": 10
+}
