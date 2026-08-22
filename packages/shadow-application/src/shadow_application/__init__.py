@@ -7,6 +7,12 @@ from .index import (
     MemoryIndexRebuildResult,
     MemoryIndexRebuildService,
 )
+from .integration import (
+    IntegrationRegistrationRequest,
+    IntegrationRegistrationResult,
+    IntegrationService,
+    integration_result_digest,
+)
 from .invalidation import (
     MemorySourceInvalidationRequest,
     MemorySourceInvalidationResult,
@@ -39,6 +45,10 @@ from .skillasset import (
 
 __all__ = [
     "ConversationService",
+    "IntegrationRegistrationRequest",
+    "IntegrationRegistrationResult",
+    "IntegrationService",
+    "integration_result_digest",
     "MemoryCandidate",
     "MemoryIndexAdapter",
     "MemoryIndexBuildArtifact",
