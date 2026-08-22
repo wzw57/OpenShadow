@@ -72,6 +72,6 @@ Action 是 typed Profile，不进入 Tiny Kernel 永久 enum。Canonical record 
 
 ## 设计验收
 
-本闸门只提交文档、ADR、Schema、fixtures、OpenAPI contract 和 documentation-sync 测试；
-未创建 ActionService、Provider adapter、Action API runtime 或数据库迁移。设计接受后才创建
-`phase4/action-implementation` 分支。
+设计阶段只提交文档、ADR、Schema、fixtures、OpenAPI contract 和 documentation-sync 测试；
+设计接受后，`phase4/action-implementation` 分支实现本闸门授权的 Action 首片。Outbox、Router、
+Pulse、跨组件 Erasure 和 Backup 仍不得提前实现。

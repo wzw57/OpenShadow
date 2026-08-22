@@ -1,6 +1,6 @@
 # Phase 4 Action 首片状态
 
-状态：**设计闸门 Accepted；实现尚未开始**
+状态：**已实现 / 已合并前收口**
 
 ## 已接受
 
@@ -9,13 +9,14 @@
 - Action、ActionProposal、ApprovalProposal、ProviderResult、Reconciliation Contract
 - 通用 Proposal 写入边界和 Action 只读查询 Contract
 
-## 待实现
+## 已实现
 
 - `ActionService` 与 Commit/CAS 生命周期；
+- low-risk auto-approval、medium-risk approval-required、high-risk policy deny；
 - deterministic Provider Adapter；
-- Action Proposal/Approval/Result/Reconciliation fixtures 的运行时验证；
-- FastAPI Proposal dispatch 与 Action 查询；
-- Action lifecycle、unknown、restart、Store outage 和 replay 测试。
+- Action Proposal/Approval/Provider Result/Reconciliation fixtures 的运行时验证；
+- FastAPI Proposal dispatch 与 Owner/Space 隔离的 Action 查询；
+- Action lifecycle、unknown、restart、Store outage、boundary 和 replay 测试。
 
 ## 明确未实现
 

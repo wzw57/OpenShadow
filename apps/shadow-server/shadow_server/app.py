@@ -7,7 +7,13 @@ from typing import Annotated, Any
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from shadow_application import ConversationService, MemoryService, StateService, TaskService
+from shadow_application import (
+    ActionService,
+    ConversationService,
+    MemoryService,
+    StateService,
+    TaskService,
+)
 from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
@@ -96,6 +102,34 @@ class CompletionCommand(BaseModel):
     result_ref: dict[str, Any] | None = None
 
 
+class ActionProposalCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    input_type: str = "shadow.action-proposal"
+    proposed_operation: str = "create"
+    action_kind: str
+    target_ref: dict[str, Any]
+    typed_parameters: dict[str, Any]
+    data_classification: str
+    side_effect_level: str
+    required_capabilities: list[str] = Field(default_factory=list)
+    deadline: str
+    secret_refs: list[str] = Field(default_factory=list)
+    provider_target_kind: str | None = None
+    proposal_reason: str | None = None
+
+
+class ActionApprovalProposalCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    input_type: str = "shadow.action-approval-proposal"
+    proposed_operation: str
+    action_ref: dict[str, Any]
+    expected_version: int = Field(ge=1)
+    approver_ref: str
+    decision: str
+    evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
+    proposal_reason: str | None = None
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -135,6 +169,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     memories = MemoryService(repository, authority, registry)
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
+    actions = ActionService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
     app.state.conversations = conversations
@@ -142,6 +177,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.state.states = states
     app.state.tasks = tasks
     app.state.admission = admission
+    app.state.actions = actions
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:
@@ -291,7 +327,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     @app.post("/v1/proposals", status_code=status.HTTP_202_ACCEPTED)
     async def submit_proposal(
-        command: StateProposalCommand | TaskProposalCommand,
+        command: StateProposalCommand | TaskProposalCommand | ActionProposalCommand | ActionApprovalProposalCommand,
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
@@ -315,8 +351,41 @@ def create_app(database_url: str | None = None) -> FastAPI:
                 proposal_reason=command.proposal_reason,
             )
             return {"record": tasks.submit_proposal(candidate, idempotency_key=idempotency_key)}
+        if isinstance(command, ActionProposalCommand):
+            candidate = actions.propose_action(
+                submitted_by=x_principal_ref,
+                owner_ref=x_principal_ref,
+                space_id=x_space_id,
+                action_kind=command.action_kind,
+                target_ref=command.target_ref,
+                typed_parameters=command.typed_parameters,
+                data_classification=command.data_classification,
+                side_effect_level=command.side_effect_level,
+                required_capabilities=command.required_capabilities,
+                deadline=command.deadline,
+                secret_refs=command.secret_refs,
+                provider_target_kind=command.provider_target_kind,
+                proposal_reason=command.proposal_reason,
+            )
+            return {"record": actions.submit_proposal(candidate, idempotency_key=idempotency_key)}
+        if isinstance(command, ActionApprovalProposalCommand):
+            action_id = command.action_ref.get("record_id")
+            if not action_id:
+                raise HTTPException(422, detail="Action approval requires action_ref.record_id")
+            candidate = actions.propose_approval(
+                submitted_by=x_principal_ref,
+                owner_ref=x_principal_ref,
+                space_id=x_space_id,
+                action_id=action_id,
+                expected_version=command.expected_version,
+                approver_ref=command.approver_ref,
+                decision=command.decision,
+                evidence_refs=command.evidence_refs,
+                proposal_reason=command.proposal_reason,
+            )
+            return {"record": actions.submit_proposal(candidate, idempotency_key=idempotency_key)}
         if command.input_type != "shadow.state-proposal":
-            raise HTTPException(422, detail="Only StateProposal or Durable Task Proposal is supported")
+            raise HTTPException(422, detail="Unsupported Proposal type")
         target_state_id = None
         if command.target_ref is not None:
             target_state_id = command.target_ref.get("record_id")
@@ -366,6 +435,14 @@ def create_app(database_url: str | None = None) -> FastAPI:
                 space_id=x_space_id,
                 idempotency_key=idempotency_key,
             )
+        if proposal_type in {"shadow.action-proposal", "shadow.action-approval-proposal"}:
+            return actions.accept_proposal(
+                proposal_id=proposal_id,
+                proposal_expected_version=expected_version,
+                principal_ref=x_principal_ref,
+                space_id=x_space_id,
+                idempotency_key=idempotency_key,
+            )
         return states.accept_proposal(
             proposal_id=proposal_id,
             proposal_expected_version=expected_version,
@@ -373,6 +450,25 @@ def create_app(database_url: str | None = None) -> FastAPI:
             space_id=x_space_id,
             idempotency_key=idempotency_key,
         )
+
+    @app.get("/v1/actions")
+    async def list_actions(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return {"records": actions.list_actions(owner_ref=x_principal_ref, space_id=x_space_id, limit=limit)}
+
+    @app.get("/v1/actions/{action_id}")
+    async def get_action(
+        action_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        record = actions.get_action(action_id, x_principal_ref, x_space_id)
+        if record is None:
+            raise HTTPException(404, detail="Action not found")
+        return {"record": record}
 
     @app.get("/v1/tasks")
     async def list_tasks(

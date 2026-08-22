@@ -1,3 +1,4 @@
+from .action import ActionProposalCandidate, ActionProvider, ActionService
 from .continuity import (
     DeterministicClock,
     DeterministicMigrationAdapter,
@@ -68,6 +69,9 @@ from .task import TaskProposalCandidate, TaskService
 
 __all__ = [
     "ConversationService",
+    "ActionProposalCandidate",
+    "ActionProvider",
+    "ActionService",
     "DeterministicClock",
     "DeterministicMigrationAdapter",
     "DeterministicScheduleAdapter",

@@ -1,3 +1,4 @@
+from .action import DeterministicActionProvider
 from .deterministic import DeterministicTestAdapter, ExecutionResult
 from .erase import DeterministicErasureAdapter
 from .index import DeterministicMemoryIndexAdapter
@@ -12,4 +13,5 @@ __all__ = [
     "DeterministicTestAdapter",
     "ExecutionResult",
     "DeterministicStateSourceAdapter",
+    "DeterministicActionProvider",
 ]
