@@ -12,6 +12,8 @@ from sqlalchemy import DateTime, Integer, String, Text, create_engine, event, fu
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from .export import build_export_bundle
+
 
 class Base(DeclarativeBase):
     pass
@@ -148,6 +150,26 @@ class SqliteCanonicalRepository:
         if space_ids:
             records = [record for record in records if record["space_id"] in space_ids]
         return records[:limit]
+
+    def export_records(
+        self,
+        *,
+        owner_refs: set[str] | None = None,
+        space_ids: set[str] | None = None,
+        record_types: set[str] | None = None,
+        record_states: set[str] | None = None,
+    ) -> dict[str, Any]:
+        """Return a portable bundle of immutable records for an explicit export operation."""
+        if not self._available:
+            raise RepositoryUnavailable()
+        records = self.query(
+            owner_refs=owner_refs,
+            space_ids=space_ids,
+            record_types=record_types,
+            record_states=record_states or {"active", "logically_deleted", "erased"},
+            limit=1_000_000,
+        )
+        return build_export_bundle(records)
 
     def commit_batch(self, plan: CommitPlan) -> CommitBatchResult:
         if not self._available:
