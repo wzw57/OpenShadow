@@ -1,0 +1,11 @@
+{
+  "task_key": "task.plan-week",
+  "goal": "Prepare the weekly plan",
+  "completion_criteria": { "kind": "user-confirmed" },
+  "lifecycle": "active",
+  "run_refs": [],
+  "checkpoint_refs": [],
+  "artifact_refs": [],
+  "trigger_refs": [],
+  "deadline": "2099-08-23T00:00:00Z"
+}

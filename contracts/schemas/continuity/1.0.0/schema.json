@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/continuity/1.0.0",
+  "title": "OpenShadow Phase 3 Continuity Contracts",
+  "$defs": {
+    "Ref": {
+      "type": "object",
+      "required": ["record_id"],
+      "properties": {
+        "record_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "unevaluatedProperties": false
+    },
+    "TaskPayload": {
+      "type": "object",
+      "required": ["task_key", "goal", "completion_criteria", "lifecycle", "run_refs", "checkpoint_refs", "artifact_refs", "trigger_refs"],
+      "properties": {
+        "task_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "goal": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "completion_criteria": {},
+        "lifecycle": { "enum": ["proposed", "active", "waiting", "paused", "completion_pending", "completed", "failed", "cancelled"] },
+        "run_refs": { "type": "array", "items": { "$ref": "#/$defs/Ref" }, "uniqueItems": true },
+        "checkpoint_refs": { "type": "array", "items": { "$ref": "#/$defs/Ref" }, "uniqueItems": true },
+        "artifact_refs": { "type": "array", "items": { "$ref": "#/$defs/Ref" }, "uniqueItems": true },
+        "trigger_refs": { "type": "array", "items": { "$ref": "#/$defs/Ref" }, "uniqueItems": true },
+        "waiting_condition": {},
+        "deadline": { "type": ["string", "null"], "format": "date-time" },
+        "last_checkpoint_ref": { "$ref": "#/$defs/Ref" },
+        "completion_ref": { "$ref": "#/$defs/Ref" },
+        "resumed_from_checkpoint": { "type": "boolean" }
+      },
+      "unevaluatedProperties": false
+    },
+    "TaskProposalPayload": {
+      "type": "object",
+      "required": ["proposed_operation", "task_key", "goal", "completion_criteria"],
+      "properties": {
+        "proposed_operation": { "enum": ["create", "activate", "wait", "pause", "resume", "completion_pending", "complete", "fail", "cancel"] },
+        "target_ref": { "$ref": "#/$defs/Ref" },
+        "expected_version": { "type": "integer", "minimum": 1 },
+        "task_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "goal": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "completion_criteria": {},
+        "waiting_condition": {},
+        "deadline": { "type": ["string", "null"], "format": "date-time" },
+        "result_ref": { "$ref": "#/$defs/Ref" },
+        "failure_summary": {},
+        "proposal_reason": { "type": "string", "maxLength": 4000 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "proposed_operation": { "const": "create" } }, "required": ["proposed_operation"] },
+          "then": { "required": ["task_key", "goal", "completion_criteria"], "properties": { "target_ref": { "not": {} }, "expected_version": { "not": {} } } }
+        },
+        {
+          "if": { "properties": { "proposed_operation": { "enum": ["activate", "wait", "pause", "resume", "completion_pending", "complete", "fail", "cancel"] } }, "required": ["proposed_operation"] },
+          "then": { "required": ["target_ref", "expected_version"] }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "CheckpointPayload": {
+      "type": "object",
+      "required": ["task_ref", "checkpoint_kind", "checkpoint_digest", "runtime_target_kind", "runtime_capabilities", "artifact_refs", "created_at"],
+      "properties": {
+        "task_ref": { "$ref": "#/$defs/Ref" },
+        "checkpoint_kind": { "enum": ["semantic", "native", "handoff"] },
+        "checkpoint_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "runtime_target_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "runtime_capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "native_resume": { "type": "boolean", "default": false },
+        "artifact_refs": { "type": "array", "items": { "$ref": "#/$defs/Ref" }, "uniqueItems": true },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    },
+    "TriggerObservation": {
+      "type": "object",
+      "required": ["trigger_key", "observed_at", "source", "condition_met"],
+      "properties": {
+        "trigger_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "source": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "condition_met": { "type": "boolean" },
+        "payload": {}
+      },
+      "unevaluatedProperties": false
+    },
+    "IntegrityManifest": {
+      "type": "object",
+      "required": ["manifest_id", "schema_version", "owner_ref", "space_id", "record_digests", "manifest_digest"],
+      "properties": {
+        "manifest_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "schema_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "owner_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "record_digests": { "type": "array", "items": { "type": "object", "required": ["record_id", "version", "digest"], "properties": { "record_id": { "type": "string" }, "version": { "type": "integer", "minimum": 1 }, "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }, "unevaluatedProperties": false }, "uniqueItems": true },
+        "manifest_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

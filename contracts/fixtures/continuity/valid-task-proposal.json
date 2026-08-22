@@ -1,0 +1,6 @@
+{
+  "proposed_operation": "create",
+  "task_key": "task.plan-week",
+  "goal": "Prepare the weekly plan",
+  "completion_criteria": { "kind": "user-confirmed" }
+}

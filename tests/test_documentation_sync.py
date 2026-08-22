@@ -314,6 +314,23 @@ def test_phase3_state_implementation_surface_and_api_are_documented() -> None:
         assert path in _read("contracts/openapi/openapi.yaml")
 
 
+def test_phase3_completion_gate_is_accepted_before_remaining_implementation() -> None:
+    gate = _read("docs/phase3-completion-design-gate.md")
+    adr = _read("docs/adr/0014-phase3-continuity-completion.md")
+    status = _read("docs/phase3-completion-status.md")
+    schema = _read("contracts/schemas/continuity/1.0.0/schema.json")
+    index = _read("docs/adr/README.md")
+
+    assert "Accepted / Phase 3 全部剩余切片获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "剩余实现进行中" in status
+    assert "TaskPayload" in schema
+    assert "CheckpointPayload" in schema
+    assert "IntegrityManifest" in schema
+    assert "ADR-0014" in index
+    assert "不新增数据库表" in gate
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")
