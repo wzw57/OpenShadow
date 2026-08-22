@@ -1,6 +1,6 @@
 # ADR-0017：Phase 4 Deterministic Policy 与 Router Proposal 边界
 
-- Status: Proposed
+- Status: Accepted
 - Scope: Phase 4 Router / Policy 设计闸门
 - Date: 2026-08-22
 

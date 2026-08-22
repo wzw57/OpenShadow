@@ -1,9 +1,9 @@
 # Phase 4 Router / Policy 设计闸门
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 4 Router/Policy 获准实现**
 
-本闸门是 Phase 4 的第三个独立切片。它只冻结确定性 Policy Decision 和 Router
-BindingProposal 的最小契约；不授权实现复杂 Policy Language、自动高风险 Action、真实
+本闸门是 Phase 4 的第三个独立切片。它已冻结确定性 Policy Decision 和 Router
+BindingProposal 的最小契约并获准实现；不授权实现复杂 Policy Language、自动高风险 Action、真实
 Router/Provider 或公开 HTTP 路由。Action 与 Durable Outbox 已合并；Semantic Pulse、
 跨组件 Erasure 和 Backup 继续保留为后续独立闸门。
 
@@ -51,7 +51,7 @@ Policy/Router unavailable 时不得伪造允许、Binding 或执行成功；Core
 
 ## 评审与实现闸门
 
-设计阶段只提交本文件、[ADR-0017](adr/0017-phase4-router-policy.md)、Schema、fixtures、
-documentation-sync 和必要的静态契约测试。维护者接受后才创建
-`phase4/router-policy-implementation` 分支；实现必须继续复用现有 Binding/Commit 原语，
+实现必须限定在本文件、[ADR-0017](adr/0017-phase4-router-policy.md)、Schema、fixtures、
+documentation-sync 和必要的静态契约测试授权的边界内；`phase4/router-policy-implementation`
+分支继续复用现有 Binding/Commit 原语，
 并通过全量 pytest、Ruff、Alembic upgrade/downgrade 与 `git diff --check`。

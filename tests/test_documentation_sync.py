@@ -79,17 +79,34 @@ def test_phase4_router_policy_gate_precedes_implementation() -> None:
     index = _read("docs/adr/README.md")
     sync = _read("docs/documentation-sync.md")
 
-    assert "Proposed / 等待维护者接受" in gate
-    assert "- Status: Proposed" in adr
-    assert "设计闸门 Proposed，尚未实现" in status
+    assert "Accepted / Phase 4 Router/Policy 获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "已实现 / 等待合并" in status
     assert "PolicyDecision" in schema
     assert "BindingProposal" in schema
     assert "ADR-0017" in index
     assert "phase4-router-policy-design-gate.md" in sync
     assert "不能签发 Capability" in gate
     assert "`target_kind` 保持 namespaced" in gate
-    assert "禁止创建" in status
-    assert "`PolicyService`" in status
+    assert "RoutingPolicyService" in status
+
+
+def test_phase4_router_policy_implementation_surface_is_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/routing.py")
+    adapter = _read("adapters/test-deterministic/src/shadow_adapters/routing.py")
+    status = _read("docs/phase4-router-policy-status.md")
+    for symbol in (
+        "class PolicyDecisionResult",
+        "class BindingProposalResult",
+        "class RoutingPolicyService",
+        "def evaluate_policy",
+        "def propose_binding",
+        "def accept_binding",
+    ):
+        assert symbol in source
+    assert "class DeterministicPolicyEngine" in adapter
+    assert "class DeterministicRouterAdapter" in adapter
+    assert "AdapterRegistry" in status
 
 
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
