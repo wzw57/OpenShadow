@@ -11,6 +11,7 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 
 - [ADR-0005：Phase 2 首个切片的 Memory 生命周期边界](0005-phase2-memory-lifecycle.md)
 - [ADR-0009：Phase 2 SkillAsset sidecar 注册边界](0009-phase2-skillasset-sidecar.md)
+- [ADR-0010：Phase 2 Integration Profile 注册边界](0010-phase2-integration-profile.md)
 
 ## 待接受 ADR
 
