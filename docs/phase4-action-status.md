@@ -18,9 +18,9 @@
 - FastAPI Proposal dispatch 与 Owner/Space 隔离的 Action 查询；
 - Action lifecycle、unknown、restart、Store outage、boundary 和 replay 测试。
 
-## 明确未实现
+## 后续切片
 
-- Durable Outbox；
+- Durable Outbox 已按 ADR-0016 实现并合并；状态见 [Phase 4 Durable Outbox](phase4-outbox-status.md)。
 - Router/Policy Engine Adapter；
 - Semantic Pulse；
 - 跨组件 Erasure、encrypted Backup 内容和真实外部 Provider；
