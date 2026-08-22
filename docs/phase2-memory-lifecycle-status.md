@@ -51,4 +51,4 @@ Memory Maintenance / Recall 与 Derived index rebuild 已分别完成设计闸�
 [第四切片设计闸门](phase2-source-invalidation-design-gate.md)，已 Accepted；实现范围和验收
 证据见 [第四切片状态](phase2-source-invalidation-status.md)。
 SkillAsset、Integration、Portable Import/restore 已分别通过设计闸门并合并实现；Physical
-erase 仍必须先维护设计稿并经维护者接受。
+erase 已按 ADR-0012 接受设计，进入最后实现闸门。
