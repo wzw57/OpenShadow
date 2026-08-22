@@ -214,6 +214,13 @@ flowchart LR
 - Migration / Integrity Store Capabilities；
 - 受限 OperationJob：export / import / migration。
 
+### 当前交付切片
+
+Phase 3 首个 State Profile 生命周期切片已按 ADR-0013 实现并合并到 `main`，覆盖
+State/Observation/StateProposal Contract、TTL/freshness、source unavailable、
+Proposal/Commit、State 查询和确定性 Source Adapter。Durable Task、Checkpoint/Handoff、
+Schedule/Clock、Migration/Integrity 和真实 Integration 联动仍需后续独立设计闸门。
+
 ### 保留但不提前实现
 
 - 复杂 Task Graph；
