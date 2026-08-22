@@ -272,13 +272,46 @@ def test_phase3_state_design_gate_and_contract_are_synchronized() -> None:
 
     assert "Accepted / Phase 3 首个 State 切片获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "实现尚未开始" in status
+    assert "已实现 / 已合并前收口" in status
     assert "shadow.profile.state" in gate
     assert "StateProposalPayload" in schema
     assert "/v1/states" in openapi
     assert "POST /v1/proposals" in gate
     assert "ADR-0013" in roadmap
     assert "不新增数据库表" in gate
+
+
+def test_phase3_state_implementation_surface_and_api_are_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/state.py")
+    adapter = _read("adapters/test-deterministic/src/shadow_adapters/state.py")
+    status = _read("docs/phase3-state-profile-status.md")
+    app_source = _read("apps/shadow-server/shadow_server/app.py")
+
+    for symbol in (
+        "class StateService",
+        "class StateProposalCandidate",
+        "def propose(",
+        "def submit_proposal(",
+        "def accept_proposal(",
+        "def list_states(",
+        "def get_state(",
+        "compute_freshness",
+    ):
+        assert symbol in source
+    assert "class DeterministicStateSourceAdapter" in adapter
+    assert "已实现 / 已合并" in status
+    assert '"/v1/states"' in app_source
+    assert '"/v1/proposals"' in app_source
+    runtime_schema = create_app("sqlite://").openapi()
+    for path, method in (
+        ("/v1/states", "get"),
+        ("/v1/states/{state_id}", "get"),
+        ("/v1/proposals", "post"),
+        ("/v1/proposals/{proposal_id}/accept", "post"),
+    ):
+        assert path in runtime_schema["paths"]
+        assert method in runtime_schema["paths"][path]
+        assert path in _read("contracts/openapi/openapi.yaml")
 
 
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:

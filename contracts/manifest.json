@@ -44,7 +44,7 @@
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/state/1.0.0",
       "path": "schemas/state/1.0.0/schema.json",
-      "sha256": "b7d36f22e9d6d6dd8bc188aea3bc339028b2774596bdc6c9d6855f514eb0955f"
+      "sha256": "94c11d2c93d9a379370a24f0780c7b1c8600cb51cba839dd91391b3767e04e5a"
     }
   ]
 }

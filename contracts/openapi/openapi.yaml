@@ -457,6 +457,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
       responses:
         "200":
           description: Proposal decision and resulting record references
