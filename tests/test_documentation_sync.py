@@ -126,6 +126,21 @@ def test_source_invalidation_gate_and_status_are_documented() -> None:
     assert "class MemorySourceInvalidationService" in application_source
 
 
+def test_skillasset_gate_and_adr_are_accepted_before_implementation() -> None:
+    gate = _read("docs/phase2-skillasset-design-gate.md")
+    adr = _read("docs/adr/0009-phase2-skillasset-sidecar.md")
+    index = _read("docs/adr/README.md")
+    roadmap = _read("docs/roadmap.md")
+
+    assert "Accepted / Phase 2 第五切片获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "shadow.profile.skill-asset" in gate
+    assert "shadow.skill-bundle-digest.v1" in gate
+    assert "不新增" in gate
+    assert "ADR-0009" in index
+    assert "SkillAsset sidecar 第五切片已按" in roadmap
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")
