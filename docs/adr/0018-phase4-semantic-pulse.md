@@ -1,6 +1,6 @@
 # ADR-0018：Phase 4 Semantic Pulse Proposal Producer 边界
 
-- Status: Proposed
+- Status: Accepted
 - Scope: Phase 4 Semantic Pulse 设计闸门
 - Date: 2026-08-22
 

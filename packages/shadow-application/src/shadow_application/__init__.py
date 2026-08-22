@@ -43,6 +43,7 @@ from .portable_import import (
     PortableImportService,
     portable_import_result_digest,
 )
+from .pulse import PulseProposalResult, SemanticPulseService
 from .recall import (
     MemoryMaintenanceAdapter,
     MemoryMaintenanceRequest,
@@ -105,6 +106,8 @@ __all__ = [
     "BindingProposalResult",
     "PolicyDecisionResult",
     "RoutingPolicyService",
+    "PulseProposalResult",
+    "SemanticPulseService",
     "MemorySnapshot",
     "MemorySourceInvalidationRequest",
     "MemorySourceInvalidationResult",

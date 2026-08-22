@@ -1,8 +1,8 @@
 # Phase 4 Semantic Pulse 设计闸门
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 4 Semantic Pulse 获准实现**
 
-本闸门是 Phase 4 的第四个独立切片。Semantic Pulse 是可替换、可关闭的 Proposal producer，
+本闸门是 Phase 4 的第四个独立切片，已获准实现。Semantic Pulse 是可替换、可关闭的 Proposal producer，
 只产生 Trigger、Observation 或 Proposal；它不是系统健康、TTL、Lease、Timeout、恢复或
 正确性依赖，也不是通用后台 Job/Queue。
 
@@ -40,7 +40,7 @@
 
 ## 评审与实现闸门
 
-设计阶段只提交本文件、[ADR-0018](adr/0018-phase4-semantic-pulse.md)、Schema、fixtures、
-documentation-sync 和静态契约测试。维护者接受后才创建
-`phase4/semantic-pulse-implementation` 分支；实现必须复用 Admission/Proposal boundary，
+实现必须限定在本文件、[ADR-0018](adr/0018-phase4-semantic-pulse.md)、Schema、fixtures、
+documentation-sync 和静态契约测试授权的边界内；`phase4/semantic-pulse-implementation`
+分支复用 Admission/Proposal boundary，
 并通过全量 pytest、Ruff、Alembic upgrade/downgrade 和 `git diff --check`。
