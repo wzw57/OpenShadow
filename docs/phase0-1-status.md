@@ -46,10 +46,10 @@ Contract；Phase 2–5 的设计仍以[分阶段实现计划](implementation-sta
 | Store unavailable / explicit degradation | 已实现 | `test_store_outage_does_not_claim_durable_success`、Admission outage test |
 | Alembic migration / rollback | 已实现 | CI isolated SQLite migration step |
 
-OpenAPI 中的 Memory correction/delete、Proposal decision、Portable Import/restore、
-Backup、Outbox 和 Erasure Job 是已接受 Contract 的后续能力；它们在本阶段保持
-Contract-only，不新增空实现。Export 目前仅作为 Store Adapter fixture，不提供公开
-HTTP Export API。
+OpenAPI 中的 Memory correction/delete 已在 Phase 2 首个切片获准并进入独立实现分支；
+Proposal decision、Portable Import/restore、Backup、Outbox 和 Erasure Job 仍是后续
+Contract-only 能力。本阶段的 Export 仍仅作为 Store Adapter fixture，不提供公开 HTTP
+Export API。
 
 ## 当前明确不在实现范围
 
@@ -84,8 +84,10 @@ uvicorn shadow_server.app:app --reload
 
 ## 下一步闸门
 
-Phase 0–1 继续开发前，新增实现必须保持：所有 Canonical write 经过 Commit、所有
-work-bearing input 经过 Admission、Adapter 不能直接写 Store、Store 故障不伪造持久成功。
-Alembic migration / rollback、restart recovery、retry → Attempt 与 Export fixture 的 Phase 0–1 基线已具备；
-在进入 Phase 2 前，还需补齐 portable Import / restore 的写入边界与完整性证据。在这些证据具备前，
-Phase 2–5 只维护文档。
+后续实现必须保持：所有 Canonical write 经过 Commit、所有 work-bearing input 经过
+Admission、Adapter 不能直接写 Store、Store 故障不伪造持久成功。Alembic migration /
+rollback、restart recovery、retry → Attempt 与 Export fixture 的 Phase 0–1 基线已具备；
+Phase 2 首个 Memory 生命周期切片的状态见
+[phase2-memory-lifecycle-status.md](phase2-memory-lifecycle-status.md)。Portable Import /
+restore、Recall、Maintenance、SkillAsset、Integration 和 Erasure 仍须各自完成设计闸门
+后才能实现。

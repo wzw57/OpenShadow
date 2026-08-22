@@ -9,8 +9,6 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 - [ADR-0003：Tiny Kernel、Typed Profile 与 Capability-first Extension](0003-tiny-core-and-typed-profiles.md)
 - [ADR-0004：Agent Skills 原生兼容与 Shadow SkillAsset 治理](0004-agent-skills-compatibility.md)
 
-## 待接受 ADR
-
 - [ADR-0005：Phase 2 首个切片的 Memory 生命周期边界](0005-phase2-memory-lifecycle.md)
 
 ## ADR 格式

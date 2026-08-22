@@ -163,6 +163,51 @@ def create_app(database_url: str | None = None) -> FastAPI:
             raise HTTPException(404, detail="Memory not found")
         return {"record": record}
 
+    @app.delete("/v1/memories/{memory_id}", status_code=status.HTTP_202_ACCEPTED)
+    async def delete_memory(
+        memory_id: str,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header()],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        principal_ref = x_principal_ref
+        return {
+            "record": memories.logical_delete(
+                memory_id=memory_id,
+                expected_version=expected_version,
+                submitted_by=principal_ref,
+                owner_ref=principal_ref,
+                space_id=x_space_id,
+                idempotency_key=idempotency_key,
+            )
+        }
+
+    @app.post("/v1/memories/{memory_id}/corrections", status_code=status.HTTP_200_OK)
+    async def correct_memory(
+        memory_id: str,
+        command: MemoryCommand,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header()],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        principal_ref = x_principal_ref
+        candidate = memories.propose_correction(
+            submitted_by=principal_ref,
+            owner_ref=principal_ref,
+            space_id=x_space_id,
+            memory_id=memory_id,
+            expected_version=expected_version,
+            memory_kind=command.memory_kind,
+            content_schema_ref=command.content_schema_ref,
+            typed_content=command.typed_content,
+            applicability_scope=command.applicability_scope,
+            evidence_refs=command.evidence_refs,
+            source_dependency=command.source_dependency,
+        )
+        return {"record": memories.commit_correction(candidate, idempotency_key=idempotency_key)}
+
     @app.get("/v1/conversations")
     async def list_conversations(
         x_principal_ref: Annotated[str | None, Header()] = None,

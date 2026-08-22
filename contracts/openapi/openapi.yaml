@@ -301,15 +301,23 @@ paths:
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
       responses:
         "202":
-          description: Logical deletion committed or erasure workflow accepted
+          description: Logical deletion committed as a new Canonical version
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/CanonicalRecordResponse"
         "409":
           $ref: "#/components/responses/Conflict"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/memories/{memory_id}/corrections:
     parameters:
       - $ref: "#/components/parameters/MemoryId"
@@ -318,6 +326,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
       requestBody:
         required: true
         content:
@@ -333,6 +343,12 @@ paths:
                 $ref: "#/components/schemas/CanonicalRecordResponse"
         "409":
           $ref: "#/components/responses/Conflict"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/proposals:
     get:
       operationId: listProposals
@@ -409,13 +425,29 @@ components:
         minLength: 1
         maxLength: 255
     ExpectedVersion:
-      name: If-Match
+      name: Expected-Version
       in: header
       required: true
-      description: Quoted positive Canonical version, for example "3".
+      description: Positive Canonical version, for example 3.
+      schema:
+        type: integer
+        minimum: 1
+    PrincipalRef:
+      name: X-Principal-Ref
+      in: header
+      required: true
       schema:
         type: string
-        pattern: '^"[1-9][0-9]*"$'
+        minLength: 1
+        maxLength: 255
+    SpaceId:
+      name: X-Space-Id
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
     Cursor:
       name: cursor
       in: query

@@ -154,8 +154,10 @@ Stage 5 不是重新设计完整架构，而是按[分阶段实现计划](implem
 `stage5/phase0-1-implementation` 分支实现并通过本地 Contract / Repository / API
 测试。已覆盖 Kernel Port、SQLite Store Adapter、Commit / Admission、Binding、
 Deterministic Adapter、Conversation / Message、Run / Attempt、SSE、幂等重放与 Store
-不可用路径，以及最小 Memory Candidate → Commit。Phase 2–5 继续只维护已接受的
-Contract 与退出条件，暂不实现业务能力。
+不可用路径，以及最小 Memory Candidate → Commit。未获单独闸门授权的 Phase 2–5 能力继续
+只维护已接受的 Contract 与退出条件，暂不实现未授权业务能力。Phase 2 首个 Memory 生命周期切片已获
+ADR-0005 接受，当前在 `phase2/memory-lifecycle` 分支实现 correction、merge（Service /
+Contract only）和 logical delete；详见 [Phase 2 状态](phase2-memory-lifecycle-status.md)。
 
 ## 延后实现与重新评估
 
