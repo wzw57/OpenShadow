@@ -48,6 +48,12 @@ FIXTURE_SCHEMA_REFS = {
     "continuity/valid-task-proposal.json": "continuity#/$defs/TaskProposalPayload",
     "continuity/valid-task.json": "continuity#/$defs/TaskPayload",
     "continuity/valid-trigger-observation.json": "continuity#/$defs/TriggerObservation",
+    "action/invalid-approval-decision.json": "action#/$defs/ApprovalProposalPayload",
+    "action/invalid-inline-secret.json": "action#/$defs/ActionProposalPayload",
+    "action/valid-action-proposal.json": "action#/$defs/ActionProposalPayload",
+    "action/valid-approval-proposal.json": "action#/$defs/ApprovalProposalPayload",
+    "action/valid-provider-result.json": "action#/$defs/ProviderResultPayload",
+    "action/valid-reconciliation.json": "action#/$defs/ReconciliationPayload",
 }
 
 
@@ -70,6 +76,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "profiles/invalid",
             "state/invalid",
             "continuity/invalid",
+            "action/invalid",
             "repository/invalid",
         )
     )

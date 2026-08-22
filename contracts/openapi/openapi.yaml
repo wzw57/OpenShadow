@@ -490,6 +490,43 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/actions:
+    get:
+      operationId: listActions
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Action heads isolated by Owner and Space
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/actions/{action_id}:
+    parameters:
+      - $ref: "#/components/parameters/ActionId"
+    get:
+      operationId: getAction
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      responses:
+        "200":
+          description: Action head
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/proposals:
     get:
       operationId: listProposals
@@ -517,6 +554,8 @@ paths:
               oneOf:
                 - $ref: "#/components/schemas/StateProposalCommand"
                 - $ref: "#/components/schemas/TaskProposalCommand"
+                - $ref: "#/components/schemas/ActionProposalCommand"
+                - $ref: "#/components/schemas/ActionApprovalProposalCommand"
       responses:
         "202":
           description: State Proposal accepted for explicit Commit decision
@@ -684,6 +723,12 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/StableId"
+    ActionId:
+      name: action_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
   schemas:
     StableId:
       $ref: "../schemas/common/1.0.0/schema.json#/$defs/StableId"
@@ -828,6 +873,74 @@ components:
         result_ref:
           $ref: "#/components/schemas/StableRecordRef"
         failure_summary: {}
+        proposal_reason:
+          type: string
+          maxLength: 4000
+      unevaluatedProperties: false
+    ActionProposalCommand:
+      type: object
+      required: [input_type, proposed_operation, action_kind, target_ref, typed_parameters, data_classification, side_effect_level, required_capabilities, deadline, secret_refs]
+      properties:
+        input_type:
+          type: string
+          const: shadow.action-proposal
+        proposed_operation:
+          type: string
+          const: create
+        action_kind:
+          type: string
+          minLength: 1
+          maxLength: 255
+        target_ref:
+          $ref: "#/components/schemas/StableRecordRef"
+        typed_parameters:
+          type: object
+        data_classification:
+          enum: [public, personal, sensitive]
+        side_effect_level:
+          enum: [none, low, medium, high]
+        required_capabilities:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        deadline:
+          type: string
+          format: date-time
+        secret_refs:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        provider_target_kind:
+          type: string
+        proposal_reason:
+          type: string
+          maxLength: 4000
+      unevaluatedProperties: false
+    ActionApprovalProposalCommand:
+      type: object
+      required: [input_type, proposed_operation, action_ref, expected_version, approver_ref, decision, evidence_refs]
+      properties:
+        input_type:
+          type: string
+          const: shadow.action-approval-proposal
+        proposed_operation:
+          enum: [approve, reject]
+        action_ref:
+          $ref: "#/components/schemas/StableRecordRef"
+        expected_version:
+          type: integer
+          minimum: 1
+        approver_ref:
+          type: string
+          minLength: 1
+        decision:
+          enum: [approved, rejected]
+        evidence_refs:
+          type: array
+          items:
+            $ref: "#/components/schemas/StableRecordRef"
         proposal_reason:
           type: string
           maxLength: 4000

@@ -1,0 +1,9 @@
+{
+  "action_ref": { "record_id": "action-1" },
+  "expected_version": 3,
+  "outcome": "unknown",
+  "external_ref": "provider-operation-1",
+  "unknown_reason": "Transport failure after dispatch",
+  "observed_at": "2026-08-22T08:00:00Z",
+  "provider_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}

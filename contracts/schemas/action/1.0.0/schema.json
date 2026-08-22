@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/action/1.0.0",
+  "title": "OpenShadow Action Profile Contracts",
+  "$defs": {
+    "TargetRef": {
+      "type": "object",
+      "required": ["record_id"],
+      "properties": {
+        "record_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "resource_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "resource_ref": { "type": "string", "minLength": 1, "maxLength": 2000 }
+      },
+      "unevaluatedProperties": false
+    },
+    "ActionPayload": {
+      "type": "object",
+      "required": [
+        "action_kind", "target_ref", "typed_parameters", "data_classification",
+        "side_effect_level", "required_capabilities", "deadline", "secret_refs",
+        "lifecycle", "idempotency_key"
+      ],
+      "properties": {
+        "action_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "target_ref": { "$ref": "#/$defs/TargetRef" },
+        "typed_parameters": { "type": "object" },
+        "data_classification": { "enum": ["public", "personal", "sensitive"] },
+        "side_effect_level": { "enum": ["none", "low", "medium"] },
+        "required_capabilities": {
+          "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "uniqueItems": true
+        },
+        "deadline": { "type": "string", "format": "date-time" },
+        "secret_refs": {
+          "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "uniqueItems": true
+        },
+        "lifecycle": {
+          "enum": ["pending", "approval_required", "approved", "executing", "succeeded", "failed", "unknown"]
+        },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "policy_decision": { "enum": ["auto_approved", "approval_required", "denied"] },
+        "approval_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "provider_target_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "external_ref": { "type": "string", "maxLength": 2000 },
+        "failure_summary": { "type": "object" },
+        "unknown_reason": { "type": "string", "maxLength": 4000 },
+        "reconciliation_refs": {
+          "type": "array",
+          "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+          "uniqueItems": true
+        }
+      },
+      "not": { "anyOf": [{ "required": ["script"] }, { "required": ["secret_values"] }] },
+      "unevaluatedProperties": false
+    },
+    "ActionProposalPayload": {
+      "type": "object",
+      "required": [
+        "proposed_operation", "action_kind", "target_ref", "typed_parameters",
+        "data_classification", "side_effect_level", "required_capabilities", "deadline", "secret_refs"
+      ],
+      "properties": {
+        "proposed_operation": { "const": "create" },
+        "action_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "target_ref": { "$ref": "#/$defs/TargetRef" },
+        "typed_parameters": { "type": "object" },
+        "data_classification": { "enum": ["public", "personal", "sensitive"] },
+        "side_effect_level": { "enum": ["none", "low", "medium", "high"] },
+        "required_capabilities": {
+          "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "uniqueItems": true
+        },
+        "deadline": { "type": "string", "format": "date-time" },
+        "secret_refs": {
+          "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "uniqueItems": true
+        },
+        "provider_target_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "proposal_reason": { "type": "string", "maxLength": 4000 }
+      },
+      "not": { "anyOf": [{ "required": ["script"] }, { "required": ["secret_values"] }] },
+      "unevaluatedProperties": false
+    },
+    "ApprovalProposalPayload": {
+      "type": "object",
+      "required": ["proposed_operation", "action_ref", "expected_version", "approver_ref", "decision", "evidence_refs"],
+      "properties": {
+        "proposed_operation": { "enum": ["approve", "reject"] },
+        "action_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "expected_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "approver_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "decision": { "enum": ["approved", "rejected"] },
+        "evidence_refs": {
+          "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+          "uniqueItems": true
+        },
+        "proposal_reason": { "type": "string", "maxLength": 4000 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "proposed_operation": { "const": "approve" } }, "required": ["proposed_operation"] },
+          "then": { "properties": { "decision": { "const": "approved" } } }
+        },
+        {
+          "if": { "properties": { "proposed_operation": { "const": "reject" } }, "required": ["proposed_operation"] },
+          "then": { "properties": { "decision": { "const": "rejected" } } }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "ProviderResultPayload": {
+      "type": "object",
+      "required": ["action_ref", "expected_version", "outcome", "observed_at"],
+      "properties": {
+        "action_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "expected_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "outcome": { "enum": ["succeeded", "failed", "unknown"] },
+        "external_ref": { "type": "string", "maxLength": 2000 },
+        "failure_summary": { "type": "object" },
+        "unknown_reason": { "type": "string", "maxLength": 4000 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "provider_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      },
+      "unevaluatedProperties": false
+    },
+    "ReconciliationPayload": {
+      "type": "object",
+      "required": ["action_ref", "expected_version", "outcome", "evidence_refs", "observed_at"],
+      "properties": {
+        "action_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+        "expected_version": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/Version" },
+        "outcome": { "enum": ["succeeded", "failed", "unknown"] },
+        "evidence_refs": {
+          "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" },
+          "minItems": 1, "uniqueItems": true
+        },
+        "external_ref": { "type": "string", "maxLength": 2000 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string", "maxLength": 4000 }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

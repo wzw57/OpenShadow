@@ -172,6 +172,16 @@ ADR-0014：Phase 3 Continuity 与 State Profile 完成边界。
 74. Schedule/Clock/Resolver 只能产生 Observation/Trigger/Proposal，State condition 必须重新进入 Admission。
 75. Migration/Integrity 是窄 Store capability，复用 Portable Export/Import，不引入通用 Job、Queue 或 Outbox。
 
+### Phase 4 Action Lifecycle
+
+ADR-0015：Phase 4 Action 生命周期与副作用安全边界。
+
+76. Action 使用独立 typed Profile，Proposal、Approval、Result 和 Reconciliation 复用 Canonical Commit。
+77. Action Proposal/Approval 复用通用 Proposal API，不新增 Action 创建路由或 Proposal 表。
+78. Provider 调用前必须持久化 executing；Provider 不能直接 Commit。
+79. low-risk 自动批准、medium-risk 需要 Approval、high-risk 确定性拒绝；unknown 必须 reconciliation，不能盲目 retry。
+80. 首片不实现 Outbox、Router、Semantic Pulse、跨组件 Erasure、Backup、真实 Provider 或 Secret 读取。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

@@ -174,6 +174,9 @@ Phase 3 首个 State Profile 切片已按 ADR-0013 完成设计闸门接受并�
 和其他 Phase 3 能力仍未授权实现。
 Phase 3 完成闸门已按 ADR-0014 接受，连续性、Schedule/Clock 和 Migration/Integrity
 切片已实现并合并，详见 [Phase 3 完成状态](phase3-completion-status.md)。
+Phase 4 已建立并接受总体设计闸门与 ADR-0015，当前仅授权 Action 生命周期首片设计后的实现；
+Outbox、Router/Policy、Semantic Pulse、跨组件 Erasure 和 Backup 仍需独立闸门，详见
+[Phase 4 Action 状态](phase4-action-status.md)。
 
 ## 延后实现与重新评估
 

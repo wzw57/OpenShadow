@@ -1,0 +1,8 @@
+{
+  "proposed_operation": "approve",
+  "action_ref": { "record_id": "action-1" },
+  "expected_version": 2,
+  "approver_ref": "principal-owner",
+  "decision": "approved",
+  "evidence_refs": [{ "record_id": "approval-evidence-1" }]
+}
