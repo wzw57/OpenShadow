@@ -34,3 +34,7 @@ correction/delete 路由、四个必需写入 headers、OpenAPI 路径以及 mer
 后续 Phase 2 能力（Physical erase、Recall、Maintenance、SkillAsset、Integration、
 Portable Import/restore、Derived index rebuild）必须先建立自己的设计闸门，再加入新的
 source-of-truth 条目和同步测试。
+
+Phase 3 State Profile 也必须先维护 `phase3-design-gate.md`、ADR-0013、状态文档、State
+Schema、fixtures、OpenAPI 和 `StateService`/Adapter surface；同步测试必须在实现或契约
+改变而文档未更新时失败。Durable Task、Checkpoint/Handoff 等后续切片不得借用本闸门提前实现。

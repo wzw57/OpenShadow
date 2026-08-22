@@ -1,0 +1,17 @@
+{
+  "state_key": "calendar.next_event",
+  "value_schema_ref": "https://schemas.openshadow.dev/examples/calendar-event/1.0.0",
+  "observed_value": { "title": "Planning" },
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence-calendar-unavailable",
+      "source_ref": "integration:calendar",
+      "availability": "unavailable",
+      "observed_at": "2026-08-22T08:30:00Z"
+    }
+  ],
+  "source_refs": ["integration:calendar"],
+  "observed_at": "2026-08-22T08:30:00Z",
+  "expires_at": "2026-08-22T09:00:00Z",
+  "source_status": "unavailable"
+}

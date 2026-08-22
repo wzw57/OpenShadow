@@ -1,0 +1,20 @@
+{
+  "proposed_operation": "create",
+  "targets": [],
+  "state_key": "presence.home",
+  "value_schema_ref": "https://schemas.openshadow.dev/examples/presence/1.0.0",
+  "proposed_value": { "present": true },
+  "evidence_refs": [
+    {
+      "evidence_id": "evidence-presence-1",
+      "source_ref": "adapter:deterministic-state",
+      "availability": "available",
+      "observed_at": "2026-08-22T08:00:00Z"
+    }
+  ],
+  "source_refs": ["adapter:deterministic-state"],
+  "observed_at": "2026-08-22T08:00:00Z",
+  "expires_at": "2026-08-22T09:00:00Z",
+  "source_status": "available",
+  "proposal_reason": "deterministic fixture observation"
+}

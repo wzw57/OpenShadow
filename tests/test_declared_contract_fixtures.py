@@ -38,6 +38,11 @@ FIXTURE_SCHEMA_REFS = {
     "repository/invalid-failed-result-metadata.json": "repository#/$defs/CommitBatchResult",
     "repository/valid-commit-plan.json": "repository#/$defs/CommitPlan",
     "repository/valid-committed-result.json": "repository#/$defs/CommitBatchResult",
+    "state/invalid-state.json": "state#/$defs/StatePayload",
+    "state/invalid-state-proposal.json": "state#/$defs/StateProposalPayload",
+    "state/valid-observation-source-unavailable.json": "state#/$defs/Observation",
+    "state/valid-state-proposal.json": "state#/$defs/StateProposalPayload",
+    "state/valid-state.json": "state#/$defs/StatePayload",
 }
 
 
@@ -58,6 +63,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "adapters/invalid",
             "kernel/invalid",
             "profiles/invalid",
+            "state/invalid",
             "repository/invalid",
         )
     )
