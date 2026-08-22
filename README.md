@@ -189,4 +189,4 @@ OpenShadow 自行实现的范围收紧为：
 
 ## 当前状态
 
-Stage 0–3 已形成需求、责任、用例和领域基线，Stage 4 的 Action 等能力也已按切片完成设计与实现。当前仓库已具备 Phase 0–4 的核心基线，以及可选的 Hermes Agent Runtime Adapter：默认运行确定性 Adapter，设置 `SHADOW_RUNTIME_KIND=hermes` 可通过 Hermes 使用在线 DeepSeek `deepseek-v4-flash` 完成文本对话。首版 Web UI 已完成，可通过 FastAPI `/ui/` 使用；Shadow 没有自研 Agent Loop，也不直接连接模型 Provider。细粒度 Runtime SSE/Session resume 和受治理的工具桥接仍未完成。
+Stage 0–3 已形成需求、责任、用例和领域基线，Stage 4 的 Action 等能力也已按切片完成设计与实现。当前仓库已具备 Phase 0–4 的核心基线，以及可选的外部 Agent Runtime Adapter：默认运行确定性 Adapter；部署通过通用 `SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入具体适配器，当前参考配置使用 Hermes 适配器通过在线 DeepSeek `deepseek-v4-flash` 完成文本对话。FastAPI、Application、Kernel 和 Web UI 不包含任何厂商分支。首版 Web UI 已完成，可通过 FastAPI `/ui/` 使用；Shadow 没有自研 Agent Loop，也不直接连接模型 Provider。细粒度 Runtime SSE/Session resume 和受治理的工具桥接仍未完成。

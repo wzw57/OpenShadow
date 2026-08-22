@@ -18,11 +18,12 @@
 
 ## 当前边界
 
-现有 ConversationService 默认仍使用 Deterministic Test Adapter。设置
-`SHADOW_RUNTIME_KIND=hermes` 后，它可以通过独立 Hermes Adapter 调用 Hermes
-API Server；Hermes 再通过 DeepSeek OpenAI-compatible API 使用
-`deepseek-v4-flash`。Shadow 不直接调用 DeepSeek，也不把 Hermes 私有 Session
-或 Memory 写入 Canonical Repository。
+现有 ConversationService 默认仍使用 Deterministic Test Adapter。部署通过
+`SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入具体 Adapter；当前参考配置将
+工厂指向独立 Hermes Adapter，调用 Hermes API Server；Hermes 再通过 DeepSeek
+OpenAI-compatible API 使用 `deepseek-v4-flash`。Shadow 不直接调用 DeepSeek，也不把
+Hermes 私有 Session 或 Memory 写入 Canonical Repository。Server 只解析通用工厂引用，
+不导入或判断 Hermes。
 
 已完成的真实联调：
 

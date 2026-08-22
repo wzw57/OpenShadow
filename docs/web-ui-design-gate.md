@@ -54,9 +54,9 @@ Web UI 不拥有数据库连接、CommitAuthority、Hermes 凭据或 Canonical r
 ### 2.1 Runtime vendor neutrality
 
 Web UI 只理解 `/v1/runtime` 的通用 `status`、`target_kind` 和 opaque `descriptor`。
-它不得根据 `target_kind`、`descriptor_id` 或环境变量推断 Hermes、Ollama、DeepSeek
-或其他 Vendor。Vendor 显示名、配置和健康语义属于 Adapter/Server composition
-boundary；替换 Runtime 不应修改 `apps/shadow-web`。
+它不得根据 `target_kind`、`descriptor_id` 或环境变量推断任何具体 Vendor。Vendor
+显示名、配置和健康语义属于具体 Adapter 与部署配置；Server 只解析通用工厂引用，
+替换 Runtime 不应修改 `apps/shadow-web`。
 
 ## 3. 单用户身份
 

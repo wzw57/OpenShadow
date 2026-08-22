@@ -17,11 +17,12 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 
 ## Vendor isolation rule
 
-除具体 `adapters/<vendor>` 实现、该模块测试和部署注册配置外，任何层不得耦合
-Vendor/Runtime 名称或私有语义。新增 Vendor 时必须通过 Vendor-neutral Adapter
-Contract；不得在 Kernel、Application、Profile/Schema、OpenAPI、Reliability 或 Web UI
-增加 Vendor 分支。Documentation Sync 检查必须包含至少一个非目标 Adapter 或源码
-扫描证据，防止新的 Vendor 条件泄漏到公共层。
+除具体 `adapters/<vendor>` 实现、该模块测试和部署配置值外，任何源代码层不得耦合
+Vendor/Runtime 名称或私有语义。Server 组合根只能解析通用
+`SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>`，不得导入或判断 Vendor。新增
+Vendor 时必须通过 Vendor-neutral Adapter Contract；不得在 Kernel、Application、
+Profile/Schema、OpenAPI、Reliability 或 Web UI 增加 Vendor 分支。Documentation Sync
+检查必须包含公共源代码扫描证据，防止新的 Vendor 条件泄漏到公共层。
 
 ## Change protocol
 

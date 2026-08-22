@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 from pathlib import Path
@@ -17,7 +18,6 @@ from shadow_application import (
     StateService,
     TaskService,
 )
-from shadow_hermes import HermesAgentRuntimeAdapter
 from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
@@ -161,12 +161,37 @@ def _error_response(error: ShadowDomainError) -> JSONResponse:
 
 
 def _runtime_from_environment() -> RuntimeAdapter | None:
+    factory_ref = os.getenv("SHADOW_RUNTIME_ADAPTER_FACTORY", "").strip()
     runtime_kind = os.getenv("SHADOW_RUNTIME_KIND", "deterministic").strip().lower()
-    if runtime_kind == "deterministic":
+    if not factory_ref and runtime_kind == "deterministic":
         return None
-    if runtime_kind == "hermes":
-        return HermesAgentRuntimeAdapter.from_environment()
-    raise ValueError(f"Unsupported SHADOW_RUNTIME_KIND: {runtime_kind}")
+    if not factory_ref:
+        raise ValueError(
+            "SHADOW_RUNTIME_ADAPTER_FACTORY is required for a non-deterministic runtime"
+        )
+    if ":" not in factory_ref:
+        raise ValueError(
+            "SHADOW_RUNTIME_ADAPTER_FACTORY must use '<module>:<factory>' format"
+        )
+    module_name, factory_name = factory_ref.split(":", 1)
+    if not module_name or not factory_name:
+        raise ValueError(
+            "SHADOW_RUNTIME_ADAPTER_FACTORY must use '<module>:<factory>' format"
+        )
+    factory: Any = importlib.import_module(module_name)
+    for attribute in factory_name.split("."):
+        factory = getattr(factory, attribute, None)
+        if factory is None:
+            raise ValueError(f"Runtime adapter factory not found: {factory_ref}")
+    if not callable(factory):
+        raise ValueError(f"Runtime adapter factory is not callable: {factory_ref}")
+    adapter = factory()
+    required_methods = ("describe", "execute", "events")
+    if not all(callable(getattr(adapter, method, None)) for method in required_methods):
+        raise ValueError(
+            "Runtime adapter factory must return an object implementing the RuntimeAdapter port"
+        )
+    return adapter
 
 
 def create_app(

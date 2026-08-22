@@ -126,11 +126,12 @@ flowchart TB
 
 ### 3.1 当前可运行参考部署
 
-当前仓库的可运行参考路径是文本 Conversation：默认使用确定性 Adapter；设置
-`SHADOW_RUNTIME_KIND=hermes` 后，Shadow 通过独立 `shadow.agent-runtime`
-Adapter 连接本地 Hermes API Server，再由 Hermes 使用已配置的在线模型提供者。
-当前联调使用 DeepSeek `deepseek-v4-flash`，不建立 Shadow 到 DeepSeek 的直连，
-也不把 Hermes 的内部 Agent Loop、Session 或 Memory 写入 Shadow Store。
+当前仓库的可运行参考路径是文本 Conversation：默认使用确定性 Adapter；部署通过
+通用 `SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入具体的
+`shadow.agent-runtime` Adapter。当前参考部署将该工厂指向 Hermes 适配器，连接本地
+Hermes API Server，再由 Hermes 使用已配置的在线模型提供者。当前联调使用 DeepSeek
+`deepseek-v4-flash`，不建立 Shadow 到 DeepSeek 的直连，也不把 Hermes 的内部 Agent
+Loop、Session 或 Memory 写入 Shadow Store。
 
 ```text
 HTTP Client / curl
@@ -144,7 +145,7 @@ ConversationService / Application Services
         │                         ▲
         │                         │ Run / Attempt / Message / Event
         ▼                         │
-Hermes Agent Runtime Adapter ─────┘
+External Agent Runtime Adapter ─────┘
         │ HTTP (OpenAI-compatible)
         ▼
 Hermes API Server
@@ -383,16 +384,17 @@ Family-specific Capability 再声明：
 
 ### 12.1 Vendor Isolation 不变量
 
-Vendor/Runtime 名称只能出现在具体 Adapter 实现、Adapter 的独立测试和明确的部署
-注册配置中。除这些边界外，以下层不得导入、判断或持久化 Vendor 语义：
+Vendor/Runtime 名称只能出现在具体 Adapter 实现、Adapter 的独立测试和部署配置值中。
+服务器组合根只解析通用工厂引用，不导入或分支判断具体 Vendor。除这些边界外，以下层
+不得导入、判断或持久化 Vendor 语义：
 
 - Tiny Kernel、Application Service、Profile/Schema、Commit/Admission 和 Reliability；
 - OpenAPI、结构化错误、Canonical typed payload 和迁移；
 - Web UI、浏览器状态和通用 Runtime status API。
 
 Adapter 必须把 Vendor 请求、响应、事件、Session reference 和错误归一化为通用
-Runtime Contract。替换 Hermes、Ollama、云端 Runtime 或其他实现，不得修改上述层；
-最多只改变 Adapter 注册和部署配置。Vendor-specific capability 不能伪装成通用
+Runtime Contract。替换任何具体 Runtime，不得修改上述层；最多只改变 Adapter 实现和
+部署配置值。Vendor-specific capability 不能伪装成通用
 Capability，Vendor-specific state 不能成为 Shadow Canonical state。
 - Reconciliation。
 
