@@ -208,6 +208,24 @@ def test_portable_import_gate_and_adr_are_accepted_before_implementation() -> No
     assert "Portable Import/restore 第七切片" in phase2
 
 
+def test_portable_import_implementation_surface_and_status_are_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/portable_import.py")
+    status = _read("docs/phase2-portable-import-status.md")
+    gate = _read("docs/phase2-portable-import-design-gate.md")
+
+    for symbol in (
+        "class PortableImportRequest",
+        "class PortableImportResult",
+        "class PortableImportService",
+        "def portable_import_result_digest",
+    ):
+        assert symbol in source
+    assert "已实现 / 已合并" in status
+    assert "Tombstone" in status
+    assert "HTTP" in status
+    assert "identity_mode" in gate
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")
