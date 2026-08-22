@@ -26,6 +26,13 @@ Physical erase、Recall、Maintenance、SkillAsset、Integration 或 Portable Im
 以上方向与 [ADR-0005](adr/0005-phase2-memory-lifecycle.md) 一致，已获维护者接受。
 当前实现只覆盖下方首个 Memory 生命周期切片，不扩展到其他 Phase 2 能力。
 
+后续切片已分别建立闸门：
+
+- [SkillAsset sidecar 第五切片](phase2-skillasset-design-gate.md) 已按 ADR-0009 接受，进入
+  实现前准备；
+- source-dependent invalidation、Integration、Portable Import/restore 和 Physical erase
+  仍受各自实现闸门约束。
+
 ## 首个切片的操作契约
 
 | 操作 | Canonical 行为 | 版本条件 | 对外边界 |
