@@ -109,6 +109,41 @@ def test_phase4_router_policy_implementation_surface_is_documented() -> None:
     assert "AdapterRegistry" in status
 
 
+def test_phase4_semantic_pulse_gate_precedes_implementation() -> None:
+    gate = _read("docs/phase4-semantic-pulse-design-gate.md")
+    adr = _read("docs/adr/0018-phase4-semantic-pulse.md")
+    status = _read("docs/phase4-semantic-pulse-status.md")
+    schema = _read("contracts/schemas/pulse/1.0.0/schema.json")
+    index = _read("docs/adr/README.md")
+    sync = _read("docs/documentation-sync.md")
+
+    assert "Accepted / Phase 4 Semantic Pulse 获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "已实现 / 已合并" in status
+    assert "PulseTrigger" in schema
+    assert "PulseObservation" in schema
+    assert "PulseProposal" in schema
+    assert "ADR-0018" in index
+    assert "phase4-semantic-pulse-design-gate.md" in sync
+    assert "不能直接创建或更新 Task、Memory、" in gate
+    assert "SemanticPulseService" in status
+
+
+def test_phase4_semantic_pulse_implementation_surface_is_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/pulse.py")
+    adapter = _read("adapters/test-deterministic/src/shadow_adapters/pulse.py")
+    status = _read("docs/phase4-semantic-pulse-status.md")
+    for symbol in (
+        "class PulseProposalResult",
+        "class SemanticPulseService",
+        "def produce_proposal",
+        "def admit_proposal",
+    ):
+        assert symbol in source
+    assert "class DeterministicSemanticPulseAdapter" in adapter
+    assert "Admission 重入" in status
+
+
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-recall-maintenance-design-gate.md")
     adr = _read("docs/adr/0006-phase2-recall-maintenance.md")

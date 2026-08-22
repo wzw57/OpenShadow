@@ -62,6 +62,10 @@ FIXTURE_SCHEMA_REFS = {
     "routing/invalid-binding-closed-target.json": "routing#/$defs/BindingProposal",
     "routing/valid-binding-proposal.json": "routing#/$defs/BindingProposal",
     "routing/valid-policy-decision.json": "routing#/$defs/PolicyDecision",
+    "pulse/invalid-direct-commit.json": "pulse#/$defs/PulseProposal",
+    "pulse/valid-observation-unavailable.json": "pulse#/$defs/PulseObservation",
+    "pulse/valid-proposal.json": "pulse#/$defs/PulseProposal",
+    "pulse/valid-trigger.json": "pulse#/$defs/PulseTrigger",
 }
 
 
@@ -87,6 +91,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "action/invalid",
             "outbox/invalid",
             "routing/invalid",
+            "pulse/invalid",
             "repository/invalid",
         )
     )

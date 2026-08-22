@@ -1,0 +1,13 @@
+{
+  "proposal_id": "pulse-proposal-1",
+  "proposal_kind": "shadow.task-proposal",
+  "input_schema_ref": "https://schemas.openshadow.dev/contracts/continuity/1.0.0#/$defs/TaskProposalPayload",
+  "typed_payload": { "proposed_operation": "create", "task_key": "calendar-follow-up" },
+  "principal_ref": "principal-pulse",
+  "space_id": "space-pulse",
+  "evidence_refs": ["calendar-event-1"],
+  "budget": { "max_cost": 1 },
+  "cooldown_key": "calendar-follow-up",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "idempotency_key": "pulse-key-1"
+}

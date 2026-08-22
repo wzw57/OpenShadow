@@ -1,0 +1,7 @@
+{
+  "source_ref": "integration:calendar",
+  "source_status": "unavailable",
+  "observed_at": "2026-08-22T08:00:00Z",
+  "evidence_refs": ["calendar-health-1"],
+  "summary": "calendar source unavailable"
+}

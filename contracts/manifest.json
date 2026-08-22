@@ -65,6 +65,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/routing/1.0.0",
       "path": "schemas/routing/1.0.0/schema.json",
       "sha256": "d11ed708d34806386abdc4da9c1bccc129b6f3fe457c74a6ada8040220d0ca3d"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/pulse/1.0.0",
+      "path": "schemas/pulse/1.0.0/schema.json",
+      "sha256": "3813ce43ce68025901994c4612947712c86826bfe523fcff4157ff7b736dd29b"
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "proposal_id": "pulse-invalid",
+  "proposal_kind": "Shadow.Action",
+  "input_schema_ref": "https://schemas.openshadow.dev/contracts/action/1.0.0#/$defs/ActionPayload",
+  "typed_payload": { "lifecycle": "succeeded", "commit": true },
+  "principal_ref": "principal-pulse",
+  "space_id": "space-pulse",
+  "evidence_refs": [],
+  "budget": {},
+  "cooldown_key": "invalid",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "idempotency_key": "pulse-invalid"
+}
