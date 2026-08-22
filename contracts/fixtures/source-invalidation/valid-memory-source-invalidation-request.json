@@ -1,0 +1,13 @@
+{
+  "principal_ref": "principal-test",
+  "space_id": "space-test",
+  "source_ref": "integration:calendar/account-1",
+  "source_event_ref": "calendar-event-001",
+  "source_state": "deleted",
+  "targets": [{"record_id": "memory-source-001", "version": 1}],
+  "idempotency_key": "source-event-001",
+  "request_id": "source-request-001",
+  "observed_at": "2026-08-22T00:00:00Z",
+  "reason": "Source account deleted",
+  "evidence_refs": ["evidence:calendar-event-001"]
+}

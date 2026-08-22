@@ -33,9 +33,9 @@
 - `tests/test_documentation_sync.py`：已接受闸门、Service surface、OpenAPI 无新增路由；
 - 全量 `pytest`、Ruff 和隔离 SQLite migration upgrade/downgrade。
 
-后续 source-dependent invalidation、SkillAsset、Integration、Portable Import/restore 和
-Physical erase 的完整实现仍须分别经过设计闸门。
+后续 SkillAsset、Integration、Portable Import/restore 和 Physical erase 的完整实现仍须分别
+经过设计闸门。
 
 第三切片状态：[Derived Memory Index Rebuild](phase2-derived-index-status.md) 已实现。
 下一切片设计闸门：[Source-dependent Memory Invalidation](phase2-source-invalidation-design-gate.md)，
-当前状态为 Accepted；实现范围和验收证据将在第四切片状态文档中补齐。
+第四切片状态：[Source Invalidation](phase2-source-invalidation-status.md) 已实现。

@@ -161,7 +161,8 @@ logical delete；详见 [Phase 2 状态](phase2-memory-lifecycle-status.md)。
 Phase 2 第二切片已按 ADR-0006 合并 Recall / Maintenance Adapter；派生 Index rebuild
 已按 ADR-0007 获准并合并第三切片实现，详见
 [第三切片状态](phase2-derived-index-status.md)。下一切片 source-dependent invalidation
-仍须先经过 ADR-0008 设计闸门。
+已按 ADR-0008 完成设计并进入实现，详见
+[第四切片状态](phase2-source-invalidation-status.md)。
 
 ## 延后实现与重新评估
 

@@ -7,6 +7,12 @@ from .index import (
     MemoryIndexRebuildResult,
     MemoryIndexRebuildService,
 )
+from .invalidation import (
+    MemorySourceInvalidationRequest,
+    MemorySourceInvalidationResult,
+    MemorySourceInvalidationService,
+    MemorySourceInvalidationTargetResult,
+)
 from .memory import MemoryCandidate, MemoryService
 from .recall import (
     MemoryMaintenanceAdapter,
@@ -41,5 +47,9 @@ __all__ = [
     "MemoryRecallService",
     "MemoryService",
     "MemorySnapshot",
+    "MemorySourceInvalidationRequest",
+    "MemorySourceInvalidationResult",
+    "MemorySourceInvalidationService",
+    "MemorySourceInvalidationTargetResult",
     "TurnResult",
 ]

@@ -48,6 +48,7 @@ alembic downgrade base
 
 Memory Maintenance / Recall 与 Derived index rebuild 已分别完成设计闸门并进入实现；
 下一切片为 source-dependent invalidation，设计稿见
-[第四切片设计闸门](phase2-source-invalidation-design-gate.md)，已 Accepted 并进入实现。
+[第四切片设计闸门](phase2-source-invalidation-design-gate.md)，已 Accepted；实现范围和验收
+证据见 [第四切片状态](phase2-source-invalidation-status.md)。
 SkillAsset、Integration、Portable Import/restore 和 Physical erase 仍必须分别维护设计稿
 并经维护者接受后，才能进入新的实现分支。
