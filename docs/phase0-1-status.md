@@ -31,6 +31,26 @@ Contract；Phase 2–5 的设计仍以[分阶段实现计划](implementation-sta
 - 本地开发和 CI 的 `ruff`、`pytest` 基线，测试覆盖 Contract fixtures、Repository CAS /
   replay、API loop 和 outage path。
 
+## Phase 0–1 验收矩阵
+
+| 能力 | 当前状态 | 主要证据 |
+| --- | --- | --- |
+| Kernel / Canonical Envelope / Commit | 已实现 | `test_phase0_repository.py`、`test_declared_contract_fixtures.py` |
+| Expected Version / Idempotency / CAS | 已实现 | `test_atomic_create_and_expected_version_conflict`、`test_committed_batch_replays_exactly` |
+| Admission → Request → Run → Attempt | 已实现 | `test_admission_is_atomic_and_degrades_explicitly`、`test_personal_shadow_loop_and_replay` |
+| Adapter Binding / capability boundaries | 已实现 | `test_adapter_binding_rejects_unknown_target_and_required_capability` |
+| Conversation / Message / Retry / SSE | 已实现 | `test_personal_shadow_loop_and_replay` |
+| Memory Candidate → Commit | 已实现 | `test_memory_candidate_requires_commit`、Memory API tests |
+| Restart recovery | 已实现 | `test_restart_recovers_canonical_conversation_and_run_events` |
+| Export serialization fixture | 已实现 | `test_phase1_export.py` |
+| Store unavailable / explicit degradation | 已实现 | `test_store_outage_does_not_claim_durable_success`、Admission outage test |
+| Alembic migration / rollback | 已实现 | CI isolated SQLite migration step |
+
+OpenAPI 中的 Memory correction/delete、Proposal decision、Portable Import/restore、
+Backup、Outbox 和 Erasure Job 是已接受 Contract 的后续能力；它们在本阶段保持
+Contract-only，不新增空实现。Export 目前仅作为 Store Adapter fixture，不提供公开
+HTTP Export API。
+
 ## 当前明确不在实现范围
 
 - Memory Intelligence、State、Durable Task、Action、Router、Pulse；
@@ -49,7 +69,9 @@ Contract；Phase 2–5 的设计仍以[分阶段实现计划](implementation-sta
 python -m pip install -e ".[dev]"
 ruff check packages/shadow-kernel/src packages/shadow-application/src adapters/test-deterministic/src adapters/store-sqlite/src apps/shadow-server tests
 pytest -q
+$env:SHADOW_DATABASE_URL = "sqlite://"
 alembic upgrade head
+alembic downgrade base
 ```
 
 启动本地服务：

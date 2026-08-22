@@ -20,7 +20,8 @@ def _turn() -> dict:
 
 
 def test_personal_shadow_loop_and_replay() -> None:
-    client = TestClient(create_app("sqlite://"))
+    app = create_app("sqlite://")
+    client = TestClient(app)
     assert client.get("/healthz").json() == {"status": "healthy", "durable": True}
     created = client.post(
         "/v1/conversations", json={"title": "Test"}, headers={"Idempotency-Key": "conversation-1"}
@@ -33,23 +34,22 @@ def test_personal_shadow_loop_and_replay() -> None:
         json=_turn(),
         headers={"Idempotency-Key": "turn-1"},
     )
+    records_before_replay = len(app.state.repository.query(limit=10_000))
     replay = client.post(
         f"/v1/conversations/{conversation_id}/turns",
         json=_turn(),
         headers={"Idempotency-Key": "turn-1"},
     )
-    assert first.status_code == replay.status_code == 202
+    assert first.status_code == 202
+    assert replay.status_code == 200
     assert first.json()["replayed"] is False
     assert replay.json()["replayed"] is True
+    assert len(app.state.repository.query(limit=10_000)) == records_before_replay
     assert len(client.get(f"/v1/conversations/{conversation_id}/messages").json()["records"]) == 2
 
     run_id = first.json()["root_run_ref"]["record_id"]
-    retry = client.post(
-        f"/v1/runs/{run_id}/retry", headers={"Idempotency-Key": "retry-1"}
-    )
-    retry_replay = client.post(
-        f"/v1/runs/{run_id}/retry", headers={"Idempotency-Key": "retry-1"}
-    )
+    retry = client.post(f"/v1/runs/{run_id}/retry", headers={"Idempotency-Key": "retry-1"})
+    retry_replay = client.post(f"/v1/runs/{run_id}/retry", headers={"Idempotency-Key": "retry-1"})
     assert retry.status_code == retry_replay.status_code == 202
     assert retry.json()["replayed"] is False
     assert retry_replay.json()["replayed"] is True

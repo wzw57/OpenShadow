@@ -192,7 +192,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_principal_ref: Annotated[str | None, Header()] = None,
         x_endpoint_ref: Annotated[str, Header()] = "endpoint-local-web",
         idempotency_key: Annotated[str | None, Header()] = None,
-    ) -> dict[str, Any]:
+    ) -> JSONResponse:
         block = submission.content_blocks[0]
         text = (
             block.typed_content.get("text")
@@ -208,7 +208,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
             text=text,
             idempotency_key=idempotency_key or submission.submission_id,
         )
-        return {
+        body = {
             "admission_ref": {
                 "record_id": result.admission["record_id"],
                 "version": result.admission["version"],
@@ -228,6 +228,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
             "replayed": result.replayed,
             "durable": True,
         }
+        return JSONResponse(
+            status_code=status.HTTP_200_OK if result.replayed else status.HTTP_202_ACCEPTED,
+            content=body,
+        )
 
     @app.get("/v1/admissions/{admission_id}")
     async def get_admission(admission_id: str) -> dict[str, Any]:
@@ -265,7 +269,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
                 "record_id": result.run["typed_payload"]["request_ref"]["record_id"],
                 "version": result.run["typed_payload"]["request_ref"]["version"],
             },
-            "root_run_ref": {"record_id": result.run["record_id"], "version": result.run["version"]},
+            "root_run_ref": {
+                "record_id": result.run["record_id"],
+                "version": result.run["version"],
+            },
             "replayed": result.replayed,
             "durable": True,
         }
