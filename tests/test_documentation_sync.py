@@ -164,6 +164,16 @@ def test_phase4_erasure_backup_gate_precedes_implementation() -> None:
     assert "ErasureService" in status
 
 
+def test_phase4_completion_status_is_explicit() -> None:
+    status = _read("docs/phase4-completion-status.md")
+    roadmap = _read("docs/roadmap.md")
+    assert "已实现 / 已合并" in status
+    assert "224 passed" in status
+    assert "Phase 5 必须从独立设计闸门开始" in status
+    assert "Phase 4 已完成" in roadmap
+    assert "加密设备 Backup 内容" in status
+
+
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-recall-maintenance-design-gate.md")
     adr = _read("docs/adr/0006-phase2-recall-maintenance.md")
