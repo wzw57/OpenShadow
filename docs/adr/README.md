@@ -20,6 +20,7 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 - [ADR-0006：Phase 2 第二切片的 Recall / Maintenance Adapter 边界](0006-phase2-recall-maintenance.md)
 - [ADR-0007：Phase 2 派生 Memory Index 重建边界](0007-phase2-derived-index-rebuild.md)
 - [ADR-0008：Phase 2 source-dependent Memory invalidation 边界](0008-phase2-source-dependent-invalidation.md)
+- [ADR-0021：Hermes Agent Runtime Adapter](0021-hermes-agent-runtime-adapter.md)
 
 ## ADR 格式
 
