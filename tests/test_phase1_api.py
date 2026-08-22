@@ -96,6 +96,7 @@ def test_memory_candidate_is_committed_only_through_authority() -> None:
     assert record["record_type"] == "shadow.profile.memory"
     assert record["typed_payload"]["memory_state"] == "active"
     assert client.get("/v1/memories").json()["records"][0]["record_id"] == record["record_id"]
+    assert client.get(f"/v1/memories/{record['record_id']}").json()["record"] == record
 
 
 def test_invalid_memory_candidate_is_a_structured_validation_error() -> None:

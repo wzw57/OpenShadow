@@ -156,6 +156,13 @@ def create_app(database_url: str | None = None) -> FastAPI:
         )
         return {"record": memories.commit_candidate(candidate, idempotency_key=key)}
 
+    @app.get("/v1/memories/{memory_id}")
+    async def get_memory(memory_id: str) -> dict[str, Any]:
+        record = memories.get_memory(memory_id)
+        if record is None:
+            raise HTTPException(404, detail="Memory not found")
+        return {"record": record}
+
     @app.get("/v1/conversations")
     async def list_conversations(
         x_principal_ref: Annotated[str | None, Header()] = None,
