@@ -144,6 +144,26 @@ def test_phase4_semantic_pulse_implementation_surface_is_documented() -> None:
     assert "Admission 重入" in status
 
 
+def test_phase4_erasure_backup_gate_precedes_implementation() -> None:
+    gate = _read("docs/phase4-erasure-backup-design-gate.md")
+    adr = _read("docs/adr/0019-phase4-erasure-backup.md")
+    status = _read("docs/phase4-erasure-backup-status.md")
+    schema = _read("contracts/schemas/erasure/1.0.0/schema.json")
+    index = _read("docs/adr/README.md")
+    sync = _read("docs/documentation-sync.md")
+
+    assert "Proposed / 等待维护者接受" in gate
+    assert "- Status: Proposed" in adr
+    assert "已实现 / 已合并" in status
+    assert "ErasureRequest" in schema
+    assert "BackupMetadata" in schema
+    assert "ADR-0019" in index
+    assert "phase4-erasure-backup-design-gate.md" in sync
+    assert "不包含敏感原文" in gate
+    assert "encrypted=true" in gate
+    assert "ErasureService" in status
+
+
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-recall-maintenance-design-gate.md")
     adr = _read("docs/adr/0006-phase2-recall-maintenance.md")

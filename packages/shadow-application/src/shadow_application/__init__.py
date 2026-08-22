@@ -14,6 +14,12 @@ from .erase import (
     PhysicalEraseService,
     physical_erase_result_digest,
 )
+from .erasure_backup import (
+    BackupMetadataService,
+    CrossComponentErasureAdapter,
+    ErasureRequestCandidate,
+    ErasureService,
+)
 from .index import (
     MemoryIndexAdapter,
     MemoryIndexBuildArtifact,
@@ -108,6 +114,10 @@ __all__ = [
     "RoutingPolicyService",
     "PulseProposalResult",
     "SemanticPulseService",
+    "BackupMetadataService",
+    "CrossComponentErasureAdapter",
+    "ErasureRequestCandidate",
+    "ErasureService",
     "MemorySnapshot",
     "MemorySourceInvalidationRequest",
     "MemorySourceInvalidationResult",

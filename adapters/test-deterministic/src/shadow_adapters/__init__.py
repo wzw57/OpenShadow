@@ -1,6 +1,7 @@
 from .action import DeterministicActionProvider
 from .deterministic import DeterministicTestAdapter, ExecutionResult
 from .erase import DeterministicErasureAdapter
+from .erasure_backup import DeterministicCrossComponentErasureAdapter
 from .index import DeterministicMemoryIndexAdapter
 from .memory import DeterministicMemoryMaintenanceAdapter, DeterministicMemoryRecallAdapter
 from .outbox import DeterministicOutboxAdapter
@@ -21,4 +22,5 @@ __all__ = [
     "DeterministicPolicyEngine",
     "DeterministicRouterAdapter",
     "DeterministicSemanticPulseAdapter",
+    "DeterministicCrossComponentErasureAdapter",
 ]

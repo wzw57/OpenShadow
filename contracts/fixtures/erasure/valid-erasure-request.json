@@ -1,0 +1,15 @@
+{
+  "request_id": "erasure-request-1",
+  "owner_ref": "principal-erasure",
+  "space_id": "space-erasure",
+  "scope_ref": "memory:memory-1",
+  "target_refs": ["memory-1", "index-entry-1", "backup-copy-1"],
+  "policy_ref": { "record_id": "policy-default", "version": 1 },
+  "requested_at": "2026-08-22T08:00:00Z",
+  "idempotency_key": "erase-key-1",
+  "lifecycle": "partially_completed",
+  "component_statuses": [
+    { "component_ref": "memory-store", "capability_family": "canonical", "state": "erased", "updated_at": "2026-08-22T08:01:00Z", "evidence_refs": ["erase-evidence-1"] },
+    { "component_ref": "backup-1", "capability_family": "backup", "state": "unreachable", "updated_at": "2026-08-22T08:01:00Z", "evidence_refs": [] }
+  ]
+}
