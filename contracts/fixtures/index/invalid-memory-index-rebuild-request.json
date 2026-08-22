@@ -1,0 +1,8 @@
+{
+  "principal_ref": "principal-test",
+  "space_id": "space-test",
+  "rebuild_request_id": "index-rebuild-invalid",
+  "index_revision": "",
+  "index_schema_ref": "https://schemas.openshadow.dev/index/memory/1.0.0",
+  "max_entries": 0
+}

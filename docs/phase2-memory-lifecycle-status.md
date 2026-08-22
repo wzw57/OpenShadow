@@ -43,9 +43,9 @@ alembic downgrade base
 
 ## 后续闸门
 
-下一切片设计闸门：[Memory Maintenance / Recall Adapter](phase2-recall-maintenance-design-gate.md)
+后续切片状态：[Memory Maintenance / Recall Adapter](phase2-recall-maintenance-design-gate.md)
 已 Accepted；实现范围和验收证据见 [第二切片状态](phase2-recall-maintenance-status.md)。
 
-Memory Maintenance / Recall、source-dependent invalidation、SkillAsset、Integration、
-Portable Import/restore、Derived index rebuild 和 Physical erase 必须分别维护设计稿并经
-维护者接受后，才能进入新的实现分支。
+Memory Maintenance / Recall 与 Derived index rebuild 已分别完成设计闸门并进入实现；
+source-dependent invalidation、SkillAsset、Integration、Portable Import/restore 和
+Physical erase 仍必须分别维护设计稿并经维护者接受后，才能进入新的实现分支。

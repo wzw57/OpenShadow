@@ -1,0 +1,9 @@
+{
+  "principal_ref": "principal-test",
+  "space_id": "space-test",
+  "rebuild_request_id": "index-rebuild-001",
+  "index_revision": "deterministic-v1",
+  "index_schema_ref": "https://schemas.openshadow.dev/index/memory/1.0.0",
+  "consistency": "canonical",
+  "max_entries": 100
+}
