@@ -1,0 +1,11 @@
+{
+  "principal_ref": "principal-test",
+  "space_id": "space-test",
+  "request_id": "maintenance-request-invalid",
+  "targets": [
+    {"record_id": "memory-001", "version": 1},
+    {"record_id": "memory-001", "version": 1}
+  ],
+  "reason": "duplicate-target",
+  "budget_limit": 10
+}

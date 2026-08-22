@@ -1,0 +1,7 @@
+{
+  "principal_ref": "principal-test",
+  "space_id": "space-test",
+  "limit": 10,
+  "consistency": "canonical",
+  "request_id": "recall-request-invalid"
+}
