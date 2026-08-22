@@ -241,6 +241,27 @@ def test_physical_erase_gate_and_adr_are_accepted_before_implementation() -> Non
     assert "ADR-0012" in phase2
 
 
+def test_physical_erase_implementation_surface_and_status_are_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/erase.py")
+    adapter = _read("adapters/test-deterministic/src/shadow_adapters/erase.py")
+    status = _read("docs/phase2-physical-erase-status.md")
+    gate = _read("docs/phase2-physical-erase-design-gate.md")
+
+    for symbol in (
+        "class PhysicalEraseRequest",
+        "class PhysicalEraseResult",
+        "class PhysicalEraseService",
+        "class ErasureAdapter",
+        "def physical_erase_result_digest",
+    ):
+        assert symbol in source
+    assert "class DeterministicErasureAdapter" in adapter
+    assert "已实现 / 已合并" in status
+    assert "Tombstone" in status
+    assert "HTTP" in status
+    assert "quiesce" in gate
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")

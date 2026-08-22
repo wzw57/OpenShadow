@@ -90,4 +90,5 @@ rollback、restart recovery、retry → Attempt 与 Export fixture 的 Phase 0�
 Phase 2 首个 Memory 生命周期切片的状态见
 [phase2-memory-lifecycle-status.md](phase2-memory-lifecycle-status.md)。Portable Import /
 restore、Recall、Maintenance、SkillAsset、Integration、Portable Import/restore 已分别完成
-设计闸门并进入/合并实现；Physical erase 已按 ADR-0012 接受设计，进入最后实现。
+设计闸门并进入/合并实现；Physical erase 已按 ADR-0012 完成并合并，Phase 2 当前冻结范围已
+完成。
