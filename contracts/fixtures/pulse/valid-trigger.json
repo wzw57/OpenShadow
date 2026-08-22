@@ -1,0 +1,9 @@
+{
+  "trigger_id": "trigger-calendar-1",
+  "trigger_kind": "shadow.pulse.calendar-change",
+  "source_ref": "integration:calendar",
+  "event_ref": "calendar-event-1",
+  "observed_at": "2026-08-22T08:00:00Z",
+  "principal_ref": "principal-pulse",
+  "space_id": "space-pulse"
+}

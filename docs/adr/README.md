@@ -201,6 +201,15 @@ ADR-0017：Phase 4 Deterministic Policy 与 Router Proposal 边界。
 85. `target_kind` 保持 namespaced open-world；candidate rank/fallback 不是授权，未知 target
     必须通过 Descriptor/Capability/Policy 检查后才能接受。
 
+### Phase 4 Semantic Pulse
+
+ADR-0018：Phase 4 Semantic Pulse Proposal Producer 边界。
+
+86. Semantic Pulse 只能产生 Trigger、Observation 或 Proposal；work-bearing Proposal 必须
+    重新进入 Admission，Pulse 不能直接创建 Task、Memory、State、Action 或 Run。
+87. Pulse 是可关闭、可替换的可选 producer；budget、deadline、cooldown、evidence、source
+    unavailable 和 dedup 状态必须诚实表达，不承诺跨进程 exactly-once。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

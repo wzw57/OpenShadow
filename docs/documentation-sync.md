@@ -57,3 +57,8 @@ Phase 4 Router/Policy 必须同步 `phase4-router-policy-design-gate.md`、ADR-0
 PolicyDecision/BindingProposal fixtures 和 `phase4-router-policy-status.md`。设计接受前禁止实现
 Policy/Router Service、策略存储、评分缓存或公开路由；外部组件只能提出 Decision/Proposal，
 Core 必须保留最终授权检查。
+
+Phase 4 Semantic Pulse 必须同步 `phase4-semantic-pulse-design-gate.md`、ADR-0018、Pulse Schema、
+Trigger/Observation/Proposal fixtures 和 `phase4-semantic-pulse-status.md`。设计接受前禁止实现
+Pulse Service、持久化 cooldown、通用 worker 或公开路由；Pulse 产生的 work-bearing Proposal
+必须重新进入 Admission。

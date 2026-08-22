@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/pulse/1.0.0",
+  "title": "OpenShadow Semantic Pulse Contracts",
+  "$defs": {
+    "PulseTrigger": {
+      "type": "object",
+      "required": ["trigger_id", "trigger_kind", "source_ref", "observed_at", "principal_ref", "space_id"],
+      "properties": {
+        "trigger_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "trigger_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "source_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "event_ref": { "type": "string", "maxLength": 1000 },
+        "schedule_ref": { "type": "string", "maxLength": 1000 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 }
+      },
+      "unevaluatedProperties": false
+    },
+    "PulseObservation": {
+      "type": "object",
+      "required": ["source_ref", "source_status", "observed_at", "evidence_refs"],
+      "properties": {
+        "source_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "source_status": { "enum": ["available", "unavailable", "unknown"] },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "evidence_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "summary": { "type": "string", "maxLength": 4000 }
+      },
+      "unevaluatedProperties": false
+    },
+    "PulseProposal": {
+      "type": "object",
+      "required": ["proposal_id", "proposal_kind", "input_schema_ref", "typed_payload", "principal_ref", "space_id", "evidence_refs", "budget", "cooldown_key", "expires_at", "idempotency_key"],
+      "properties": {
+        "proposal_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "proposal_kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)+$", "maxLength": 255 },
+        "input_schema_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "typed_payload": { "type": "object" },
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "evidence_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "budget": { "type": "object" },
+        "cooldown_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 255 }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}
