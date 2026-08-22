@@ -2,7 +2,8 @@
 
 更新时间：2026-08-23
 
-实现分支：`web-ui/implementation`（待 PR 合并到 `main`）
+首版实现分支：`web-ui/implementation`；可靠性切片当前在
+`runtime/reliability-design-gate`（待按该分支闸门合并）。
 
 | 能力 | 状态 |
 | --- | --- |
