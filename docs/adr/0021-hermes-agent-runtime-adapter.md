@@ -58,3 +58,11 @@ Hermes 继续拥有：
 - 第一版需要记录外部 Session reference 和事件 cursor；
 - 完整 Tool/Capability、Checkpoint 和 native resume 需要后续独立设计；
 - 本 ADR 不新增表，不改变现有迁移，不提供多用户身份能力。
+
+## Vendor Isolation Boundary
+
+本 ADR 允许 Hermes 名称和协议只存在于 `adapters/hermes-agent` 的实现、该模块的
+测试和部署注册。Kernel、Application、Reliability、OpenAPI、Canonical Profile 和
+Web UI 不得导入 Hermes 类型、判断 Hermes 名称或持久化 Hermes 私有语义。Adapter
+必须把 Hermes response/event/session/error 映射为通用 Runtime Contract；更换
+Runtime 不能要求修改这些层。

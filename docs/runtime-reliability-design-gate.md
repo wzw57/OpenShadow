@@ -117,5 +117,6 @@ Token delta 可以作为传输事件，但首版不承诺逐 token 的 Canonical
 - [x] 成功、明确失败、未知结果和 Store outage 语义已冻结；
 - [x] Idempotency/CAS/重启关系已冻结；
 - [x] Hermes event/session 的 opaque reference 边界已冻结；
+- [x] Reliability Core、公共 Contract 和 Web UI 不依赖任何 Vendor 名称或类型；
 - [x] 不新增表、工具或公开临时路由；
 - [ ] implementation branch 的代码、测试、迁移和真实 Hermes 验收完成。

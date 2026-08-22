@@ -15,6 +15,14 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | Web UI 参考客户端范围 | `docs/web-ui-design-gate.md`、ADR-0022 | `apps/shadow-web`、`/ui` 静态托管、Web UI 状态文档和浏览器验收 |
 | Runtime Reliability / durable dispatch | `docs/runtime-reliability-design-gate.md`、ADR-0023 | Run/Attempt Service、Hermes Adapter、OpenAPI/错误体、恢复测试和 runtime 状态文档 |
 
+## Vendor isolation rule
+
+除具体 `adapters/<vendor>` 实现、该模块测试和部署注册配置外，任何层不得耦合
+Vendor/Runtime 名称或私有语义。新增 Vendor 时必须通过 Vendor-neutral Adapter
+Contract；不得在 Kernel、Application、Profile/Schema、OpenAPI、Reliability 或 Web UI
+增加 Vendor 分支。Documentation Sync 检查必须包含至少一个非目标 Adapter 或源码
+扫描证据，防止新的 Vendor 条件泄漏到公共层。
+
 ## Change protocol
 
 涉及以下任一变化时，代码、契约、测试和状态文档必须在同一个 PR 中更新：

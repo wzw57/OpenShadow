@@ -380,6 +380,20 @@ Family-specific Capability 再声明：
 - Checkpoint / Resume；
 - Migration / Export；
 - Backup / Outbox；
+
+### 12.1 Vendor Isolation 不变量
+
+Vendor/Runtime 名称只能出现在具体 Adapter 实现、Adapter 的独立测试和明确的部署
+注册配置中。除这些边界外，以下层不得导入、判断或持久化 Vendor 语义：
+
+- Tiny Kernel、Application Service、Profile/Schema、Commit/Admission 和 Reliability；
+- OpenAPI、结构化错误、Canonical typed payload 和迁移；
+- Web UI、浏览器状态和通用 Runtime status API。
+
+Adapter 必须把 Vendor 请求、响应、事件、Session reference 和错误归一化为通用
+Runtime Contract。替换 Hermes、Ollama、云端 Runtime 或其他实现，不得修改上述层；
+最多只改变 Adapter 注册和部署配置。Vendor-specific capability 不能伪装成通用
+Capability，Vendor-specific state 不能成为 Shadow Canonical state。
 - Reconciliation。
 
 Shadow 不建设万能插件操作系统。Adapter SDK 只提供 Envelope、生命周期、Capability Negotiation、错误模型和 Contract Test。

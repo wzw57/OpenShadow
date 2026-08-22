@@ -338,6 +338,13 @@ events(ExecutionReference, cursor?) -> event stream
 
 没有声明的能力不得被调用，也不得用不可靠模拟返回成功。
 
+#### 5.4 Runtime Vendor Isolation
+
+Runtime Port、Run/Attempt lifecycle、Reliability、OpenAPI、Schema、Application
+Service 和 Web UI 都必须保持 Vendor-neutral。Vendor-specific HTTP、SDK、事件格式、
+Session semantics 和错误映射只能位于对应 `adapters/<vendor>` 模块及其测试；部署
+组合层只允许做 Adapter 注册，不得把 Vendor 条件传播到业务逻辑或公共 Contract。
+
 ### 5.4 Port Output Families
 
 Execution / Intelligence Family 使用：
