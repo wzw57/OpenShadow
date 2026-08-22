@@ -35,3 +35,6 @@
 
 后续 Physical erase、source-dependent invalidation、SkillAsset、Integration、Portable
 Import/restore 和 Derived index rebuild 的完整实现仍须分别经过设计闸门。
+
+下一切片设计闸门：[Derived Memory Index Rebuild](phase2-derived-index-design-gate.md)，
+当前状态为 Accepted；实现范围和验收证据将在 `phase2/derived-index-rebuild` 分支补齐。
