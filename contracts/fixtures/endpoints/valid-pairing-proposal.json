@@ -1,0 +1,11 @@
+{
+  "proposed_operation": "create",
+  "principal_ref": "principal-endpoint",
+  "space_id": "space-personal",
+  "endpoint_kind": "shadow.mobile",
+  "proof_method": "out-of-band-confirmation",
+  "proof_ref": "pairing-proof-opaque-2",
+  "capability_refs": ["shadow.endpoint.admission"],
+  "expires_at": "2099-01-01T00:00:00Z",
+  "idempotency_key": "pairing-key-1"
+}

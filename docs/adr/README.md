@@ -219,6 +219,15 @@ ADR-0019：Phase 4 跨组件 Erasure 与 Backup Metadata 边界。
 89. Backup 只冻结加密 Export metadata、digest、manifest、opaque key ref、retention 和
     erase schedule；不保存 Secret、Provider 私有状态或不可重建索引。
 
+### Phase 5 Endpoint Pairing
+
+ADR-0020：Phase 5 Endpoint Pairing 与 Device Trust 边界。
+
+90. Endpoint 使用 typed Profile 和 namespaced open-world endpoint_kind；每个 Endpoint 仍经过
+    Admission，revoked Endpoint 不能创建新工作。
+91. Pairing Adapter 只能返回 proof/Observation；Core 通过 Commit 创建或更新 Endpoint，
+    只保存 opaque proof/public-key refs，不保存私钥、token、pairing code 或音频原文。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

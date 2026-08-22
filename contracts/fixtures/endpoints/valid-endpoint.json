@@ -1,0 +1,14 @@
+{
+  "endpoint_id": "endpoint-web-1",
+  "principal_ref": "principal-endpoint",
+  "space_id": "space-personal",
+  "endpoint_kind": "shadow.web",
+  "trust_state": "trusted",
+  "status": "online",
+  "capability_refs": ["shadow.endpoint.admission"],
+  "pairing_ref": "pairing-proof-opaque-1",
+  "public_key_ref": "device-public-key-opaque-1",
+  "registered_at": "2026-08-22T08:00:00Z",
+  "last_seen_at": "2026-08-22T08:01:00Z",
+  "metadata": { "platform": "browser" }
+}

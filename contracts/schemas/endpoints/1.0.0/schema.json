@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/endpoints/1.0.0",
+  "title": "OpenShadow Endpoint Pairing Contracts",
+  "$defs": {
+    "EndpointPayload": {
+      "type": "object",
+      "required": ["endpoint_id", "principal_ref", "space_id", "endpoint_kind", "trust_state", "status", "capability_refs", "pairing_ref", "public_key_ref", "registered_at", "last_seen_at"],
+      "properties": {
+        "endpoint_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "endpoint_kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)+$", "maxLength": 255 },
+        "trust_state": { "enum": ["pending", "proof-required", "trusted", "revoked"] },
+        "status": { "enum": ["online", "offline", "unavailable"] },
+        "capability_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "pairing_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "public_key_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "registered_at": { "type": "string", "format": "date-time" },
+        "last_seen_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "unevaluatedProperties": false
+    },
+    "EndpointPairingProposal": {
+      "type": "object",
+      "required": ["proposed_operation", "principal_ref", "space_id", "endpoint_kind", "proof_method", "proof_ref", "capability_refs", "expires_at", "idempotency_key"],
+      "properties": {
+        "proposed_operation": { "const": "create" },
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "endpoint_kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)+$", "maxLength": 255 },
+        "proof_method": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "proof_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "capability_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 255 }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

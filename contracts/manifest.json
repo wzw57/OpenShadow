@@ -75,6 +75,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/erasure/1.0.0",
       "path": "schemas/erasure/1.0.0/schema.json",
       "sha256": "94362fa2207fa934ff96a620f0b3a2d7d4cce643646c6c80f53ad5e9946424a4"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/endpoints/1.0.0",
+      "path": "schemas/endpoints/1.0.0/schema.json",
+      "sha256": "fa9da87916a8689bd9fd930ce8ab5f1c4b65d8c7fd3522f6fc65ddc52e6523be"
     }
   ]
 }

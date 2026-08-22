@@ -67,3 +67,8 @@ Phase 4 Erasure/Backup 必须同步 `phase4-erasure-backup-design-gate.md`、ADR
 ErasureRequest/BackupMetadata fixtures 和 `phase4-erasure-backup-status.md`。设计接受前禁止实现
 跨组件 Erasure、Backup Service、真实 Adapter、密钥/备份内容或公开路由；未确认组件不得报告
 completed。
+
+Phase 5 Endpoint pairing 必须同步 `phase5-design-gate.md`、`phase5-endpoint-pairing-design-gate.md`、
+ADR-0020、Endpoint Schema、Endpoint/Pairing fixtures 和 `phase5-endpoint-pairing-status.md`。
+设计接受前禁止实现 Endpoint Service、设备注册表、ACL、同步逻辑或公开路由；Endpoint 必须
+继续经过 Admission，Secret/私钥只允许 opaque reference。

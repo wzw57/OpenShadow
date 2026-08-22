@@ -69,6 +69,9 @@ FIXTURE_SCHEMA_REFS = {
     "erasure/invalid-unencrypted-backup.json": "erasure#/$defs/BackupMetadata",
     "erasure/valid-backup-metadata.json": "erasure#/$defs/BackupMetadata",
     "erasure/valid-erasure-request.json": "erasure#/$defs/ErasureRequest",
+    "endpoints/invalid-inline-secret.json": "endpoints#/$defs/EndpointPairingProposal",
+    "endpoints/valid-endpoint.json": "endpoints#/$defs/EndpointPayload",
+    "endpoints/valid-pairing-proposal.json": "endpoints#/$defs/EndpointPairingProposal",
 }
 
 
@@ -96,6 +99,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "routing/invalid",
             "pulse/invalid",
             "erasure/invalid",
+            "endpoints/invalid",
             "repository/invalid",
         )
     )

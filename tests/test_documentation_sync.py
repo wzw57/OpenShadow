@@ -174,6 +174,27 @@ def test_phase4_completion_status_is_explicit() -> None:
     assert "加密设备 Backup 内容" in status
 
 
+def test_phase5_endpoint_pairing_gate_precedes_implementation() -> None:
+    overall = _read("docs/phase5-design-gate.md")
+    gate = _read("docs/phase5-endpoint-pairing-design-gate.md")
+    adr = _read("docs/adr/0020-phase5-endpoint-pairing.md")
+    status = _read("docs/phase5-endpoint-pairing-status.md")
+    schema = _read("contracts/schemas/endpoints/1.0.0/schema.json")
+    index = _read("docs/adr/README.md")
+    sync = _read("docs/documentation-sync.md")
+
+    assert "Proposed / 首个 Endpoint pairing 切片等待接受" in overall
+    assert "Proposed / 等待维护者接受" in gate
+    assert "- Status: Proposed" in adr
+    assert "设计闸门 Proposed，尚未实现" in status
+    assert "EndpointPayload" in schema
+    assert "EndpointPairingProposal" in schema
+    assert "ADR-0020" in index
+    assert "phase5-endpoint-pairing-design-gate.md" in sync
+    assert "不保存私钥" in gate
+    assert "ACL" in overall
+
+
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-recall-maintenance-design-gate.md")
     adr = _read("docs/adr/0006-phase2-recall-maintenance.md")
