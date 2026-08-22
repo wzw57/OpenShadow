@@ -272,7 +272,7 @@ def test_phase3_state_design_gate_and_contract_are_synchronized() -> None:
 
     assert "Accepted / Phase 3 首个 State 切片获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "已实现 / 已合并前收口" in status
+    assert "已实现 / 已合并" in status
     assert "shadow.profile.state" in gate
     assert "StateProposalPayload" in schema
     assert "/v1/states" in openapi
@@ -367,7 +367,7 @@ def test_phase4_action_design_gate_and_contract_are_synchronized() -> None:
 
     assert "Accepted / Phase 4 首个 Action 生命周期切片获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "已实现 / 已合并前收口" in status
+    assert "已实现 / 已合并" in status
     for definition in (
         "ActionPayload",
         "ActionProposalPayload",
@@ -405,7 +405,7 @@ def test_phase4_action_implementation_surface_and_api_are_documented() -> None:
     ):
         assert symbol in source
     assert "class DeterministicActionProvider" in adapter
-    assert "已实现 / 已合并前收口" in status
+    assert "已实现 / 已合并" in status
     assert '"/v1/actions"' in app_source
     assert '"/v1/proposals"' in app_source
     for path, method in (
