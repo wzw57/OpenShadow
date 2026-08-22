@@ -108,6 +108,23 @@ def test_derived_index_status_is_linked_from_recall_status() -> None:
     assert "phase2-derived-index-status.md" in status
 
 
+def test_source_invalidation_gate_precedes_implementation() -> None:
+    gate = _read("docs/phase2-source-invalidation-design-gate.md")
+    adr = _read("docs/adr/0008-phase2-source-dependent-invalidation.md")
+    status = _read("docs/phase2-derived-index-status.md")
+    recall_status = _read("docs/phase2-recall-maintenance-status.md")
+    application_source = _read("packages/shadow-application/src/shadow_application/__init__.py")
+
+    assert "Proposed / 等待维护者接受" in gate
+    assert "- Status: Proposed" in adr
+    assert "Source-dependent Memory Invalidation" in status
+    assert "当前状态为 Proposed" in recall_status
+    assert "memory_state=invalidated" in gate
+    assert "不新增公开 HTTP" in gate
+    assert "数据库表" in gate
+    assert "MemorySourceInvalidationService" not in application_source
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")

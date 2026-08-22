@@ -35,3 +35,6 @@
 
 后续 source-dependent invalidation、SkillAsset、Integration、Portable Import/restore 和
 Physical erase 仍须分别经过设计闸门。
+
+下一切片设计闸门：[Source-dependent Memory Invalidation](phase2-source-invalidation-design-gate.md)，
+当前状态为 Proposed；实现前必须先接受 ADR-0008。

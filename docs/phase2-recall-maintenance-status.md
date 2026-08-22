@@ -15,7 +15,7 @@
 | Maintenance snapshot boundary | 已实现 | `MemoryMaintenanceService` 校验 owner / space / active head |
 | Maintenance typed Proposal validation | 已实现 | Profile Registry、target expected-version、budget 和 digest tests |
 | Deterministic adapters | 已实现 | `DeterministicMemoryRecallAdapter`、`DeterministicMemoryMaintenanceAdapter` |
-| Derived index contract | Contract-only | snapshot ref / digest / rebuild boundary；本切片不建立 authoritative index |
+| Derived index contract | 已实现 | snapshot ref / digest / rebuild boundary；详见第三切片状态 |
 
 ## 明确不在本切片
 
@@ -33,9 +33,9 @@
 - `tests/test_documentation_sync.py`：已接受闸门、Service surface、OpenAPI 无新增路由；
 - 全量 `pytest`、Ruff 和隔离 SQLite migration upgrade/downgrade。
 
-后续 Physical erase、source-dependent invalidation、SkillAsset、Integration、Portable
-Import/restore 和 Derived index rebuild 的完整实现仍须分别经过设计闸门。
+后续 source-dependent invalidation、SkillAsset、Integration、Portable Import/restore 和
+Physical erase 的完整实现仍须分别经过设计闸门。
 
-下一切片设计闸门：[Derived Memory Index Rebuild](phase2-derived-index-design-gate.md)，
-当前状态为 Accepted；实现范围和验收证据见
-[第三切片状态](phase2-derived-index-status.md)。
+第三切片状态：[Derived Memory Index Rebuild](phase2-derived-index-status.md) 已实现。
+下一切片设计闸门：[Source-dependent Memory Invalidation](phase2-source-invalidation-design-gate.md)，
+当前状态为 Proposed；在维护者接受前不得实现 source invalidation 业务代码。
