@@ -1,9 +1,10 @@
 # Phase 2 设计闸门：Memory 与 Capability Profiles
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 2 首个切片获准实现**
 
-本文件不启动 Phase 2 业务实现。只有在 Phase 0–1 合并、下列边界得到维护者接受，
-并补齐对应 Contract / fixture / migration 方案后，才允许新增 Phase 2 代码。
+本文件已经获维护者接受，授权当前首个 Memory 生命周期切片进入实现。它不授权
+Physical erase、Recall、Maintenance、SkillAsset、Integration 或 Portable Import/restore
+业务实现；这些能力继续只维护 Contract 和设计。
 
 本轮首个切片限定为 **Memory 生命周期**。SkillAsset、Integration、Recall、Maintenance
 和 Portable Import/restore 继续只维护 Contract，不进入本切片。
@@ -22,8 +23,8 @@
   immutable snapshot / pinned revision 和确定性 digest，不修改 `SKILL.md` 或 bundle。
 - Integration 与外部资产默认按需读取；派生索引可删除并从 Canonical 记录重建。
 
-以上方向与 [ADR-0005](adr/0005-phase2-memory-lifecycle.md) 一致；在维护者接受前，
-它们是设计提案，不代表已经开始实现。
+以上方向与 [ADR-0005](adr/0005-phase2-memory-lifecycle.md) 一致，已获维护者接受。
+当前实现只覆盖下方首个 Memory 生命周期切片，不扩展到其他 Phase 2 能力。
 
 ## 首个切片的操作契约
 
@@ -70,10 +71,10 @@
 及 `TombstonePayload`。Tombstone 只能包含 `erased=true`、`erasure_ref` 和非敏感关系引用；
 Adapter 不可达时不得报告完成。本切片不新增 Erasure API、Adapter、Job 或数据库表。
 
-## 必须在实现前明确的边界
+## 后续切片必须在实现前明确的边界
 
-1. **Memory 生命周期**：correction、supersede、logical delete、physical erase 的
-   Proposal payload、状态转换、并发冲突和 anti-resurrection 测试。
+1. **Physical erase 与扩展 Memory 生命周期**：Tombstone、Erasure Adapter、source-dependent
+   invalidation、状态转换、并发冲突和 anti-resurrection 的完整边界。
 2. **Adapter Contract**：Maintenance / Recall 的输入输出、source dependency、
    unavailable / stale 语义，以及 Proposal 审批和 Commit 的责任边界。
 3. **Skill / Integration**：bundle digest、sidecar 版本、外部引用失效、按需读取和
@@ -101,4 +102,5 @@ Adapter 不可达时不得报告完成。本切片不新增 Erasure API、Adapte
 - Import / restore 只在完整性、身份边界、冲突和幂等规则被接受后实现。
 - 派生索引删除后可从 Canonical records 确定性重建。
 
-在“首个 Memory 生命周期切片退出条件”和维护者 ADR 接受完成前，Phase 2–5 继续只维护文档。
+首个切片退出后，Phase 2 后续能力仍须分别完成设计闸门；在各自闸门接受前，继续只维护
+文档，不提前实现业务代码。

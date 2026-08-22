@@ -1,6 +1,6 @@
 # ADR-0005: Phase 2 首个切片的 Memory 生命周期边界
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-22
 - Owners: OpenShadow maintainers
 

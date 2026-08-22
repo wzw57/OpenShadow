@@ -1,0 +1,14 @@
+{
+  "proposed_operation": "correct",
+  "targets": [
+    { "memory_ref": { "record_id": "memory-1" }, "expected_version": 1 }
+  ],
+  "memory_kind": "shadow.memory.preference",
+  "content_schema_ref": "https://schemas.openshadow.dev/content/text/1.0.0",
+  "proposed_content": { "text": "Concise status updates" },
+  "applicability_scope": { "scope_kind": "shadow.scope.personal", "scope_refs": [] },
+  "evidence_refs": [],
+  "source_refs": ["conversation:conversation-001"],
+  "source_dependency": "independent",
+  "proposal_reason": "User corrected the preference."
+}

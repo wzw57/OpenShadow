@@ -1,0 +1,24 @@
+{
+  "record_id": "memory-erased-001",
+  "record_type": "shadow.profile.memory",
+  "schema_ref": "https://schemas.openshadow.dev/contracts/profiles/1.0.0#/$defs/MemoryPayload",
+  "owner_ref": "principal-user-001",
+  "space_id": "space-personal-001",
+  "created_by": "principal-user-001",
+  "data_classification": "personal",
+  "provenance": {
+    "origin_type": "shadow.origin.erasure",
+    "origin_ref": "erasure-request-001",
+    "source_refs": []
+  },
+  "version": 3,
+  "retention_policy_ref": { "record_id": "retention-default-001" },
+  "record_state": "erased",
+  "created_at": "2026-08-21T12:00:00Z",
+  "committed_at": "2026-08-21T12:05:00Z",
+  "typed_payload": {
+    "erased": true,
+    "erasure_ref": { "record_id": "erasure-request-001" },
+    "non_sensitive_relation_refs": []
+  }
+}
