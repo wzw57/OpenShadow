@@ -1,9 +1,9 @@
 # Phase 4 Durable Outbox 设计闸门
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 4 Durable Outbox 获准实现**
 
-本闸门是 Phase 4 的第二个独立切片，只冻结 Durable Outbox 的最小语义和契约，
-不授权实现代码。Action 首片已经合并；Router/Policy、Semantic Pulse、跨组件 Erasure
+本闸门是 Phase 4 的第二个独立切片，已冻结 Durable Outbox 的最小语义和契约并获准实现。
+Action 首片已经合并；Router/Policy、Semantic Pulse、跨组件 Erasure
 和 Backup 必须继续使用各自独立的设计闸门。
 
 ## 目标与边界
@@ -61,7 +61,7 @@ Result 版本分别通过 CAS 写入。
 
 ## 评审与实现闸门
 
-设计阶段只允许提交本文件、[ADR-0016](adr/0016-phase4-durable-outbox.md)、JSON Schema、
-fixtures、Contract/OpenAPI 变更和同步测试。维护者接受后，才创建
-`phase4/outbox-implementation` 分支实现 Service、Adapter 和恢复路径；实现完成必须通过
+实现必须限定在本文件、[ADR-0016](adr/0016-phase4-durable-outbox.md)、JSON Schema、
+fixtures、Contract/OpenAPI 变更和同步测试授权的边界内；`phase4/outbox-implementation` 分支
+负责 Service、Adapter 和恢复路径，实现完成必须通过
 全量 pytest、Ruff、Alembic upgrade/downgrade、`git diff --check` 和 documentation-sync。

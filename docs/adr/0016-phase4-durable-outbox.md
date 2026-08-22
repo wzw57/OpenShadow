@@ -1,6 +1,6 @@
 # ADR-0016：Phase 4 Durable Outbox 最小可靠副作用边界
 
-- Status: Proposed
+- Status: Accepted
 - Scope: Phase 4 Durable Outbox 设计闸门
 - Date: 2026-08-22
 

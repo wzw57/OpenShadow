@@ -42,16 +42,33 @@ def test_phase4_outbox_design_gate_precedes_implementation() -> None:
     index = _read("docs/adr/README.md")
     sync = _read("docs/documentation-sync.md")
 
-    assert "Proposed / 等待维护者接受" in gate
-    assert "- Status: Proposed" in adr
-    assert "设计闸门 Proposed，尚未实现" in status
+    assert "Accepted / Phase 4 Durable Outbox 获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "已实现 / 等待合并" in status
     assert "OutboxIntentPayload" in schema
     assert "ADR-0016" in index
     assert "phase4-outbox-design-gate.md" in sync
     assert "不新增数据库表" in gate
     assert "通用 Queue" in gate
     assert "Event Bus" in gate
-    assert "禁止创建 `OutboxService`" in status
+    assert "`OutboxService`" in status
+
+
+def test_phase4_outbox_implementation_surface_is_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/outbox.py")
+    adapter = _read("adapters/test-deterministic/src/shadow_adapters/outbox.py")
+    status = _read("docs/phase4-outbox-status.md")
+    for symbol in (
+        "class OutboxIntentCandidate",
+        "class OutboxService",
+        "def propose_intent",
+        "def lease_intent",
+        "def record_delivery_result",
+        "def reconcile_unknown",
+    ):
+        assert symbol in source
+    assert "class DeterministicOutboxAdapter" in adapter
+    assert "Commit/CAS" in status
 
 
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:

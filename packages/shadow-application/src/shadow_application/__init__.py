@@ -35,6 +35,7 @@ from .invalidation import (
     MemorySourceInvalidationTargetResult,
 )
 from .memory import MemoryCandidate, MemoryService
+from .outbox import OutboxDeliveryAdapter, OutboxIntentCandidate, OutboxService
 from .portable_import import (
     PortableImportRecordResult,
     PortableImportRequest,
@@ -97,6 +98,9 @@ __all__ = [
     "MemoryRecallResult",
     "MemoryRecallService",
     "MemoryService",
+    "OutboxDeliveryAdapter",
+    "OutboxIntentCandidate",
+    "OutboxService",
     "MemorySnapshot",
     "MemorySourceInvalidationRequest",
     "MemorySourceInvalidationResult",

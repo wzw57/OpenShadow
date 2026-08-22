@@ -3,6 +3,7 @@ from .deterministic import DeterministicTestAdapter, ExecutionResult
 from .erase import DeterministicErasureAdapter
 from .index import DeterministicMemoryIndexAdapter
 from .memory import DeterministicMemoryMaintenanceAdapter, DeterministicMemoryRecallAdapter
+from .outbox import DeterministicOutboxAdapter
 from .state import DeterministicStateSourceAdapter
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "ExecutionResult",
     "DeterministicStateSourceAdapter",
     "DeterministicActionProvider",
+    "DeterministicOutboxAdapter",
 ]
