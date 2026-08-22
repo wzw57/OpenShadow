@@ -11,6 +11,10 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 
 - [ADR-0005：Phase 2 首个切片的 Memory 生命周期边界](0005-phase2-memory-lifecycle.md)
 
+## 待接受 ADR
+
+- [ADR-0006：Phase 2 第二切片的 Recall / Maintenance Adapter 边界](0006-phase2-recall-maintenance.md)
+
 ## ADR 格式
 
 文件命名：
