@@ -1,0 +1,6 @@
+{
+  "outcome": "delivered",
+  "provider_ref": "provider-attempt-1",
+  "evidence_refs": ["provider-query-1"],
+  "observed_at": "2026-08-22T08:05:00Z"
+}

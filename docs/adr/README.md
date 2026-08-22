@@ -182,6 +182,16 @@ ADR-0015：Phase 4 Action 生命周期与副作用安全边界。
 79. low-risk 自动批准、medium-risk 需要 Approval、high-risk 确定性拒绝；unknown 必须 reconciliation，不能盲目 retry。
 80. 首片不实现 Outbox、Router、Semantic Pulse、跨组件 Erasure、Backup、真实 Provider 或 Secret 读取。
 
+### Phase 4 Durable Outbox
+
+ADR-0016：Phase 4 Durable Outbox 最小可靠副作用边界。
+
+81. Outbox 仅服务 allowlisted reliable side effect/emergency capability，不是通用 Queue、
+    Event Bus、Workflow 或后台 Job 平台。
+82. Provider 调用前必须提交 Outbox Intent；Adapter 只能返回 Result，不能直接 Commit。
+83. `unknown` 必须通过 evidence-backed reconciliation 收敛或保持 unknown，不能盲目 retry；
+    同一 dedup key 重放不创建新的 Intent、Result 或 Reconciliation。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

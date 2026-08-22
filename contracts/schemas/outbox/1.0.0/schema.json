@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/outbox/1.0.0",
+  "title": "OpenShadow Durable Outbox Contracts",
+  "$defs": {
+    "OutboxIntentPayload": {
+      "type": "object",
+      "required": [
+        "action_ref", "target_ref", "operation_kind", "capability", "delivery_class",
+        "parameter_digest", "data_classification", "side_effect_level", "deadline",
+        "idempotency_key", "lifecycle", "created_at", "attempt_count"
+      ],
+      "properties": {
+        "action_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "target_ref": {
+          "type": "object",
+          "required": ["record_id"],
+          "properties": {
+            "record_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "resource_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+            "resource_ref": { "type": "string", "minLength": 1, "maxLength": 2000 }
+          },
+          "unevaluatedProperties": false
+        },
+        "operation_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "capability": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "delivery_class": { "enum": ["reliable-side-effect", "emergency"] },
+        "parameter_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "data_classification": { "enum": ["public", "personal", "sensitive"] },
+        "side_effect_level": { "enum": ["none", "low", "medium"] },
+        "deadline": { "type": "string", "format": "date-time" },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "lifecycle": { "enum": ["pending", "leased", "delivered", "failed", "unknown"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "attempt_count": { "type": "integer", "minimum": 0 },
+        "lease": {
+          "type": "object",
+          "required": ["lease_owner", "expires_at"],
+          "properties": {
+            "lease_owner": { "type": "string", "minLength": 1, "maxLength": 255 },
+            "expires_at": { "type": "string", "format": "date-time" }
+          },
+          "unevaluatedProperties": false
+        },
+        "provider_ref": { "type": "string", "maxLength": 2000 },
+        "failure_summary": { "type": "object" },
+        "unknown_reason": { "type": "string", "maxLength": 4000 },
+        "reconciliation_refs": {
+          "type": "array",
+          "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+          "uniqueItems": true
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "DeliveryResultPayload": {
+      "type": "object",
+      "required": ["outcome", "observed_at"],
+      "properties": {
+        "outcome": { "enum": ["delivered", "failed", "unknown"] },
+        "provider_ref": { "type": "string", "maxLength": 2000 },
+        "reason": { "type": "string", "maxLength": 4000 },
+        "evidence_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "observed_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    },
+    "ReconciliationPayload": {
+      "type": "object",
+      "required": ["outcome", "provider_ref", "evidence_refs", "observed_at"],
+      "properties": {
+        "outcome": { "enum": ["delivered", "failed", "unknown"] },
+        "provider_ref": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "evidence_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "minItems": 1, "uniqueItems": true },
+        "observed_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

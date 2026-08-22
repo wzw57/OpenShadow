@@ -55,6 +55,10 @@ FIXTURE_SCHEMA_REFS = {
     "action/valid-approval-proposal.json": "action#/$defs/ApprovalProposalPayload",
     "action/valid-provider-result.json": "action#/$defs/ProviderResultPayload",
     "action/valid-reconciliation.json": "action#/$defs/ReconciliationPayload",
+    "outbox/invalid-intent-inline-secret.json": "outbox#/$defs/OutboxIntentPayload",
+    "outbox/valid-delivery-result.json": "outbox#/$defs/DeliveryResultPayload",
+    "outbox/valid-intent.json": "outbox#/$defs/OutboxIntentPayload",
+    "outbox/valid-reconciliation.json": "outbox#/$defs/ReconciliationPayload",
 }
 
 
@@ -78,6 +82,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "state/invalid",
             "continuity/invalid",
             "action/invalid",
+            "outbox/invalid",
             "repository/invalid",
         )
     )

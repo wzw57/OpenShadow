@@ -11,6 +11,7 @@ from shadow_application import (
     ActionService,
     ConversationService,
     MemoryService,
+    OutboxService,
     StateService,
     TaskService,
 )
@@ -170,6 +171,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
     actions = ActionService(repository, authority, registry)
+    outbox = OutboxService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
     app.state.conversations = conversations
@@ -178,6 +180,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.state.tasks = tasks
     app.state.admission = admission
     app.state.actions = actions
+    app.state.outbox = outbox
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:

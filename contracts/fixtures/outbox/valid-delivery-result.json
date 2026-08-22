@@ -1,0 +1,6 @@
+{
+  "outcome": "unknown",
+  "provider_ref": "provider-attempt-1",
+  "reason": "provider timeout after request write",
+  "observed_at": "2026-08-22T08:01:00Z"
+}
