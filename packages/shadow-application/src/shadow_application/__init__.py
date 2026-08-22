@@ -26,6 +26,16 @@ from .recall import (
     MemoryRecallService,
     MemorySnapshot,
 )
+from .skillasset import (
+    SkillAssetRegistrationRequest,
+    SkillAssetRegistrationResult,
+    SkillAssetService,
+    SkillBundleFile,
+    SkillBundleManifest,
+    skill_asset_result_digest,
+    skill_bundle_digest,
+    skill_bundle_manifest,
+)
 
 __all__ = [
     "ConversationService",
@@ -51,5 +61,13 @@ __all__ = [
     "MemorySourceInvalidationResult",
     "MemorySourceInvalidationService",
     "MemorySourceInvalidationTargetResult",
+    "SkillAssetRegistrationRequest",
+    "SkillAssetRegistrationResult",
+    "SkillAssetService",
+    "SkillBundleFile",
+    "SkillBundleManifest",
+    "skill_asset_result_digest",
+    "skill_bundle_digest",
+    "skill_bundle_manifest",
     "TurnResult",
 ]

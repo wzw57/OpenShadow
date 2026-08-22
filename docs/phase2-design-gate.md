@@ -28,8 +28,8 @@ Physical erase、Recall、Maintenance、SkillAsset、Integration 或 Portable Im
 
 后续切片已分别建立闸门：
 
-- [SkillAsset sidecar 第五切片](phase2-skillasset-design-gate.md) 已按 ADR-0009 接受，进入
-  实现前准备；
+- [SkillAsset sidecar 第五切片](phase2-skillasset-design-gate.md) 已按 ADR-0009 接受并完成
+  实现，状态见 [第五切片状态](phase2-skillasset-status.md)；
 - source-dependent invalidation、Integration、Portable Import/restore 和 Physical erase
   仍受各自实现闸门约束。
 

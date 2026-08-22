@@ -141,6 +141,25 @@ def test_skillasset_gate_and_adr_are_accepted_before_implementation() -> None:
     assert "SkillAsset sidecar 第五切片已按" in roadmap
 
 
+def test_skillasset_implementation_surface_and_status_are_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/skillasset.py")
+    status = _read("docs/phase2-skillasset-status.md")
+    gate = _read("docs/phase2-skillasset-design-gate.md")
+
+    for symbol in (
+        "class SkillAssetRegistrationRequest",
+        "class SkillAssetRegistrationResult",
+        "class SkillAssetService",
+        "def skill_bundle_manifest",
+        "def skill_bundle_digest",
+    ):
+        assert symbol in source
+    assert "已实现 / 已合并" in status
+    assert "SkillAsset" in gate
+    assert "HTTP" in status
+    assert "数据库表" in status
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")

@@ -13,5 +13,8 @@ format and the independent OpenShadow governance boundary.
   digest and invalidates digest-bound trust and high-risk permission.
 - `manifests/` and `digest-results.json` pin the deterministic sidecar output
   for the positive and content-change fixtures.
+- `valid-registration-result.json` and `invalid-registration-result.json` pin the
+  SkillAsset sidecar payload boundary; the invalid payload contains a forbidden
+  capability grant.
 
 Shadow sidecar data is deliberately not written into any fixture bundle.
