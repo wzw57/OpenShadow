@@ -166,6 +166,8 @@ Phase 2 第二切片已按 ADR-0006 合并 Recall / Maintenance Adapter；派生
 ADR-0009 接受并合并实现，详见 [第五切片状态](phase2-skillasset-status.md)；Integration、
 Portable Import/restore 和 Physical erase 仍须分别完成设计接受后实现。
 Integration 第六切片已完成并合并，详见 [第六切片状态](phase2-integration-status.md)。
+Portable Import/restore 第七切片已按 ADR-0011 接受设计，进入实现闸门；Physical erase
+仍须单独完成设计接受后实现。
 
 ## 延后实现与重新评估
 
