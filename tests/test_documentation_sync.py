@@ -175,6 +175,24 @@ def test_integration_gate_and_contract_are_accepted_before_implementation() -> N
     assert "不读取 Secret" in gate
 
 
+def test_integration_implementation_surface_and_status_are_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/integration.py")
+    gate = _read("docs/phase2-integration-design-gate.md")
+    status = _read("docs/phase2-integration-status.md")
+
+    for symbol in (
+        "class IntegrationRegistrationRequest",
+        "class IntegrationRegistrationResult",
+        "class IntegrationService",
+        "def integration_result_digest",
+    ):
+        assert symbol in source
+    assert "已实现 / 已合并" in status
+    assert "secret_refs" in status
+    assert "不读取 Secret" in gate
+    assert "HTTP" in status
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")

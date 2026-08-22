@@ -1,0 +1,13 @@
+{
+  "integration_id": "integration-calendar",
+  "format": "shadow.integration",
+  "provider_kind": "shadow.integration.calendar",
+  "external_ref": "provider-account-1",
+  "config_ref": { "record_id": "config-calendar" },
+  "secret_refs": [{ "record_id": "secret-calendar" }],
+  "adapter_ref": { "record_id": "adapter-calendar", "version": 1 },
+  "adapter_descriptor_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "status": "enabled",
+  "lifecycle": "active",
+  "health_observation_ref": { "record_id": "health-calendar", "version": 1 }
+}

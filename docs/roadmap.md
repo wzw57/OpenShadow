@@ -165,7 +165,7 @@ Phase 2 第二切片已按 ADR-0006 合并 Recall / Maintenance Adapter；派生
 [第四切片状态](phase2-source-invalidation-status.md)。SkillAsset sidecar 第五切片已按
 ADR-0009 接受并合并实现，详见 [第五切片状态](phase2-skillasset-status.md)；Integration、
 Portable Import/restore 和 Physical erase 仍须分别完成设计接受后实现。
-Integration 第六切片已按 ADR-0010 接受设计，进入实现闸门。
+Integration 第六切片已完成并合并，详见 [第六切片状态](phase2-integration-status.md)。
 
 ## 延后实现与重新评估
 
