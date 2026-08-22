@@ -50,6 +50,7 @@ FIXTURE_SCHEMA_REFS = {
     "continuity/valid-trigger-observation.json": "continuity#/$defs/TriggerObservation",
     "action/invalid-approval-decision.json": "action#/$defs/ApprovalProposalPayload",
     "action/invalid-inline-secret.json": "action#/$defs/ActionProposalPayload",
+    "action/valid-action.json": "action#/$defs/ActionPayload",
     "action/valid-action-proposal.json": "action#/$defs/ActionProposalPayload",
     "action/valid-approval-proposal.json": "action#/$defs/ApprovalProposalPayload",
     "action/valid-provider-result.json": "action#/$defs/ProviderResultPayload",

@@ -1,0 +1,13 @@
+{
+  "action_kind": "shadow.action.send-notification",
+  "target_ref": { "record_id": "target-notification-1", "resource_kind": "notification" },
+  "typed_parameters": { "channel": "test", "body": "Hello" },
+  "data_classification": "personal",
+  "side_effect_level": "low",
+  "required_capabilities": ["shadow.action.notify"],
+  "deadline": "2099-01-01T00:00:00Z",
+  "secret_refs": [],
+  "lifecycle": "approved",
+  "idempotency_key": "action-accept-1",
+  "policy_decision": "auto_approved"
+}

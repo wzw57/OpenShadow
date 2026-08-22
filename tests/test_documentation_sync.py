@@ -367,7 +367,7 @@ def test_phase4_action_design_gate_and_contract_are_synchronized() -> None:
 
     assert "Accepted / Phase 4 首个 Action 生命周期切片获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "设计闸门 Accepted；实现尚未开始" in status
+    assert "已实现 / 已合并前收口" in status
     for definition in (
         "ActionPayload",
         "ActionProposalPayload",
@@ -382,6 +382,41 @@ def test_phase4_action_design_gate_and_contract_are_synchronized() -> None:
     assert "/v1/actions/{action_id}" in openapi
     assert "ADR-0015" in roadmap
     assert "不新增数据库表" in gate
+
+
+def test_phase4_action_implementation_surface_and_api_are_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/action.py")
+    adapter = _read("adapters/test-deterministic/src/shadow_adapters/action.py")
+    app_source = _read("apps/shadow-server/shadow_server/app.py")
+    status = _read("docs/phase4-action-status.md")
+    openapi = _read("contracts/openapi/openapi.yaml")
+    runtime_schema = create_app("sqlite://").openapi()
+
+    for symbol in (
+        "class ActionService",
+        "class ActionProposalCandidate",
+        "def propose_action(",
+        "def propose_approval(",
+        "def begin_execution(",
+        "def record_provider_result(",
+        "def reconcile_unknown(",
+        "def list_actions(",
+        "def get_action(",
+    ):
+        assert symbol in source
+    assert "class DeterministicActionProvider" in adapter
+    assert "已实现 / 已合并前收口" in status
+    assert '"/v1/actions"' in app_source
+    assert '"/v1/proposals"' in app_source
+    for path, method in (
+        ("/v1/actions", "get"),
+        ("/v1/actions/{action_id}", "get"),
+        ("/v1/proposals", "post"),
+        ("/v1/proposals/{proposal_id}/accept", "post"),
+    ):
+        assert path in runtime_schema["paths"]
+        assert method in runtime_schema["paths"][path]
+        assert path in openapi
 
 
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:

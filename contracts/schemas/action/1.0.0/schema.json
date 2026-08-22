@@ -140,6 +140,34 @@
         "reason": { "type": "string", "maxLength": 4000 }
       },
       "unevaluatedProperties": false
+    },
+    "ActionProposalRecordPayload": {
+      "type": "object",
+      "required": ["proposal_type", "status", "proposer_ref", "owner_ref", "space_id", "proposal"],
+      "properties": {
+        "proposal_type": { "const": "shadow.action-proposal" },
+        "status": { "enum": ["pending", "accepted", "rejected"] },
+        "proposer_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "owner_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "proposal": { "$ref": "#/$defs/ActionProposalPayload" },
+        "resulting_action_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }
+      },
+      "unevaluatedProperties": false
+    },
+    "ActionApprovalProposalRecordPayload": {
+      "type": "object",
+      "required": ["proposal_type", "status", "proposer_ref", "owner_ref", "space_id", "proposal"],
+      "properties": {
+        "proposal_type": { "const": "shadow.action-approval-proposal" },
+        "status": { "enum": ["pending", "accepted", "rejected"] },
+        "proposer_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "owner_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "proposal": { "$ref": "#/$defs/ApprovalProposalPayload" },
+        "resulting_action_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/StableRecordRef" }
+      },
+      "unevaluatedProperties": false
     }
   }
 }
