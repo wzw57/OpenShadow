@@ -226,6 +226,21 @@ def test_portable_import_implementation_surface_and_status_are_documented() -> N
     assert "identity_mode" in gate
 
 
+def test_physical_erase_gate_and_adr_are_accepted_before_implementation() -> None:
+    gate = _read("docs/phase2-physical-erase-design-gate.md")
+    adr = _read("docs/adr/0012-phase2-physical-erase-tombstone.md")
+    phase2 = _read("docs/phase2-design-gate.md")
+    index = _read("docs/adr/README.md")
+
+    assert "Accepted / Phase 2 第八切片获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "quiesce" in gate
+    assert "Tombstone" in gate
+    assert "purge" in gate
+    assert "ADR-0012" in index
+    assert "ADR-0012" in phase2
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")

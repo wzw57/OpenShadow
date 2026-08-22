@@ -13,6 +13,7 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 - [ADR-0009：Phase 2 SkillAsset sidecar 注册边界](0009-phase2-skillasset-sidecar.md)
 - [ADR-0010：Phase 2 Integration Profile 注册边界](0010-phase2-integration-profile.md)
 - [ADR-0011：Phase 2 Portable Import / restore snapshot 边界](0011-phase2-portable-import-restore.md)
+- [ADR-0012：Phase 2 Physical erase 与 Tombstone 边界](0012-phase2-physical-erase-tombstone.md)
 
 ## 待接受 ADR
 
