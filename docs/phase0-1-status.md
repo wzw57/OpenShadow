@@ -89,5 +89,5 @@ Admission、Adapter 不能直接写 Store、Store 故障不伪造持久成功。
 rollback、restart recovery、retry → Attempt 与 Export fixture 的 Phase 0–1 基线已具备；
 Phase 2 首个 Memory 生命周期切片的状态见
 [phase2-memory-lifecycle-status.md](phase2-memory-lifecycle-status.md)。Portable Import /
-restore、Recall、Maintenance、SkillAsset、Integration 和 Erasure 仍须各自完成设计闸门
-后才能实现。
+restore、Recall、Maintenance、SkillAsset、Integration 已分别完成设计闸门并进入/合并实现；
+Portable Import/restore 已按 ADR-0011 接受进入实现，Erasure 仍须完成独立设计闸门后实现。
