@@ -20,6 +20,13 @@ from .invalidation import (
     MemorySourceInvalidationTargetResult,
 )
 from .memory import MemoryCandidate, MemoryService
+from .portable_import import (
+    PortableImportRecordResult,
+    PortableImportRequest,
+    PortableImportResult,
+    PortableImportService,
+    portable_import_result_digest,
+)
 from .recall import (
     MemoryMaintenanceAdapter,
     MemoryMaintenanceRequest,
@@ -71,6 +78,11 @@ __all__ = [
     "MemorySourceInvalidationResult",
     "MemorySourceInvalidationService",
     "MemorySourceInvalidationTargetResult",
+    "PortableImportRecordResult",
+    "PortableImportRequest",
+    "PortableImportResult",
+    "PortableImportService",
+    "portable_import_result_digest",
     "SkillAssetRegistrationRequest",
     "SkillAssetRegistrationResult",
     "SkillAssetService",

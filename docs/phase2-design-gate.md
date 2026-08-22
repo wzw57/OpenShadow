@@ -33,7 +33,8 @@ Physical erase、Recall、Maintenance、SkillAsset、Integration 或 Portable Im
 - [Integration 第六切片](phase2-integration-design-gate.md) 已完成实现，状态见
   [第六切片状态](phase2-integration-status.md)；
 - [Portable Import/restore 第七切片](phase2-portable-import-design-gate.md) 已按 ADR-0011
-  接受，进入实现；Physical erase 仍受独立闸门约束。
+  接受并完成实现，状态见 [第七切片状态](phase2-portable-import-status.md)；Physical erase
+  仍受独立闸门约束。
 
 ## 首个切片的操作契约
 

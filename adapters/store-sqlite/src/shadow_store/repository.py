@@ -306,6 +306,22 @@ class SqliteCanonicalRepository:
             self._save_idempotency(session, plan, result)
             return result
 
+    def idempotency_result(
+        self, idempotency_scope: str, idempotency_key: str
+    ) -> dict[str, Any] | None:
+        """Read an existing idempotency receipt without creating a Store capability."""
+        if not self._available:
+            raise RepositoryUnavailable()
+        with self._session_factory() as session:
+            prior = session.get(IdempotencyRow, (idempotency_scope, idempotency_key))
+            if prior is None:
+                return None
+            return {
+                "request_digest": prior.request_digest,
+                "outcome": prior.outcome,
+                "result": CommitBatchResult.model_validate(json.loads(prior.result_json)),
+            }
+
     def _created_at(self, record_id: str, session: Session) -> str:
         row = session.scalar(
             select(RecordVersionRow).where(
