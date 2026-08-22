@@ -84,17 +84,18 @@ def test_recall_maintenance_surface_is_documented() -> None:
     assert "不新增 HTTP 路由、数据库表" in status
 
 
-def test_derived_index_rebuild_gate_precedes_implementation() -> None:
+def test_derived_index_rebuild_gate_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-derived-index-design-gate.md")
     adr = _read("docs/adr/0007-phase2-derived-index-rebuild.md")
     status = _read("docs/phase2-recall-maintenance-status.md")
     application_source = _read("packages/shadow-application/src/shadow_application/__init__.py")
 
-    assert "Proposed / 等待维护者接受" in gate
-    assert "- Status: Proposed" in adr
+    assert "Accepted / Phase 2 第三切片获准实现" in gate
+    assert "- Status: Accepted" in adr
     assert "下一切片设计闸门" in status
     assert "Derived Memory Index Rebuild" in status
-    assert "不得实现 Index rebuild 业务代码" in gate
+    assert "创建" in gate
+    assert "phase2/derived-index-rebuild" in gate
     assert "不新增公开 HTTP" in gate
     assert "数据库表" in gate
     assert "MemoryIndexRebuildService" not in application_source

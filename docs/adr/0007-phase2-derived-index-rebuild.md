@@ -1,6 +1,6 @@
 # ADR-0007: Phase 2 派生 Memory Index 重建边界
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-22
 - Owners: OpenShadow maintainers
 
@@ -46,4 +46,5 @@ Contract-only。下一切片需要定义如何从 Canonical Memory active heads 
 - restart 后 Canonical 仍可重建 Index，损坏或缺失 Derived State 不影响 Canonical；
 - 文档同步测试确认没有新增 HTTP 路由、数据库表或未授权 Phase 2 业务。
 
-本 ADR 仍为 Proposed。维护者接受设计闸门后，才允许创建实现分支和代码 PR。
+本 ADR 已获维护者接受，允许创建实现分支和代码 PR；实现仍必须补齐上述验收证据，且不得
+扩大本 ADR 的范围。

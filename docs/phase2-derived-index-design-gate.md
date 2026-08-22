@@ -1,8 +1,8 @@
 # Phase 2 第三切片设计闸门：Derived Memory Index Rebuild
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 2 第三切片获准实现**
 
-本文件只定义派生 Memory Index 的重建与可见性边界，建立在已合并的
+本文件已获维护者接受，只定义派生 Memory Index 的重建与可见性边界，建立在已合并的
 [Recall / Maintenance 第二切片](phase2-recall-maintenance-status.md)之上。未获接受前，
 不得实现 Index rebuild 业务代码。
 
@@ -86,6 +86,6 @@ anti-resurrection。Tombstone、Physical erase、Backup/Cache/Graph 清除仍由
 
 ## 闸门结论
 
-维护者接受本文件和 [ADR-0007](adr/0007-phase2-derived-index-rebuild.md) 后，才创建
-`phase2/derived-index-rebuild` 实现分支。接受前仅允许修改设计、Contract fixtures、
-状态记录和文档同步测试，不允许提交 Index rebuild 实现。
+维护者已接受本文件和 [ADR-0007](adr/0007-phase2-derived-index-rebuild.md)，现在创建
+`phase2/derived-index-rebuild` 实现分支。实现必须严格限制在本闸门范围内，并在提交前补齐
+Contract fixtures、重建原子性、CAS 冲突、重放和 restart 证据。
