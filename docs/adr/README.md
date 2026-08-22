@@ -163,6 +163,15 @@ NNNN-short-title.md
 70. State freshness 使用 `fresh`、`stale`、`unknown` 稳定语义；TTL 到期不得继续返回 fresh。
 71. Phase 3 首个 State 切片不新增数据库表、Proposal 审批表或 State 专用写入路由。
 
+### Phase 3 Continuity Completion
+
+ADR-0014：Phase 3 Continuity 与 State Profile 完成边界。
+
+72. Durable Task 使用 typed Profile；Run success 不自动完成 Task。
+73. Checkpoint/Handoff 只保存可审计 refs/digest；无 native resume 时只能创建新 Attempt，不能伪装原 Session 恢复。
+74. Schedule/Clock/Resolver 只能产生 Observation/Trigger/Proposal，State condition 必须重新进入 Admission。
+75. Migration/Integrity 是窄 Store capability，复用 Portable Export/Import，不引入通用 Job、Queue 或 Outbox。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

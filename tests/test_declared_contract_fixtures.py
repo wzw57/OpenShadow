@@ -43,6 +43,11 @@ FIXTURE_SCHEMA_REFS = {
     "state/valid-observation-source-unavailable.json": "state#/$defs/Observation",
     "state/valid-state-proposal.json": "state#/$defs/StateProposalPayload",
     "state/valid-state.json": "state#/$defs/StatePayload",
+    "continuity/invalid-task.json": "continuity#/$defs/TaskPayload",
+    "continuity/valid-checkpoint.json": "continuity#/$defs/CheckpointPayload",
+    "continuity/valid-task-proposal.json": "continuity#/$defs/TaskProposalPayload",
+    "continuity/valid-task.json": "continuity#/$defs/TaskPayload",
+    "continuity/valid-trigger-observation.json": "continuity#/$defs/TriggerObservation",
 }
 
 
@@ -64,6 +69,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "kernel/invalid",
             "profiles/invalid",
             "state/invalid",
+            "continuity/invalid",
             "repository/invalid",
         )
     )

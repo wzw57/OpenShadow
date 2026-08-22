@@ -1,0 +1,11 @@
+{
+  "task_key": "task.invalid",
+  "goal": "Invalid task",
+  "completion_criteria": {},
+  "lifecycle": "unknown",
+  "run_refs": [],
+  "checkpoint_refs": [],
+  "artifact_refs": [],
+  "trigger_refs": [],
+  "deadline": "2020-01-01T00:00:00Z"
+}

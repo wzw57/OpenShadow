@@ -1,0 +1,22 @@
+contract: https://schemas.openshadow.dev/contracts/continuity/1.0.0
+cases:
+  - case_id: continuity.task.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/continuity/valid-task.json]
+    expected_outcome: valid
+  - case_id: continuity.task.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/continuity/invalid-task.json]
+    expected_outcome: invalid
+  - case_id: continuity.task.proposal.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/continuity/valid-task-proposal.json]
+    expected_outcome: valid
+  - case_id: continuity.checkpoint.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/continuity/valid-checkpoint.json]
+    expected_outcome: valid
+  - case_id: continuity.trigger.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/continuity/valid-trigger-observation.json]
+    expected_outcome: valid

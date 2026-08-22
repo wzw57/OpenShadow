@@ -1,0 +1,10 @@
+{
+  "task_ref": { "record_id": "task-1", "version": 1 },
+  "checkpoint_kind": "semantic",
+  "checkpoint_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "runtime_target_kind": "shadow.test-runner",
+  "runtime_capabilities": ["shadow.execution.checkpoint"],
+  "native_resume": false,
+  "artifact_refs": [],
+  "created_at": "2026-08-22T08:00:00Z"
+}

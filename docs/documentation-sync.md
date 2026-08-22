@@ -38,3 +38,7 @@ source-of-truth 条目和同步测试。
 Phase 3 State Profile 也必须先维护 `phase3-design-gate.md`、ADR-0013、状态文档、State
 Schema、fixtures、OpenAPI 和 `StateService`/Adapter surface；同步测试必须在实现或契约
 改变而文档未更新时失败。Durable Task、Checkpoint/Handoff 等后续切片不得借用本闸门提前实现。
+
+Phase 3 完成切片必须同步 `phase3-completion-design-gate.md`、ADR-0014、continuity Schema、
+Task/Checkpoint/Schedule/Integrity fixtures、OpenAPI、实现 surface 和
+`phase3-completion-status.md`；任何一项漂移都必须使 CI 失败。
