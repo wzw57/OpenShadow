@@ -118,3 +118,19 @@ endpoint_ref  = endpoint-local-web
 - [x] UI 不包含任何具体 Runtime/Model Vendor 分支；
 - [x] 不提前实现 Memory、Action、Task、Tool bridge 或多用户认证；
 - [x] 前端构建、API 集成和真实浏览器验收在实现分支完成。
+
+## 7. Conversation UI 可靠性切片
+
+本切片只增强现有 Conversation 客户端的状态收敛，不扩大公开 API 或 Profile 范围：
+
+- `pending` / `running` Run 使用现有 `GET /v1/runs/{id}` 定时回查，直到 terminal state；
+- 每次回查同时读取现有有限 `/events`，事件只作为诊断展示，不伪装成 token streaming；
+- Runtime 与 Shadow readiness 支持手动刷新，不能把浏览器缓存当作权威状态；
+- 网络错误保留 `code`、`category`、`retryable`，可恢复错误提供重试入口；
+- 事件详情只渲染通用 `sequence`、`event_type`、opaque payload，不解释 Provider 私有字段；
+- 页面刷新仍以 Conversation、Message、Run API 为权威，不写入 localStorage；
+- 不新增后端路由、数据库字段、Runtime Adapter 分支或 Memory/State/Task/Action 页面。
+
+验收：前端构建通过；发送后非 terminal Run 会自动收敛；事件面板可展开且不重复；
+ready/runtime 手动刷新可见；失败和网络错误可以重新加载；Vendor-neutrality 与现有
+全量 API 测试保持通过。

@@ -16,6 +16,8 @@ import {
 } from "./api";
 import type { Conversation, Message, Run, RunEvent, RuntimeStatus } from "./types";
 
+const TERMINAL_LIFECYCLES = new Set(["completed", "failed", "unknown", "cancelled", "canceled"]);
+
 function formatTime(value?: string): string {
   if (!value) return "";
   const date = new Date(value);
@@ -33,6 +35,10 @@ function runLabel(run: Run | null): string {
   const lifecycle = run?.typed_payload?.lifecycle;
   if (!lifecycle) return "Ready";
   return lifecycle.replaceAll("_", " ");
+}
+
+function isTerminalRun(run: Run | null): boolean {
+  return !run || TERMINAL_LIFECYCLES.has(run.typed_payload?.lifecycle ?? "");
 }
 
 function errorMessage(error: unknown): string {
@@ -54,6 +60,7 @@ export default function App() {
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedConversation = useMemo(
@@ -85,20 +92,40 @@ export default function App() {
     return nextRun;
   }, []);
 
+  const refreshStatus = useCallback(async () => {
+    const [readyBody, runtimeBody] = await Promise.all([getReady(), getRuntime()]);
+    setReady(readyBody.status === "healthy" && readyBody.durable);
+    setRuntime(runtimeBody);
+  }, []);
+
+  const refreshWorkspace = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      const records = await refreshConversations();
+      await refreshStatus();
+      const conversationId = selectedId ?? records[0]?.record_id;
+      if (conversationId) await refreshMessages(conversationId);
+      if (run?.record_id) await refreshRun(run.record_id);
+    } catch (refreshError) {
+      setError(errorMessage(refreshError));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshConversations, refreshMessages, refreshRun, refreshStatus, run?.record_id, selectedId]);
+
   useEffect(() => {
     let active = true;
-    Promise.all([refreshConversations(), getReady(), getRuntime()])
-      .then(([, readyBody, runtimeBody]) => {
+    Promise.all([refreshConversations(), refreshStatus()])
+      .then(() => {
         if (!active) return;
-        setReady(readyBody.status === "healthy" && readyBody.durable);
-        setRuntime(runtimeBody);
       })
       .catch((loadError) => active && setError(errorMessage(loadError)))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [refreshConversations]);
+  }, [refreshConversations, refreshStatus]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -108,8 +135,26 @@ export default function App() {
       return;
     }
     setError(null);
+    setRun(null);
+    setEvents([]);
     refreshMessages(selectedId).catch((loadError) => setError(errorMessage(loadError)));
   }, [refreshMessages, selectedId]);
+
+  useEffect(() => {
+    const activeRun = run;
+    if (!activeRun || isTerminalRun(activeRun)) return;
+    const runId = activeRun.record_id;
+    let active = true;
+    const timer = window.setInterval(() => {
+      refreshRun(runId).catch((pollError) => {
+        if (active) setError(errorMessage(pollError));
+      });
+    }, 1000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [refreshRun, run?.record_id, run?.typed_payload?.lifecycle]);
 
   async function handleCreateConversation(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -169,6 +214,7 @@ export default function App() {
 
   const lifecycle = run?.typed_payload?.lifecycle;
   const failed = lifecycle === "failed" || lifecycle === "unknown";
+  const runActive = Boolean(run && !isTerminalRun(run));
 
   return (
     <div className="app-shell">
@@ -230,16 +276,24 @@ export default function App() {
             <div className="eyebrow">Conversation</div>
             <h1>{selectedConversation ? recordTitle(selectedConversation) : "Your workspace"}</h1>
           </div>
-          <div className="runtime-pill" title={runtime?.target_kind}>
-            <span className={`status-dot ${runtime?.status === "unavailable" ? "offline" : "online"}`} />
-            <span>{runtimeLabel(runtime)}</span>
+          <div className="topbar-actions">
+            <button className="text-button refresh-button" onClick={refreshWorkspace} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+            <div className="runtime-pill" title={runtime?.target_kind}>
+              <span className={`status-dot ${runtime?.status === "unavailable" ? "offline" : "online"}`} />
+              <span>{runtimeLabel(runtime)}</span>
+            </div>
           </div>
         </header>
 
         {error && (
           <div className="error-banner" role="alert">
             <span>{error}</span>
-            <button onClick={() => setError(null)} aria-label="Dismiss error">Dismiss</button>
+            <span className="error-actions">
+              <button onClick={refreshWorkspace} disabled={refreshing}>Refresh</button>
+              <button onClick={() => setError(null)} aria-label="Dismiss error">Dismiss</button>
+            </span>
           </div>
         )}
 
@@ -294,12 +348,28 @@ export default function App() {
               )}
             </div>
           )}
+          {events.length > 0 && (
+            <details className="event-details">
+              <summary>Event timeline</summary>
+              <div className="event-list">
+                {events.map((event, index) => (
+                  <div className="event-row" key={`${event.sequence ?? "event"}-${index}`}>
+                    <span className="event-sequence">{event.sequence ?? index + 1}</span>
+                    <span className="event-type">{event.event_type ?? "event"}</span>
+                    {event.payload && (
+                      <code>{JSON.stringify(event.payload)}</code>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
           <form className="composer" onSubmit={handleSend}>
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder={selectedConversation ? "Write a message…" : "Create a conversation first"}
-              disabled={!selectedConversation || sending}
+              disabled={!selectedConversation || sending || runActive}
               rows={1}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
@@ -308,8 +378,8 @@ export default function App() {
                 }
               }}
             />
-            <button className="send-button" disabled={!selectedConversation || !draft.trim() || sending}>
-              <span>{sending ? "Sending" : "Send"}</span>
+            <button className="send-button" disabled={!selectedConversation || !draft.trim() || sending || runActive}>
+              <span>{sending || runActive ? "Working" : "Send"}</span>
               <span className="send-arrow">↗</span>
             </button>
           </form>
