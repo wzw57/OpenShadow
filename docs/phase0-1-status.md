@@ -23,6 +23,8 @@ Contract；Phase 2–5 的设计仍以[分阶段实现计划](implementation-sta
   不会自动成为 Memory。
 - Runtime base Port 的 `describe` / `execute` / `events` 形状、Deterministic Adapter 实现
   以及 SQLite 重启后的 Conversation、Run、Attempt 和 SSE event 恢复测试。
+- Runtime Adapter 可替换性 Contract Test：替换 target kind 和输出实现不改变 Conversation、
+  Message、Request 或 Run 的 Shadow 稳定 ID。
 - 本地开发和 CI 的 `ruff`、`pytest` 基线，测试覆盖 Contract fixtures、Repository CAS /
   replay、API loop 和 outage path。
 
@@ -59,6 +61,6 @@ uvicorn shadow_server.app:app --reload
 
 Phase 0–1 继续开发前，新增实现必须保持：所有 Canonical write 经过 Commit、所有
 work-bearing input 经过 Admission、Adapter 不能直接写 Store、Store 故障不伪造持久成功。
-在进入 Phase 2 前，先补齐 export fixture 和更换 Runtime Adapter 的 Contract Test；
+在进入 Phase 2 前，先补齐 export fixture；
 Alembic migration / rollback、restart recovery 与 retry → Attempt 的 Phase 0–1 基线已具备。在这些证据具备前，
 Phase 2–5 只维护文档。

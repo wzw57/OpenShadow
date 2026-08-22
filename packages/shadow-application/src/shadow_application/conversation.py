@@ -24,6 +24,7 @@ from shadow_kernel.models import (
     StableRecordRef,
 )
 from shadow_kernel.repository import CanonicalRepository
+from shadow_kernel.runtime import RuntimeAdapter
 
 PROFILE_SCHEMA = "https://schemas.openshadow.dev/contracts/profiles/1.0.0"
 KERNEL_SCHEMA = "https://schemas.openshadow.dev/contracts/kernel/1.0.0"
@@ -45,12 +46,18 @@ class TurnResult:
 class ConversationService:
     """Phase 1 application flow: conversation -> admission -> run -> result."""
 
-    def __init__(self, repository: CanonicalRepository, authority: CommitAuthority):
+    def __init__(
+        self,
+        repository: CanonicalRepository,
+        authority: CommitAuthority,
+        runtime_adapter: RuntimeAdapter | None = None,
+    ):
         self.repository = repository
         self.authority = authority
         self.adapters = AdapterRegistry()
-        self.deterministic = DeterministicTestAdapter()
-        self._ensure_deterministic_descriptor()
+        self.runtime_adapter = runtime_adapter or DeterministicTestAdapter()
+        self.runtime_descriptor = self._ensure_runtime_descriptor()
+        self.runtime_target_kind = self.runtime_descriptor.supported_target_kinds[0]
 
     def create_conversation(
         self,
@@ -180,7 +187,7 @@ class ConversationService:
             )
         }
         now = utc_timestamp()
-        output = self.deterministic.execute(text)
+        output = self.runtime_adapter.execute(text)
         current_payload = ConversationPayload.model_validate(conversation["typed_payload"])
         owner_ref = conversation["owner_ref"]
         space_id = conversation["space_id"]
@@ -202,7 +209,7 @@ class ConversationService:
             conversation_ref=StableRecordRef(record_id=conversation_id),
             sequence=len(current_payload.message_refs) + 2,
             message_type="shadow.message.assistant",
-            author_ref="shadow.deterministic-runner",
+            author_ref=self.runtime_descriptor.descriptor_id,
             content_blocks=[
                 ContentBlock(
                     block_type="shadow.content.text",
@@ -231,7 +238,7 @@ class ConversationService:
         requirements = ExecutionRequirementsPayload(
             requirements_id=ids["requirements"],
             required_capabilities=[],
-            acceptable_target_kinds=["shadow.deterministic-runner"],
+            acceptable_target_kinds=[self.runtime_target_kind],
             allowed_side_effects=[],
             streaming_required=True,
             checkpoint_required=False,
@@ -250,7 +257,7 @@ class ConversationService:
         cap = {
             "envelope_id": ids["capability-envelope"],
             "principal_ref": principal_ref,
-            "grantee_ref": "adapter-deterministic",
+            "grantee_ref": self.runtime_descriptor.descriptor_id,
             "scope_ref": {"record_id": ids["run"]},
             "allowed_capabilities": [],
             "data_scope": {
@@ -271,8 +278,8 @@ class ConversationService:
             "issued_at": now,
         }
         binding = self.adapters.bind(
-            descriptor_id="shadow.adapter.deterministic",
-            target_kind="shadow.deterministic-runner",
+            descriptor_id=self.runtime_descriptor.descriptor_id,
+            target_kind=self.runtime_target_kind,
             required_capabilities=[],
             binding_id=ids["binding"],
             scope_ref={"record_id": ids["run"]},
@@ -422,7 +429,7 @@ class ConversationService:
                 f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
                 owner_ref,
                 space_id,
-                "shadow.deterministic-runner",
+                self.runtime_descriptor.descriptor_id,
                 assistant_message.model_dump(mode="json", exclude_none=True),
                 provenance,
             ),
@@ -563,13 +570,13 @@ class ConversationService:
         assistant_id = f"message-assistant-retry-{token}"
         attempt_id = f"attempt-retry-{token}"
         now = utc_timestamp()
-        output = self.deterministic.execute(text)
+        output = self.runtime_adapter.execute(text)
         run_version = run_record["version"] + 1
         assistant_message = MessagePayload(
             conversation_ref=StableRecordRef(record_id=conversation_id),
             sequence=len(current_payload.message_refs) + 1,
             message_type="shadow.message.assistant",
-            author_ref="shadow.deterministic-runner",
+            author_ref=self.runtime_descriptor.descriptor_id,
             content_blocks=[
                 ContentBlock(
                     block_type="shadow.content.text",
@@ -634,7 +641,7 @@ class ConversationService:
                 f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
                 owner_ref,
                 space_id,
-                "shadow.deterministic-runner",
+                self.runtime_descriptor.descriptor_id,
                 assistant_message.model_dump(mode="json", exclude_none=True),
                 provenance,
             ),
@@ -721,22 +728,35 @@ class ConversationService:
             replayed=result.outcome == "idempotent_replay",
         )
 
-    def _ensure_deterministic_descriptor(self) -> None:
-        body = {
-            "descriptor_id": "shadow.adapter.deterministic",
-            "descriptor_version": "1.0.0",
-            "adapter_family": "shadow.execution",
-            "implementation_ref": "openshadow://adapters/test-deterministic",
-            "implementation_version": "0.1.0",
-            "supported_contracts": [{"contract_id": "shadow.execution", "version_range": "1.0.0"}],
-            "supported_target_kinds": ["shadow.deterministic-runner"],
-            "capabilities": [],
-            "config_schema_ref": f"{ADAPTER_SCHEMA}#/$defs/AdapterDescriptor",
-        }
+    def _ensure_runtime_descriptor(self) -> AdapterDescriptor:
+        body = self.runtime_adapter.describe()
         descriptor = AdapterDescriptor(**body, descriptor_digest=sha256_digest(body))
+        if not descriptor.supported_target_kinds:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.runtime.descriptor-no-target-kind",
+                    category="incompatible",
+                    message="A Runtime Adapter must declare at least one target kind.",
+                )
+            )
         self.adapters.register(descriptor)
+        legacy_default = (
+            descriptor.descriptor_id == "shadow.adapter.deterministic"
+            and descriptor.descriptor_version == "1.0.0"
+        )
+        operation_id = "operation-adapter-deterministic" if legacy_default else f"operation-{descriptor.descriptor_id}"
+        commit_request_id = (
+            "commit-request-adapter-deterministic"
+            if legacy_default
+            else f"commit-request-{descriptor.descriptor_id}"
+        )
+        idempotency_key = (
+            "deterministic-v1"
+            if legacy_default
+            else f"{descriptor.descriptor_id}:{descriptor.descriptor_version}"
+        )
         operation = self._operation(
-            "operation-adapter-deterministic",
+            operation_id,
             "create",
             descriptor.descriptor_id,
             "shadow.adapter.descriptor",
@@ -748,15 +768,25 @@ class ConversationService:
             Provenance(origin_type="shadow.origin.system", origin_ref="phase0-bootstrap"),
         )
         plan = CommitPlan(
-            commit_request_id="commit-request-adapter-deterministic",
+            commit_request_id=commit_request_id,
             idempotency_scope="system-adapter",
-            idempotency_key="deterministic-v1",
+            idempotency_key=idempotency_key,
             request_digest=sha256_digest(descriptor.model_dump(mode="json", exclude_none=True)),
             actor_ref="system",
             operations=[operation],
             prepared_at=utc_timestamp(),
         )
-        self.authority.commit(plan)
+        result = self.authority.commit(plan)
+        if result.outcome in {"failed", "conflict"}:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.runtime.descriptor-commit-failed",
+                    category="validation" if result.outcome == "failed" else "conflict",
+                    message="Runtime Adapter descriptor could not be committed.",
+                    typed_details=result.model_dump(mode="json", exclude_none=True),
+                )
+            )
+        return descriptor
 
     @staticmethod
     def _operation(

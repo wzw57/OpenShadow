@@ -16,9 +16,19 @@ class DeterministicTestAdapter:
 
     def describe(self) -> dict[str, object]:
         return {
+            "descriptor_id": "shadow.adapter.deterministic",
+            "descriptor_version": "1.0.0",
             "adapter_family": "shadow.execution",
-            "target_kind": self.target_kind,
+            "implementation_ref": "openshadow://adapters/test-deterministic",
+            "implementation_version": "0.1.0",
+            "supported_contracts": [
+                {"contract_id": "shadow.execution", "version_range": "1.0.0"}
+            ],
+            "supported_target_kinds": [self.target_kind],
             "capabilities": [],
+            "config_schema_ref": (
+                "https://schemas.openshadow.dev/contracts/adapters/1.0.0#/$defs/AdapterDescriptor"
+            ),
         }
 
     def execute(self, text: str) -> ExecutionResult:
