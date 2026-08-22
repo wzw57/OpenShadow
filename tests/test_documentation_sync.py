@@ -154,14 +154,14 @@ def test_phase4_erasure_backup_gate_precedes_implementation() -> None:
 
     assert "Proposed / 等待维护者接受" in gate
     assert "- Status: Proposed" in adr
-    assert "设计闸门 Proposed，尚未实现" in status
+    assert "已实现 / 已合并" in status
     assert "ErasureRequest" in schema
     assert "BackupMetadata" in schema
     assert "ADR-0019" in index
     assert "phase4-erasure-backup-design-gate.md" in sync
     assert "不包含敏感原文" in gate
     assert "encrypted=true" in gate
-    assert "Erasure Service" in status
+    assert "ErasureService" in status
 
 
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
