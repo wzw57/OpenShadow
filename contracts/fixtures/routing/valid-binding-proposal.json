@@ -1,0 +1,15 @@
+{
+  "proposal_id": "binding-proposal-1",
+  "subject_ref": { "record_id": "run-1", "version": 2 },
+  "target_kind": "vendor.example-runtime",
+  "adapter_ref": { "record_id": "adapter-1", "version": 1 },
+  "contract_version": "1.0.0",
+  "required_capabilities": ["shadow.action.notify"],
+  "requested_data_scope": { "classification_max": "personal" },
+  "policy_decision_ref": { "record_id": "policy-decision-1", "version": 1 },
+  "candidate_rank": 0,
+  "fallback": false,
+  "proposed_at": "2026-08-22T08:00:00Z",
+  "idempotency_key": "binding-key-1",
+  "reason": "deterministic adapter match"
+}

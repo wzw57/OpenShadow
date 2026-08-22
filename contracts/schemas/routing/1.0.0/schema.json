@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/routing/1.0.0",
+  "title": "OpenShadow Router and Policy Contracts",
+  "$defs": {
+    "PolicyDecision": {
+      "type": "object",
+      "required": ["decision", "policy_ref", "policy_version", "evaluated_at", "effective_until", "allowed_capabilities", "data_scope", "resource_scope", "budget_limits", "allowed_side_effects", "approval_refs", "revocation_state"],
+      "properties": {
+        "decision": { "enum": ["allow", "deny", "approval_required"] },
+        "policy_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "policy_version": { "type": "integer", "minimum": 1 },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "effective_until": { "type": "string", "format": "date-time" },
+        "allowed_capabilities": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 255 }, "uniqueItems": true },
+        "data_scope": { "type": "object" },
+        "resource_scope": { "type": "object" },
+        "budget_limits": { "type": "object" },
+        "allowed_side_effects": { "type": "array", "items": { "enum": ["none", "low", "medium", "high"] }, "uniqueItems": true },
+        "approval_refs": { "type": "array", "items": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" }, "uniqueItems": true },
+        "revocation_state": { "enum": ["active", "revoked", "unknown"] },
+        "reason_code": { "type": "string", "maxLength": 255 }
+      },
+      "unevaluatedProperties": false
+    },
+    "BindingProposal": {
+      "type": "object",
+      "required": ["proposal_id", "subject_ref", "target_kind", "adapter_ref", "contract_version", "required_capabilities", "requested_data_scope", "policy_decision_ref", "candidate_rank", "fallback", "proposed_at", "idempotency_key"],
+      "properties": {
+        "proposal_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "subject_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "target_kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9-]+)+$", "maxLength": 255 },
+        "adapter_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "contract_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "required_capabilities": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 255 }, "uniqueItems": true },
+        "requested_data_scope": { "type": "object" },
+        "policy_decision_ref": { "$ref": "https://schemas.openshadow.dev/contracts/common/1.0.0#/$defs/RecordVersionRef" },
+        "candidate_rank": { "type": "integer", "minimum": 0 },
+        "fallback": { "type": "boolean" },
+        "proposed_at": { "type": "string", "format": "date-time" },
+        "idempotency_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "reason": { "type": "string", "maxLength": 2000 }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}
