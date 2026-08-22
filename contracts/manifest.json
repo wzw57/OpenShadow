@@ -55,6 +55,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/action/1.0.0",
       "path": "schemas/action/1.0.0/schema.json",
       "sha256": "6950d7bd3cc9ffd6a2f6e42ccce418a278532b32e85e5aa81b212a2c2f2c9949"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/outbox/1.0.0",
+      "path": "schemas/outbox/1.0.0/schema.json",
+      "sha256": "307d135afa36892cbbe6144a30b4d503c18a0de3931929e0d0e83db9fe3e8158"
     }
   ]
 }

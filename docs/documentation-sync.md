@@ -47,3 +47,8 @@ Phase 4 Action 首片必须同步 `phase4-design-gate.md`、ADR-0015、Action Sc
 Provider/Reconciliation fixtures、OpenAPI、`ActionService`/deterministic Adapter surface 和
 `phase4-action-status.md`。设计闸门接受前禁止实现 Action 业务代码；Outbox、Router、Pulse、
 跨组件 Erasure 和 Backup 必须另建闸门。
+
+Phase 4 Durable Outbox 必须同步 `phase4-outbox-design-gate.md`、ADR-0016、Outbox Schema、
+Intent/Delivery/Reconciliation fixtures 和 `phase4-outbox-status.md`。设计接受前禁止实现
+Outbox Service、Adapter delivery、迁移或公开 Outbox 路由；Outbox 只允许可靠副作用和预配置
+emergency capability，不得漂移成通用 Queue/Event Bus。

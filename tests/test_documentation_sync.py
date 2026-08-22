@@ -25,6 +25,35 @@ def test_phase2_status_and_adr_are_delivered() -> None:
     assert "phase2/memory-lifecycle` 分支实现" not in roadmap
 
 
+def test_phase3_and_phase4_status_do_not_drift() -> None:
+    phase3 = _read("docs/phase3-state-profile-status.md")
+    roadmap = _read("docs/roadmap.md")
+    assert "已实现 / 已合并" in phase3
+    assert "已实现 / 已合并前收口" not in phase3
+    assert "完成并合并 Action 生命周期首片" in roadmap
+    assert "进入合并收口" not in roadmap
+
+
+def test_phase4_outbox_design_gate_precedes_implementation() -> None:
+    gate = _read("docs/phase4-outbox-design-gate.md")
+    adr = _read("docs/adr/0016-phase4-durable-outbox.md")
+    status = _read("docs/phase4-outbox-status.md")
+    schema = _read("contracts/schemas/outbox/1.0.0/schema.json")
+    index = _read("docs/adr/README.md")
+    sync = _read("docs/documentation-sync.md")
+
+    assert "Proposed / 等待维护者接受" in gate
+    assert "- Status: Proposed" in adr
+    assert "设计闸门 Proposed，尚未实现" in status
+    assert "OutboxIntentPayload" in schema
+    assert "ADR-0016" in index
+    assert "phase4-outbox-design-gate.md" in sync
+    assert "不新增数据库表" in gate
+    assert "通用 Queue" in gate
+    assert "Event Bus" in gate
+    assert "禁止创建 `OutboxService`" in status
+
+
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-recall-maintenance-design-gate.md")
     adr = _read("docs/adr/0006-phase2-recall-maintenance.md")
