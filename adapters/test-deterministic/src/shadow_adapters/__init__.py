@@ -4,6 +4,7 @@ from .erase import DeterministicErasureAdapter
 from .index import DeterministicMemoryIndexAdapter
 from .memory import DeterministicMemoryMaintenanceAdapter, DeterministicMemoryRecallAdapter
 from .outbox import DeterministicOutboxAdapter
+from .routing import DeterministicPolicyEngine, DeterministicRouterAdapter
 from .state import DeterministicStateSourceAdapter
 
 __all__ = [
@@ -16,4 +17,6 @@ __all__ = [
     "DeterministicStateSourceAdapter",
     "DeterministicActionProvider",
     "DeterministicOutboxAdapter",
+    "DeterministicPolicyEngine",
+    "DeterministicRouterAdapter",
 ]

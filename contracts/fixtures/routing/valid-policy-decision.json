@@ -1,0 +1,15 @@
+{
+  "decision": "allow",
+  "policy_ref": { "record_id": "policy-default", "version": 1 },
+  "policy_version": 1,
+  "evaluated_at": "2026-08-22T08:00:00Z",
+  "effective_until": "2099-01-01T00:00:00Z",
+  "allowed_capabilities": ["shadow.action.notify"],
+  "data_scope": { "classification_max": "personal" },
+  "resource_scope": { "space_id": "space-routing" },
+  "budget_limits": { "max_cost": 10 },
+  "allowed_side_effects": ["none", "low"],
+  "approval_refs": [],
+  "revocation_state": "active",
+  "reason_code": "deterministic.allow"
+}

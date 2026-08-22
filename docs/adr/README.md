@@ -192,6 +192,15 @@ ADR-0016：Phase 4 Durable Outbox 最小可靠副作用边界。
 83. `unknown` 必须通过 evidence-backed reconciliation 收敛或保持 unknown，不能盲目 retry；
     同一 dedup key 重放不创建新的 Intent、Result 或 Reconciliation。
 
+### Phase 4 Router / Policy
+
+ADR-0017：Phase 4 Deterministic Policy 与 Router Proposal 边界。
+
+84. Policy Engine 只能提出 PolicyDecision，Router 只能提出 BindingProposal；Core 保留最终
+    capability、data scope、budget、side effect、approval、expiry 和 revocation 检查。
+85. `target_kind` 保持 namespaced open-world；candidate rank/fallback 不是授权，未知 target
+    必须通过 Descriptor/Capability/Policy 检查后才能接受。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

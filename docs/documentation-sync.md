@@ -52,3 +52,8 @@ Phase 4 Durable Outbox 必须同步 `phase4-outbox-design-gate.md`、ADR-0016、
 Intent/Delivery/Reconciliation fixtures 和 `phase4-outbox-status.md`。设计接受前禁止实现
 Outbox Service、Adapter delivery、迁移或公开 Outbox 路由；Outbox 只允许可靠副作用和预配置
 emergency capability，不得漂移成通用 Queue/Event Bus。
+
+Phase 4 Router/Policy 必须同步 `phase4-router-policy-design-gate.md`、ADR-0017、Routing Schema、
+PolicyDecision/BindingProposal fixtures 和 `phase4-router-policy-status.md`。设计接受前禁止实现
+Policy/Router Service、策略存储、评分缓存或公开路由；外部组件只能提出 Decision/Proposal，
+Core 必须保留最终授权检查。

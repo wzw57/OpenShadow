@@ -55,6 +55,7 @@ from .recall import (
     MemoryRecallService,
     MemorySnapshot,
 )
+from .routing import BindingProposalResult, PolicyDecisionResult, RoutingPolicyService
 from .skillasset import (
     SkillAssetRegistrationRequest,
     SkillAssetRegistrationResult,
@@ -101,6 +102,9 @@ __all__ = [
     "OutboxDeliveryAdapter",
     "OutboxIntentCandidate",
     "OutboxService",
+    "BindingProposalResult",
+    "PolicyDecisionResult",
+    "RoutingPolicyService",
     "MemorySnapshot",
     "MemorySourceInvalidationRequest",
     "MemorySourceInvalidationResult",

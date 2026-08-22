@@ -44,7 +44,7 @@ def test_phase4_outbox_design_gate_precedes_implementation() -> None:
 
     assert "Accepted / Phase 4 Durable Outbox 获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "已实现 / 等待合并" in status
+    assert "已实现 / 已合并" in status
     assert "OutboxIntentPayload" in schema
     assert "ADR-0016" in index
     assert "phase4-outbox-design-gate.md" in sync
@@ -69,6 +69,44 @@ def test_phase4_outbox_implementation_surface_is_documented() -> None:
         assert symbol in source
     assert "class DeterministicOutboxAdapter" in adapter
     assert "Commit/CAS" in status
+
+
+def test_phase4_router_policy_gate_precedes_implementation() -> None:
+    gate = _read("docs/phase4-router-policy-design-gate.md")
+    adr = _read("docs/adr/0017-phase4-router-policy.md")
+    status = _read("docs/phase4-router-policy-status.md")
+    schema = _read("contracts/schemas/routing/1.0.0/schema.json")
+    index = _read("docs/adr/README.md")
+    sync = _read("docs/documentation-sync.md")
+
+    assert "Accepted / Phase 4 Router/Policy 获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "已实现 / 已合并" in status
+    assert "PolicyDecision" in schema
+    assert "BindingProposal" in schema
+    assert "ADR-0017" in index
+    assert "phase4-router-policy-design-gate.md" in sync
+    assert "不能签发 Capability" in gate
+    assert "`target_kind` 保持 namespaced" in gate
+    assert "RoutingPolicyService" in status
+
+
+def test_phase4_router_policy_implementation_surface_is_documented() -> None:
+    source = _read("packages/shadow-application/src/shadow_application/routing.py")
+    adapter = _read("adapters/test-deterministic/src/shadow_adapters/routing.py")
+    status = _read("docs/phase4-router-policy-status.md")
+    for symbol in (
+        "class PolicyDecisionResult",
+        "class BindingProposalResult",
+        "class RoutingPolicyService",
+        "def evaluate_policy",
+        "def propose_binding",
+        "def accept_binding",
+    ):
+        assert symbol in source
+    assert "class DeterministicPolicyEngine" in adapter
+    assert "class DeterministicRouterAdapter" in adapter
+    assert "AdapterRegistry" in status
 
 
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:

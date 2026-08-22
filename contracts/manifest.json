@@ -60,6 +60,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/outbox/1.0.0",
       "path": "schemas/outbox/1.0.0/schema.json",
       "sha256": "307d135afa36892cbbe6144a30b4d503c18a0de3931929e0d0e83db9fe3e8158"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/routing/1.0.0",
+      "path": "schemas/routing/1.0.0/schema.json",
+      "sha256": "d11ed708d34806386abdc4da9c1bccc129b6f3fe457c74a6ada8040220d0ca3d"
     }
   ]
 }
