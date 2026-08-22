@@ -19,7 +19,11 @@ PROFILE_SCHEMA = "https://schemas.openshadow.dev/contracts/profiles/1.0.0"
 
 
 def _operation(
-    record_id: str, operation: str = "create", expected_version: int | None = None
+    record_id: str,
+    operation: str = "create",
+    expected_version: int | None = None,
+    owner_ref: str = "principal-test",
+    space_id: str = "space-test",
 ) -> CommitOperation:
     payload = ConversationPayload(conversation_state="open", message_refs=[], queued_run_refs=[])
     return CommitOperation(
@@ -28,8 +32,8 @@ def _operation(
         record_id=record_id,
         record_type="shadow.profile.conversation",
         target_schema_ref=f"{PROFILE_SCHEMA}#/$defs/ConversationPayload",
-        owner_ref="principal-test",
-        space_id="space-test",
+        owner_ref=owner_ref,
+        space_id=space_id,
         created_by="principal-test",
         data_classification="personal",
         provenance=Provenance(origin_type="shadow.origin.test", origin_ref="test"),
@@ -79,3 +83,34 @@ def test_committed_batch_replays_exactly(tmp_path: Path) -> None:
     assert replay.outcome == "idempotent_replay"
     assert replay.commit_id == first.commit_id
     assert repository.get("conversation-2")["version"] == 1
+
+
+def test_query_filters_owner_before_applying_limit(tmp_path: Path) -> None:
+    registry = ContractRegistry(ROOT)
+    repository = SqliteCanonicalRepository(tmp_path / "shadow.db")
+    authority = CommitAuthority(repository, registry)
+    authority.commit(_plan(_operation("conversation-other", owner_ref="principal-other"), "other"))
+    authority.commit(_plan(_operation("conversation-target"), "target"))
+    records = repository.query(owner_refs={"principal-test"}, limit=1)
+    assert [record["record_id"] for record in records] == ["conversation-target"]
+
+
+def test_owner_and_space_are_immutable_across_versions(tmp_path: Path) -> None:
+    registry = ContractRegistry(ROOT)
+    repository = SqliteCanonicalRepository(tmp_path / "shadow.db")
+    authority = CommitAuthority(repository, registry)
+    authority.commit(_plan(_operation("conversation-immutable"), "immutable-create"))
+    result = authority.commit(
+        _plan(
+            _operation(
+                "conversation-immutable",
+                operation="update",
+                expected_version=1,
+                owner_ref="principal-other",
+            ),
+            "immutable-update",
+        )
+    )
+    assert result.outcome == "failed"
+    assert result.structured_error["code"] == "shadow.repository.identity-immutable"
+    assert repository.current_version("conversation-immutable") == 1

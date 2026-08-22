@@ -137,9 +137,10 @@ class SqliteCanonicalRepository:
             )
             if record_types:
                 query = query.where(RecordVersionRow.record_type.in_(record_types))
-            query = query.order_by(RecordVersionRow.committed_at, RecordVersionRow.record_id).limit(
-                limit
-            )
+            # Owner and Space live in the canonical JSON envelope rather than physical columns.
+            # Do not apply the page limit before those boundary filters, or a page containing
+            # another tenant's records can incorrectly appear empty.
+            query = query.order_by(RecordVersionRow.committed_at, RecordVersionRow.record_id)
             rows = session.scalars(query).all()
             records = [json.loads(row.envelope_json) for row in rows]
         if owner_refs:
@@ -205,6 +206,25 @@ class SqliteCanonicalRepository:
                             )
                         )
                         continue
+                    current_row = session.scalar(
+                        select(RecordVersionRow).where(
+                            RecordVersionRow.record_id == operation.record_id,
+                            RecordVersionRow.version == current,
+                        )
+                    )
+                    current_envelope = (
+                        json.loads(current_row.envelope_json) if current_row else None
+                    )
+                    if current_envelope and (
+                        operation.owner_ref != current_envelope["owner_ref"]
+                        or operation.space_id != current_envelope["space_id"]
+                    ):
+                        result = self._failed_result(
+                            "shadow.repository.identity-immutable",
+                            "Owner and Space cannot change across Canonical versions.",
+                        )
+                        self._save_idempotency(session, plan, result)
+                        return result
                     next_version = current + 1
                     previous_version = current
                 committed_at = utc_timestamp()
