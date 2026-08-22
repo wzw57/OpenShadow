@@ -184,6 +184,8 @@ OpenShadow 自行实现的范围收紧为：
 - [Phase 0–1 实现状态](docs/phase0-1-status.md)
 - [Stage 4 Contract 基线](docs/contract-baseline.md)
 - [架构决策记录](docs/adr/README.md)
+- [Web UI 设计闸门](docs/web-ui-design-gate.md)
+- [Web UI 实现状态](docs/web-ui-status.md)
 
 ## 当前状态
 

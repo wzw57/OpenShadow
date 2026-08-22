@@ -171,6 +171,8 @@ OpenShadow implements:
 - [Roadmap](docs/roadmap.md)
 - [Stage 4 Contract Baseline](docs/contract-baseline.md)
 - [Architecture Decision Records](docs/adr/README.md)
+- [Web UI Design Gate](docs/web-ui-design-gate.md)
+- [Web UI Status](docs/web-ui-status.md)
 
 ## Status
 

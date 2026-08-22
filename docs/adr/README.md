@@ -15,6 +15,7 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 - [ADR-0011：Phase 2 Portable Import / restore snapshot 边界](0011-phase2-portable-import-restore.md)
 - [ADR-0012：Phase 2 Physical erase 与 Tombstone 边界](0012-phase2-physical-erase-tombstone.md)
 - [ADR-0021：Hermes Agent Runtime Adapter](0021-hermes-agent-runtime-adapter.md)
+- [ADR-0022：Web UI 作为 Shadow API 参考客户端](0022-web-ui-reference-client.md)
 
 ## 待接受 ADR
 
