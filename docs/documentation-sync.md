@@ -42,3 +42,8 @@ Schema、fixtures、OpenAPI 和 `StateService`/Adapter surface；同步测试必
 Phase 3 完成切片必须同步 `phase3-completion-design-gate.md`、ADR-0014、continuity Schema、
 Task/Checkpoint/Schedule/Integrity fixtures、OpenAPI、实现 surface 和
 `phase3-completion-status.md`；任何一项漂移都必须使 CI 失败。
+
+Phase 4 Action 首片必须同步 `phase4-design-gate.md`、ADR-0015、Action Schema、Action/Approval/
+Provider/Reconciliation fixtures、OpenAPI、`ActionService`/deterministic Adapter surface 和
+`phase4-action-status.md`。设计闸门接受前禁止实现 Action 业务代码；Outbox、Router、Pulse、
+跨组件 Erasure 和 Backup 必须另建闸门。

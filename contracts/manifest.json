@@ -50,6 +50,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/continuity/1.0.0",
       "path": "schemas/continuity/1.0.0/schema.json",
       "sha256": "58b49e5725572af6604959a00abdbca5cfc1000599a756a02f7edc823d0d5097"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/action/1.0.0",
+      "path": "schemas/action/1.0.0/schema.json",
+      "sha256": "44878f7c2108b77fe2ce3db75ef768e79615aa44e1f0a65d8aeee964a7cdfea4"
     }
   ]
 }

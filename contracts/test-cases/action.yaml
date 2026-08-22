@@ -1,0 +1,27 @@
+profile: action
+version: 1.0.0
+cases:
+  - id: valid-action-proposal
+    fixture: action/valid-action-proposal.json
+    schema: action#/$defs/ActionProposalPayload
+    expected: valid
+  - id: valid-approval-proposal
+    fixture: action/valid-approval-proposal.json
+    schema: action#/$defs/ApprovalProposalPayload
+    expected: valid
+  - id: valid-provider-result
+    fixture: action/valid-provider-result.json
+    schema: action#/$defs/ProviderResultPayload
+    expected: valid
+  - id: valid-reconciliation
+    fixture: action/valid-reconciliation.json
+    schema: action#/$defs/ReconciliationPayload
+    expected: valid
+  - id: invalid-inline-secret
+    fixture: action/invalid-inline-secret.json
+    schema: action#/$defs/ActionProposalPayload
+    expected: invalid
+  - id: invalid-approval-decision
+    fixture: action/invalid-approval-decision.json
+    schema: action#/$defs/ApprovalProposalPayload
+    expected: invalid

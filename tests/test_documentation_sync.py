@@ -357,6 +357,33 @@ def test_phase3_completion_implementation_surface_and_status_are_documented() ->
         assert path in openapi
 
 
+def test_phase4_action_design_gate_and_contract_are_synchronized() -> None:
+    gate = _read("docs/phase4-design-gate.md")
+    adr = _read("docs/adr/0015-phase4-action-lifecycle.md")
+    status = _read("docs/phase4-action-status.md")
+    schema = _read("contracts/schemas/action/1.0.0/schema.json")
+    openapi = _read("contracts/openapi/openapi.yaml")
+    roadmap = _read("docs/roadmap.md")
+
+    assert "Accepted / Phase 4 首个 Action 生命周期切片获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "设计闸门 Accepted；实现尚未开始" in status
+    for definition in (
+        "ActionPayload",
+        "ActionProposalPayload",
+        "ApprovalProposalPayload",
+        "ProviderResultPayload",
+        "ReconciliationPayload",
+    ):
+        assert definition in schema
+    assert "ActionProposalCommand" in openapi
+    assert "ActionApprovalProposalCommand" in openapi
+    assert "/v1/actions" in openapi
+    assert "/v1/actions/{action_id}" in openapi
+    assert "ADR-0015" in roadmap
+    assert "不新增数据库表" in gate
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")
