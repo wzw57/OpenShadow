@@ -1,3 +1,10 @@
+from .continuity import (
+    DeterministicClock,
+    DeterministicMigrationAdapter,
+    DeterministicScheduleAdapter,
+    IntegrityService,
+    StateConditionAdmission,
+)
 from .conversation import ConversationService, TurnResult
 from .erase import (
     ErasureAdapter,
@@ -57,9 +64,13 @@ from .skillasset import (
     skill_bundle_manifest,
 )
 from .state import StateProposalCandidate, StateService, StateSourceAdapter
+from .task import TaskProposalCandidate, TaskService
 
 __all__ = [
     "ConversationService",
+    "DeterministicClock",
+    "DeterministicMigrationAdapter",
+    "DeterministicScheduleAdapter",
     "ErasureAdapter",
     "IntegrationRegistrationRequest",
     "IntegrationRegistrationResult",
@@ -107,5 +118,9 @@ __all__ = [
     "StateProposalCandidate",
     "StateService",
     "StateSourceAdapter",
+    "StateConditionAdmission",
+    "TaskProposalCandidate",
+    "TaskService",
+    "IntegrityService",
     "TurnResult",
 ]

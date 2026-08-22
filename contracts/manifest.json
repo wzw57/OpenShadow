@@ -49,7 +49,7 @@
     {
       "schema_id": "https://schemas.openshadow.dev/contracts/continuity/1.0.0",
       "path": "schemas/continuity/1.0.0/schema.json",
-      "sha256": "a7715cd8175b4e8f492d5d0dd3516ccf53e052c5b0499faa9f9099027012e18a"
+      "sha256": "58b49e5725572af6604959a00abdbca5cfc1000599a756a02f7edc823d0d5097"
     }
   ]
 }

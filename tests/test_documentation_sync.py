@@ -323,12 +323,38 @@ def test_phase3_completion_gate_is_accepted_before_remaining_implementation() ->
 
     assert "Accepted / Phase 3 全部剩余切片获准实现" in gate
     assert "- Status: Accepted" in adr
-    assert "剩余实现进行中" in status
+    assert "已实现 / 已合并" in status
     assert "TaskPayload" in schema
     assert "CheckpointPayload" in schema
     assert "IntegrityManifest" in schema
     assert "ADR-0014" in index
     assert "不新增数据库表" in gate
+
+
+def test_phase3_completion_implementation_surface_and_status_are_documented() -> None:
+    task_source = _read("packages/shadow-application/src/shadow_application/task.py")
+    continuity_source = _read("packages/shadow-application/src/shadow_application/continuity.py")
+    app_source = _read("apps/shadow-server/shadow_server/app.py")
+    status = _read("docs/phase3-completion-status.md")
+    openapi = _read("contracts/openapi/openapi.yaml")
+    runtime_schema = create_app("sqlite://").openapi()
+
+    for symbol in ("class TaskService", "class TaskProposalCandidate", "def create_checkpoint", "def accept_proposal", "def link_run"):
+        assert symbol in task_source
+    for symbol in ("class DeterministicClock", "class DeterministicScheduleAdapter", "class StateConditionAdmission", "class IntegrityService", "class DeterministicMigrationAdapter"):
+        assert symbol in continuity_source
+    assert "已实现 / 已合并" in status
+    assert '"/v1/tasks"' in app_source
+    assert '"/v1/tasks/{task_id}/checkpoints"' in app_source
+    for path, method in (
+        ("/v1/tasks", "get"),
+        ("/v1/tasks/{task_id}", "get"),
+        ("/v1/tasks/{task_id}/checkpoints", "post"),
+        ("/v1/tasks/{task_id}/completion", "post"),
+    ):
+        assert path in runtime_schema["paths"]
+        assert method in runtime_schema["paths"][path]
+        assert path in openapi
 
 
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:

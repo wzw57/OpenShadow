@@ -7,7 +7,8 @@ from typing import Annotated, Any
 from fastapi import FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
-from shadow_application import ConversationService, MemoryService, StateService
+from shadow_application import ConversationService, MemoryService, StateService, TaskService
+from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest
@@ -64,6 +65,37 @@ class StateProposalCommand(BaseModel):
     proposal_reason: str | None = None
 
 
+class TaskProposalCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    input_type: str = "shadow.durable-task-proposal"
+    proposed_operation: str
+    target_ref: dict[str, Any] | None = None
+    expected_version: int | None = Field(default=None, ge=1)
+    task_key: str
+    goal: str
+    completion_criteria: Any
+    waiting_condition: Any | None = None
+    deadline: str | None = None
+    result_ref: dict[str, Any] | None = None
+    failure_summary: Any | None = None
+    proposal_reason: str | None = None
+
+
+class CheckpointCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    checkpoint_kind: str
+    checkpoint_digest: str
+    runtime_target_kind: str
+    runtime_capabilities: list[str] = Field(default_factory=list)
+    artifact_refs: list[dict[str, Any]] = Field(default_factory=list)
+    native_resume: bool = False
+
+
+class CompletionCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    result_ref: dict[str, Any] | None = None
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -98,14 +130,18 @@ def create_app(database_url: str | None = None) -> FastAPI:
         database_url = f"sqlite:///{database_path.as_posix()}"
     repository = SqliteCanonicalRepository(database_url)
     authority = CommitAuthority(repository, registry)
+    admission = AdmissionService(repository, authority)
     conversations = ConversationService(repository, authority)
     memories = MemoryService(repository, authority, registry)
     states = StateService(repository, authority, registry)
+    tasks = TaskService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
     app.state.conversations = conversations
     app.state.memories = memories
     app.state.states = states
+    app.state.tasks = tasks
+    app.state.admission = admission
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:
@@ -255,13 +291,32 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     @app.post("/v1/proposals", status_code=status.HTTP_202_ACCEPTED)
     async def submit_proposal(
-        command: StateProposalCommand,
+        command: StateProposalCommand | TaskProposalCommand,
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
     ) -> dict[str, Any]:
+        if isinstance(command, TaskProposalCommand):
+            target_task_id = command.target_ref.get("record_id") if command.target_ref else None
+            candidate = tasks.propose(
+                submitted_by=x_principal_ref,
+                owner_ref=x_principal_ref,
+                space_id=x_space_id,
+                operation=command.proposed_operation,
+                task_key=command.task_key,
+                goal=command.goal,
+                completion_criteria=command.completion_criteria,
+                target_task_id=target_task_id,
+                expected_version=command.expected_version,
+                waiting_condition=command.waiting_condition,
+                deadline=command.deadline,
+                result_ref=command.result_ref,
+                failure_summary=command.failure_summary,
+                proposal_reason=command.proposal_reason,
+            )
+            return {"record": tasks.submit_proposal(candidate, idempotency_key=idempotency_key)}
         if command.input_type != "shadow.state-proposal":
-            raise HTTPException(422, detail="Only StateProposal is supported in this slice")
+            raise HTTPException(422, detail="Only StateProposal or Durable Task Proposal is supported")
         target_state_id = None
         if command.target_ref is not None:
             target_state_id = command.target_ref.get("record_id")
@@ -299,9 +354,96 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
+        proposal = repository.get(proposal_id)
+        if proposal is None:
+            raise HTTPException(404, detail="Proposal not found")
+        proposal_type = proposal.get("typed_payload", {}).get("proposal_type")
+        if proposal_type == "shadow.durable-task-proposal":
+            return tasks.accept_proposal(
+                proposal_id=proposal_id,
+                proposal_expected_version=expected_version,
+                principal_ref=x_principal_ref,
+                space_id=x_space_id,
+                idempotency_key=idempotency_key,
+            )
         return states.accept_proposal(
             proposal_id=proposal_id,
             proposal_expected_version=expected_version,
+            principal_ref=x_principal_ref,
+            space_id=x_space_id,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.get("/v1/tasks")
+    async def list_tasks(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return {"records": tasks.list_tasks(owner_ref=x_principal_ref, space_id=x_space_id, limit=limit)}
+
+    @app.get("/v1/tasks/{task_id}")
+    async def get_task(
+        task_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        record = tasks.get_task(task_id, x_principal_ref, x_space_id)
+        if record is None:
+            raise HTTPException(404, detail="Task not found")
+        return {"record": record}
+
+    @app.post("/v1/tasks/{task_id}/checkpoints")
+    async def create_checkpoint(
+        task_id: str,
+        command: CheckpointCommand,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        return tasks.create_checkpoint(
+            task_id=task_id,
+            expected_task_version=expected_version,
+            principal_ref=x_principal_ref,
+            space_id=x_space_id,
+            checkpoint_kind=command.checkpoint_kind,
+            checkpoint_digest=command.checkpoint_digest,
+            runtime_target_kind=command.runtime_target_kind,
+            runtime_capabilities=command.runtime_capabilities,
+            artifact_refs=command.artifact_refs,
+            native_resume=command.native_resume,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.post("/v1/tasks/{task_id}/completion")
+    async def complete_task(
+        task_id: str,
+        command: CompletionCommand,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        current = tasks.get_task(task_id, x_principal_ref, x_space_id)
+        if current is None:
+            raise HTTPException(404, detail="Task not found")
+        candidate = tasks.propose(
+            submitted_by=x_principal_ref,
+            owner_ref=x_principal_ref,
+            space_id=x_space_id,
+            operation="complete",
+            task_key=current["typed_payload"]["task_key"],
+            goal=current["typed_payload"]["goal"],
+            completion_criteria=current["typed_payload"]["completion_criteria"],
+            target_task_id=task_id,
+            expected_version=expected_version,
+            result_ref=command.result_ref,
+        )
+        proposal = tasks.submit_proposal(candidate, idempotency_key=f"{idempotency_key}:proposal")
+        return tasks.accept_proposal(
+            proposal_id=proposal["record_id"],
+            proposal_expected_version=proposal["version"],
             principal_ref=x_principal_ref,
             space_id=x_space_id,
             idempotency_key=idempotency_key,
