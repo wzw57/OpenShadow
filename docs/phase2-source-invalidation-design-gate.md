@@ -1,8 +1,8 @@
 # Phase 2 第四切片设计闸门：Source-dependent Memory Invalidation
 
-状态：**Proposed / 等待维护者接受**
+状态：**Accepted / Phase 2 第四切片获准实现**
 
-本文件定义来源不可用/删除事件影响 Memory 的最小 Canonical 边界，建立在已合并的
+本文件已获维护者接受，定义来源不可用/删除事件影响 Memory 的最小 Canonical 边界，建立在已合并的
 [Derived Index Rebuild 第三切片](phase2-derived-index-status.md)之上。未获接受前，
 不得实现 source invalidation 业务代码。
 
@@ -91,6 +91,6 @@ Source invalidation 不创建 Proposal 表，不绕过 CommitAuthority，不执�
 
 ## 闸门结论
 
-维护者接受本文件和 [ADR-0008](adr/0008-phase2-source-dependent-invalidation.md) 后，
-才创建 `phase2/source-dependent-invalidation` 实现分支。接受前只允许修改设计、fixtures、
-状态记录和同步测试。
+维护者已接受本文件和 [ADR-0008](adr/0008-phase2-source-dependent-invalidation.md)，
+现在创建 `phase2/source-dependent-invalidation` 实现分支。实现必须补齐 Contract fixtures、
+all-or-nothing、CAS、幂等和 anti-resurrection 证据，且不得扩大本闸门范围。

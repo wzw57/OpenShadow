@@ -37,4 +37,4 @@
 Physical erase 仍须分别经过设计闸门。
 
 下一切片设计闸门：[Source-dependent Memory Invalidation](phase2-source-invalidation-design-gate.md)，
-当前状态为 Proposed；实现前必须先接受 ADR-0008。
+当前状态为 Accepted；实现范围和验收证据将在第四切片状态文档中补齐。

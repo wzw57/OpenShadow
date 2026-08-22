@@ -38,4 +38,4 @@ Physical erase 的完整实现仍须分别经过设计闸门。
 
 第三切片状态：[Derived Memory Index Rebuild](phase2-derived-index-status.md) 已实现。
 下一切片设计闸门：[Source-dependent Memory Invalidation](phase2-source-invalidation-design-gate.md)，
-当前状态为 Proposed；在维护者接受前不得实现 source invalidation 业务代码。
+当前状态为 Accepted；实现范围和验收证据将在第四切片状态文档中补齐。

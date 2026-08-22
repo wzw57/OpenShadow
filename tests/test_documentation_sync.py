@@ -115,10 +115,10 @@ def test_source_invalidation_gate_precedes_implementation() -> None:
     recall_status = _read("docs/phase2-recall-maintenance-status.md")
     application_source = _read("packages/shadow-application/src/shadow_application/__init__.py")
 
-    assert "Proposed / 等待维护者接受" in gate
-    assert "- Status: Proposed" in adr
+    assert "Accepted / Phase 2 第四切片获准实现" in gate
+    assert "- Status: Accepted" in adr
     assert "Source-dependent Memory Invalidation" in status
-    assert "当前状态为 Proposed" in recall_status
+    assert "当前状态为 Accepted" in recall_status
     assert "memory_state=invalidated" in gate
     assert "不新增公开 HTTP" in gate
     assert "数据库表" in gate

@@ -1,6 +1,6 @@
 # ADR-0008: Phase 2 source-dependent Memory invalidation 边界
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-08-22
 - Owners: OpenShadow maintainers
 
@@ -49,5 +49,5 @@ Source Connector 的不可用/删除事件还不能安全地影响 Canonical Mem
 - source-event 幂等重放、replay conflict、旧 Candidate/Index anti-resurrection 和 restart；
 - no public HTTP、no new table、no Proposal persistence 的 Documentation Drift 检查。
 
-本 ADR 仍为 Proposed。维护者接受设计闸门后，才允许创建
-`phase2/source-dependent-invalidation` 实现分支。
+本 ADR 已获维护者接受，允许创建 `phase2/source-dependent-invalidation` 实现分支；实现
+仍必须严格遵守本 ADR 范围并补齐上述验收证据。
