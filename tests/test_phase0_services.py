@@ -9,6 +9,7 @@ from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError
 from shadow_kernel.ids import sha256_digest
+from shadow_kernel.models import CommitOperation, CommitPlan, Provenance, StableRecordRef
 from shadow_kernel.registry import ContractRegistry
 from shadow_store import SqliteCanonicalRepository
 
@@ -136,3 +137,35 @@ def test_memory_candidate_requires_commit(tmp_path: Path) -> None:
     record = memories.commit_candidate(candidate, idempotency_key="memory-1")
     assert record["record_type"] == "shadow.profile.memory"
     assert record["typed_payload"]["created_from_ref"]["record_id"] == candidate.candidate_id
+
+
+def test_commit_maps_schema_failure_to_structured_domain_error(tmp_path: Path) -> None:
+    repository = SqliteCanonicalRepository(tmp_path / "shadow.db")
+    authority = CommitAuthority(repository, ContractRegistry(ROOT))
+    operation = CommitOperation(
+        operation_id="operation-invalid",
+        operation="create",
+        record_id="memory-invalid",
+        record_type="shadow.profile.memory",
+        target_schema_ref="https://schemas.openshadow.dev/contracts/profiles/1.0.0#/$defs/MemoryPayload",
+        owner_ref="principal-test",
+        space_id="space-test",
+        created_by="principal-test",
+        data_classification="personal",
+        provenance=Provenance(origin_type="shadow.origin.test", origin_ref="test"),
+        retention_policy_ref=StableRecordRef(record_id="retention-default"),
+        typed_payload={"memory_kind": "not-namespaced"},
+    )
+    plan = CommitPlan(
+        commit_request_id="commit-invalid",
+        idempotency_scope="test",
+        idempotency_key="invalid",
+        request_digest=sha256_digest(operation.model_dump(mode="json")),
+        actor_ref="principal-test",
+        operations=[operation],
+        prepared_at="2026-01-01T00:00:00Z",
+    )
+    with pytest.raises(ShadowDomainError) as failure:
+        authority.commit(plan)
+    assert failure.value.error.code == "shadow.contract.validation-failed"
+    assert failure.value.error.category == "validation"
