@@ -156,6 +156,13 @@ NNNN-short-title.md
 66.首批参考 Adapter 为 Deterministic Test、OpenAI Model 与 Process Runtime。
 67.具体 Framework / SDK 不进入 Kernel、Profile Canonical Schema 或 Stable ID。
 
+### Phase 3 State Profile
+
+68. State 使用独立 `shadow.profile.state`，Canonical Envelope 只负责身份、Owner/Space、版本和 Commit。
+69. Observation / StateProposal 只能经过 StateService 与 CommitAuthority，Source Adapter/Resolver 不得直接 Commit。
+70. State freshness 使用 `fresh`、`stale`、`unknown` 稳定语义；TTL 到期不得继续返回 fresh。
+71. Phase 3 首个 State 切片不新增数据库表、Proposal 审批表或 State 专用写入路由。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

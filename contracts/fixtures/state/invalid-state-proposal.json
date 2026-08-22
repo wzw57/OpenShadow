@@ -1,0 +1,12 @@
+{
+  "proposed_operation": "update",
+  "targets": [{ "state_ref": "state-1" }],
+  "state_key": "presence.home",
+  "value_schema_ref": "https://schemas.openshadow.dev/examples/presence/1.0.0",
+  "proposed_value": { "present": true },
+  "evidence_refs": [],
+  "source_refs": [],
+  "observed_at": "2026-08-22T08:00:00Z",
+  "expires_at": "2026-08-22T09:00:00Z",
+  "source_status": "available"
+}

@@ -1,0 +1,26 @@
+contract: https://schemas.openshadow.dev/contracts/state/1.0.0
+cases:
+  - case_id: state.payload.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/state/valid-state.json]
+    expected_outcome: valid
+    invariants: [stable-state-key, ttl-explicit, freshness-not-fresh-when-source-unavailable]
+  - case_id: state.payload.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/state/invalid-state.json]
+    expected_outcome: invalid
+  - case_id: state.proposal.valid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/state/valid-state-proposal.json]
+    expected_outcome: valid
+    invariants: [create-has-no-target, proposal-cannot-direct-commit]
+  - case_id: state.proposal.invalid
+    requirement_level: must
+    input_fixture_refs: [../fixtures/state/invalid-state-proposal.json]
+    expected_outcome: invalid
+    invariants: [expected-version-required-for-update]
+  - case_id: state.observation.source-unavailable
+    requirement_level: must
+    input_fixture_refs: [../fixtures/state/valid-observation-source-unavailable.json]
+    expected_outcome: valid
+    invariants: [source-unavailable-never-fresh]

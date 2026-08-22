@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/state/1.0.0",
+  "title": "OpenShadow State Profile Contracts",
+  "$defs": {
+    "EvidenceReference": {
+      "type": "object",
+      "required": ["evidence_id", "source_ref", "availability", "observed_at"],
+      "properties": {
+        "evidence_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "source_record_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "locator": { "type": "string", "maxLength": 2000 },
+        "content_digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "availability": { "enum": ["available", "unavailable", "deleted", "unknown"] },
+        "observed_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    },
+    "StatePayload": {
+      "type": "object",
+      "required": [
+        "state_key",
+        "value_schema_ref",
+        "typed_value",
+        "evidence_refs",
+        "source_refs",
+        "observed_at",
+        "expires_at",
+        "source_status",
+        "freshness"
+      ],
+      "properties": {
+        "state_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "value_schema_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "typed_value": {},
+        "evidence_refs": { "type": "array", "items": { "$ref": "#/$defs/EvidenceReference" } },
+        "source_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "source_status": { "enum": ["available", "unavailable", "unknown"] },
+        "freshness": { "enum": ["fresh", "stale", "unknown"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "source_status": { "const": "unavailable" } }, "required": ["source_status"] },
+          "then": { "properties": { "freshness": { "enum": ["stale", "unknown"] } } }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "StateProposalTarget": {
+      "type": "object",
+      "required": ["state_ref", "expected_version"],
+      "properties": {
+        "state_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "expected_version": { "type": "integer", "minimum": 1 }
+      },
+      "unevaluatedProperties": false
+    },
+    "StateProposalPayload": {
+      "type": "object",
+      "required": [
+        "proposed_operation",
+        "targets",
+        "state_key",
+        "value_schema_ref",
+        "proposed_value",
+        "evidence_refs",
+        "source_refs",
+        "observed_at",
+        "expires_at",
+        "source_status"
+      ],
+      "properties": {
+        "proposed_operation": { "enum": ["create", "update", "logical_delete"] },
+        "targets": { "type": "array", "items": { "$ref": "#/$defs/StateProposalTarget" }, "uniqueItems": true },
+        "state_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "value_schema_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "proposed_value": {},
+        "evidence_refs": { "type": "array", "items": { "$ref": "#/$defs/EvidenceReference" } },
+        "source_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "source_status": { "enum": ["available", "unavailable", "unknown"] },
+        "proposal_reason": { "type": "string", "maxLength": 4000 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "proposed_operation": { "const": "create" } }, "required": ["proposed_operation"] },
+          "then": { "properties": { "targets": { "maxItems": 0 } } }
+        },
+        {
+          "if": { "properties": { "proposed_operation": { "enum": ["update", "logical_delete"] } }, "required": ["proposed_operation"] },
+          "then": { "properties": { "targets": { "minItems": 1, "maxItems": 1 } } }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "Observation": {
+      "type": "object",
+      "required": ["state_key", "value_schema_ref", "observed_value", "evidence_refs", "source_refs", "observed_at", "expires_at", "source_status"],
+      "properties": {
+        "state_key": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "value_schema_ref": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "observed_value": {},
+        "evidence_refs": { "type": "array", "items": { "$ref": "#/$defs/EvidenceReference" } },
+        "source_refs": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 1000 }, "uniqueItems": true },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "source_status": { "enum": ["available", "unavailable", "unknown"] }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

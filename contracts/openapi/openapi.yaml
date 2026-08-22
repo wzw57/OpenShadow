@@ -349,6 +349,52 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/states:
+    get:
+      operationId: listStates
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+        - name: state_key
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Active State heads with computed freshness
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/states/{state_id}:
+    parameters:
+      - $ref: "#/components/parameters/StateId"
+    get:
+      operationId: getState
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      responses:
+        "200":
+          description: Current State head with computed freshness
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/proposals:
     get:
       operationId: listProposals
@@ -362,6 +408,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RecordPage"
+    post:
+      operationId: submitProposal
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StateProposalCommand"
+      responses:
+        "202":
+          description: State Proposal accepted for explicit Commit decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/proposals/{proposal_id}:
     parameters:
       - $ref: "#/components/parameters/ProposalId"
@@ -500,6 +573,12 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/StableId"
+    StateId:
+      name: state_id
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/StableId"
   schemas:
     StableId:
       $ref: "../schemas/common/1.0.0/schema.json#/$defs/StableId"
@@ -571,6 +650,48 @@ components:
             $ref: "../schemas/profiles/1.0.0/schema.json#/$defs/EvidenceReference"
         source_dependency:
           enum: [independent, dependent, review_required]
+      unevaluatedProperties: false
+    StateProposalCommand:
+      type: object
+      required: [input_type, proposed_operation, state_key, value_schema_ref, proposed_value, evidence_refs, source_refs, observed_at, expires_at, source_status]
+      properties:
+        input_type:
+          type: string
+          const: shadow.state-proposal
+        proposed_operation:
+          enum: [create, update, logical_delete]
+        target_ref:
+          $ref: "#/components/schemas/StableRecordRef"
+        expected_version:
+          type: integer
+          minimum: 1
+        state_key:
+          type: string
+          minLength: 1
+          maxLength: 255
+        value_schema_ref:
+          type: string
+          format: uri
+        proposed_value: {}
+        evidence_refs:
+          type: array
+          items:
+            $ref: "../schemas/state/1.0.0/schema.json#/$defs/EvidenceReference"
+        source_refs:
+          type: array
+          items:
+            type: string
+        observed_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        source_status:
+          enum: [available, unavailable, unknown]
+        proposal_reason:
+          type: string
+          maxLength: 4000
       unevaluatedProperties: false
     CanonicalRecordResponse:
       type: object

@@ -40,6 +40,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/skills/1.0.0",
       "path": "schemas/skills/1.0.0/schema.json",
       "sha256": "ba2be5721ecf600d9e5b83cfafe65ee8ed7b6b30d2997abdbcdd3cf24b3f0da9"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/state/1.0.0",
+      "path": "schemas/state/1.0.0/schema.json",
+      "sha256": "b7d36f22e9d6d6dd8bc188aea3bc339028b2774596bdc6c9d6855f514eb0955f"
     }
   ]
 }

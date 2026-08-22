@@ -262,6 +262,25 @@ def test_physical_erase_implementation_surface_and_status_are_documented() -> No
     assert "quiesce" in gate
 
 
+def test_phase3_state_design_gate_and_contract_are_synchronized() -> None:
+    gate = _read("docs/phase3-design-gate.md")
+    adr = _read("docs/adr/0013-phase3-state-profile-lifecycle.md")
+    status = _read("docs/phase3-state-profile-status.md")
+    schema = _read("contracts/schemas/state/1.0.0/schema.json")
+    openapi = _read("contracts/openapi/openapi.yaml")
+    roadmap = _read("docs/roadmap.md")
+
+    assert "Accepted / Phase 3 首个 State 切片获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "实现尚未开始" in status
+    assert "shadow.profile.state" in gate
+    assert "StateProposalPayload" in schema
+    assert "/v1/states" in openapi
+    assert "POST /v1/proposals" in gate
+    assert "ADR-0013" in roadmap
+    assert "不新增数据库表" in gate
+
+
 def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     app_source = _read("apps/shadow-server/shadow_server/app.py")
     openapi_source = _read("contracts/openapi/openapi.yaml")

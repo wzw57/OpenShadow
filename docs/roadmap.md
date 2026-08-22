@@ -169,6 +169,9 @@ Integration 第六切片已完成并合并，详见 [第六切片状态](phase2-
 Portable Import/restore 第七切片已按 ADR-0011 接受并合并实现，详见
 [第七切片状态](phase2-portable-import-status.md)。Physical erase 第八切片已按 ADR-0012
 接受并合并实现，详见 [第八切片状态](phase2-physical-erase-status.md)。
+Phase 3 首个 State Profile 切片已按 ADR-0013 完成设计闸门接受，当前只进入 State
+生命周期实现；详见 [Phase 3 State Profile 状态](phase3-state-profile-status.md)。Durable Task、
+Checkpoint/Handoff 和其他 Phase 3 能力仍未授权实现。
 
 ## 延后实现与重新评估
 
