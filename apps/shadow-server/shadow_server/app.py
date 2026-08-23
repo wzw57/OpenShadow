@@ -6,6 +6,7 @@ import logging
 import os
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -30,10 +31,12 @@ from shadow_application import (
     StateService,
     StaticSecretResolver,
     TaskService,
+    register_builtin_extensions,
 )
 from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
+from shadow_kernel.extensions import ExtensionRegistry
 from shadow_kernel.ids import sha256_digest
 from shadow_kernel.registry import ContractRegistry
 from shadow_kernel.repository import CanonicalRepository
@@ -190,7 +193,10 @@ def _runtime_from_environment() -> RuntimeAdapter | None:
 
 
 def create_app(
-    database_url: str | None = None, runtime_adapter: RuntimeAdapter | None = None
+    database_url: str | None = None,
+    runtime_adapter: RuntimeAdapter | None = None,
+    *,
+    store_factory: Callable[[str], CanonicalRepository] | None = None,
 ) -> FastAPI:
     root = _repo_root()
     registry = ContractRegistry(root)
@@ -202,7 +208,7 @@ def create_app(
             database_path = root / ".shadow" / "shadow.db"
             database_path.parent.mkdir(parents=True, exist_ok=True)
             database_url = f"sqlite:///{database_path.as_posix()}"
-    repository = create_canonical_repository(database_url)
+    repository = (store_factory or create_canonical_repository)(database_url)
     authority = CommitAuthority(repository, registry)
     admission = AdmissionService(repository, authority)
     auth_mode = os.getenv("SHADOW_AUTH_MODE", "local-dev").strip().lower()
@@ -241,6 +247,9 @@ def create_app(
     else:
         selected_runtime = supervisor.adapter_for()
     conversations = ConversationService(repository, authority, runtime_adapter=selected_runtime)
+    extension_registry = ExtensionRegistry(registry)
+    register_builtin_extensions(extension_registry)
+    supervisor.set_extension_registry(extension_registry)
     memories = MemoryService(repository, authority, registry)
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
@@ -250,10 +259,13 @@ def create_app(
         tasks=tasks,
         actions=actions,
     )
+    input_handlers = proposal_handlers
     identity = IdentityService(repository, authority, registry)
     outbox = OutboxService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
+    app.state.contract_registry = registry
+    app.state.authority = authority
     app.state.conversations = conversations
     app.state.memories = memories
     app.state.states = states
@@ -261,6 +273,8 @@ def create_app(
     app.state.admission = admission
     app.state.actions = actions
     app.state.proposal_handlers = proposal_handlers
+    app.state.input_handlers = proposal_handlers
+    app.state.extension_registry = extension_registry
     app.state.identity = identity
     app.state.outbox = outbox
     app.state.auth_mode = auth_mode
@@ -756,6 +770,61 @@ def create_app(
         if record is None:
             raise HTTPException(404, detail="State not found")
         return {"record": record}
+
+    @app.get("/v1/extensions")
+    async def list_extensions(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id)
+        return {"extensions": extension_registry.descriptors()}
+
+    @app.get("/v1/records/{record_id}")
+    async def get_generic_record(
+        record_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+    ) -> dict[str, Any]:
+        context = _context(x_principal_ref, x_space_id)
+        record = repository.get(record_id)
+        if record is None or record.get("space_id") != x_space_id:
+            raise HTTPException(404, detail="Record not found")
+        if identity._space(context.space_id) is None and record.get("owner_ref") != x_principal_ref:
+            raise HTTPException(404, detail="Record not found")
+        return {"record": record}
+
+    @app.get("/v1/records")
+    async def list_generic_records(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        record_type: str | None = None,
+        record_state: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        context = _context(x_principal_ref, x_space_id)
+        records = repository.query(
+            owner_refs={x_principal_ref} if identity._space(context.space_id) is None else None,
+            space_ids={x_space_id},
+            record_types={record_type} if record_type else None,
+            record_states={record_state} if record_state else None,
+            limit=limit,
+        )
+        return {"records": records}
+
+    @app.post("/v1/inputs", status_code=status.HTTP_202_ACCEPTED)
+    async def submit_generic_input(
+        payload: dict[str, Any],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id, write=True)
+        return input_handlers.submit_payload(
+            payload,
+            principal_ref=x_principal_ref,
+            space_id=x_space_id,
+            idempotency_key=idempotency_key,
+        )
 
     @app.post("/v1/proposals", status_code=status.HTTP_202_ACCEPTED)
     async def submit_proposal(

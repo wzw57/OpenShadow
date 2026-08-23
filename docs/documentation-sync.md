@@ -7,7 +7,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 
 | 事实 | 权威来源 | 必须同步的证据 |
 | --- | --- | --- |
-| v0.2 extensibility refactor boundary | `docs/v02-refactor-audit-and-plan.md`、`docs/v02-r0-status.md`、`docs/v02-r1-status.md`、`docs/v02-r2-status.md`、`docs/v02-r3-status.md`、`docs/v02-r4-status.md` | R0/R1/R2/R3/R4 architecture tests、Extension fixtures、每阶段状态文档和迁移 PR evidence |
+| v0.2 extensibility refactor boundary | `docs/v02-refactor-audit-and-plan.md`、`docs/v02-r0-status.md`、`docs/v02-r1-status.md`、`docs/v02-r2-status.md`、`docs/v02-r3-status.md`、`docs/v02-r4-status.md`、`docs/v02-r5-status.md` | R0/R1/R2/R3/R4/R5 architecture tests、Extension fixtures、每阶段状态文档和迁移 PR evidence |
 | Public route、method、status、headers | `contracts/openapi/openapi.yaml` | FastAPI route、API tests、对应状态文档 |
 | Canonical version / lifecycle semantics | Accepted ADR、design gate、JSON Schema | Service implementation、contract fixtures、lifecycle tests |
 | 当前交付状态 | `docs/phase*-status.md`、`docs/roadmap.md` | PR description、CI evidence；不得保留已合并分支作为当前状态 |
@@ -91,6 +91,12 @@ Phase 5 Core Slice 必须同步 `phase5-design-gate.md`、ADR-0024、Identity Sc
 Membership/Invitation fixtures、OpenAPI、ACL service surface、Web context 和 `phase5-status.md`。
 真实 OAuth/OIDC、Voice、远程 Store 与设备同步必须另建 Adapter 闸门，不能以本地 membership
 实现替代。
+
+v0.2 R5 Generic surface 必须同步 `docs/v02-r5-status.md`、Extension/Input registry surface、
+Store capability protocols、`/v1/extensions`、`/v1/records`、`/v1/records/{record_id}`、
+`/v1/inputs` 的 runtime/static OpenAPI 和 owner/space 隔离测试。Generic API 只能通过注册表
+解析 namespaced input，不得在 Server dispatch 中重新引入 Profile/Runtime 分支；Store 的
+Event、Erasure、Portable Transfer 能力必须保持为可选 capability，不得扩大基础 Repository port。
 
 Production Readiness 必须先同步 `production-readiness-design-gate.md`、ADR-0026 和对应 Slice
 状态文档；认证、Secret、远程 Store、Runtime reliability、Voice/Device 和发布运维不得在

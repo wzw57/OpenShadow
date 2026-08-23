@@ -13,6 +13,7 @@ from threading import RLock
 from typing import Any
 
 from shadow_kernel.errors import ShadowDomainError, ShadowError
+from shadow_kernel.extensions import ExtensionDescriptor, ExtensionRegistry
 from shadow_kernel.ids import sha256_digest, utc_timestamp
 from shadow_kernel.runtime import RuntimeAdapter
 
@@ -115,6 +116,11 @@ class RuntimeState:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class _RuntimeExtension:
+    descriptor: ExtensionDescriptor
+
+
 class RuntimeSupervisor:
     """Local process and Runtime Adapter control plane."""
 
@@ -124,6 +130,7 @@ class RuntimeSupervisor:
         *,
         active_runtime_id: str,
         selection_guard: Callable[[], bool] | None = None,
+        extension_registry: ExtensionRegistry | None = None,
     ) -> None:
         if not profiles:
             raise _error("shadow.runtime.invalid-profile", "At least one Runtime profile is required.")
@@ -136,6 +143,7 @@ class RuntimeSupervisor:
         self._processes: dict[str, subprocess.Popen[Any]] = {}
         self._idempotency: dict[tuple[str, str], tuple[str, dict[str, Any]]] = {}
         self._selection_guard = selection_guard
+        self._extension_registry = extension_registry
         self._lock = RLock()
 
     @classmethod
@@ -179,6 +187,34 @@ class RuntimeSupervisor:
     def set_selection_guard(self, guard: Callable[[], bool] | None) -> None:
         self._selection_guard = guard
 
+    def set_extension_registry(self, registry: ExtensionRegistry) -> None:
+        """Attach the shared registry without merging lifecycle concerns into it."""
+        with self._lock:
+            self._extension_registry = registry
+            for adapter in self._adapters.values():
+                self.register_extension(adapter)
+
+    def register_extension(self, adapter: RuntimeAdapter) -> None:
+        """Publish an adapter descriptor through the shared ExtensionRegistry."""
+        if self._extension_registry is None:
+            return
+        body = adapter.describe()
+        descriptor = ExtensionDescriptor(
+            extension_id=f"shadow.runtime.{body['descriptor_id']}",
+            version=str(body.get("descriptor_version", "1.0.0")),
+            execution_target_kinds=tuple(body.get("supported_target_kinds", [])),
+            capabilities=tuple(
+                capability.get("capability_id", "")
+                for capability in body.get("capabilities", [])
+                if capability.get("capability_id")
+            ),
+        )
+        if descriptor.extension_id in {
+            item["extension_id"] for item in self._extension_registry.descriptors()
+        }:
+            return
+        self._extension_registry.register(_RuntimeExtension(descriptor))
+
     def register_adapter(self, runtime_id: str, adapter: RuntimeAdapter, *, display_name: str | None = None) -> None:
         with self._lock:
             if runtime_id not in self._profiles:
@@ -193,6 +229,7 @@ class RuntimeSupervisor:
                 self._states[runtime_id] = RuntimeState()
             self._adapters[runtime_id] = adapter
             self._active_runtime_id = runtime_id
+            self.register_extension(adapter)
 
     def adapter_for(self, runtime_id: str | None = None) -> RuntimeAdapter:
         runtime_id = runtime_id or self._active_runtime_id

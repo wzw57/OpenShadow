@@ -33,6 +33,7 @@ from .erasure_backup import (
     ErasureService,
 )
 from .execution import ExecutionCoordinator
+from .extensions import BuiltInExtension, register_builtin_extensions
 from .identity import AccessContext, IdentityService
 from .index import (
     MemoryIndexAdapter,
@@ -45,6 +46,7 @@ from .index import (
 from .inputs import (
     ActionApprovalProposalCommand,
     ActionProposalCommand,
+    InputHandlerRegistry,
     ProposalCommand,
     ProposalHandlerRegistry,
     StateProposalCommand,
@@ -108,8 +110,11 @@ from .task import TaskProposalCandidate, TaskService
 
 __all__ = [
     "ConversationService",
+    "BuiltInExtension",
+    "register_builtin_extensions",
     "ProposalCommand",
     "ProposalHandlerRegistry",
+    "InputHandlerRegistry",
     "StateProposalCommand",
     "TaskProposalCommand",
     "ActionProposalCommand",

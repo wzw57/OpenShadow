@@ -3,8 +3,9 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
+from shadow_kernel.ids import sha256_digest, utc_timestamp
+from shadow_kernel.models import CommitOperation, CommitPlan, Provenance, StableRecordRef
 from shadow_server.app import create_app
 
 from tests.v02_fixtures.example_profile_extension import ExampleProfileExtension
@@ -81,12 +82,62 @@ def test_example_runtime_exposes_typed_request_boundary() -> None:
     assert result.output == {"echo": {"value": "hello"}}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R5 migration gate: generic input and record APIs are not yet public",
-)
-def test_example_profile_can_create_and_query_through_generic_api() -> None:
-    client = TestClient(create_app("sqlite://"))
+def test_example_profile_can_create_and_query_through_generic_api(tmp_path: Path) -> None:
+    from tests.v02_fixtures.example_profile_extension import ExampleProfileExtension
+
+    app = create_app(f"sqlite:///{(tmp_path / 'example.db').as_posix()}")
+
+    class ExampleInputHandler:
+        def submit(self, payload, *, principal_ref, space_id, idempotency_key):
+            extension = ExampleProfileExtension()
+            intent = extension.handle_input(
+                payload, owner_ref=principal_ref, space_id=space_id
+            )
+            record_id = f"example-{sha256_digest({'owner': principal_ref, 'key': idempotency_key})[7:31]}"
+            typed_payload = {
+                "state_key": intent["typed_payload"]["label"],
+                "value_schema_ref": "https://schemas.openshadow.dev/examples/example/1.0.0",
+                "typed_value": intent["typed_payload"],
+                "evidence_refs": [],
+                "source_refs": ["example.profile"],
+                "observed_at": "2026-08-22T08:00:00Z",
+                "expires_at": "2099-08-22T00:00:00Z",
+                "source_status": "available",
+                "freshness": "fresh",
+            }
+            operation = CommitOperation(
+                operation_id=f"operation-{record_id}",
+                operation="create",
+                record_id=record_id,
+                record_type=intent["record_type"],
+                target_schema_ref="https://schemas.openshadow.dev/contracts/state/1.0.0#/$defs/StatePayload",
+                owner_ref=principal_ref,
+                space_id=space_id,
+                created_by=principal_ref,
+                data_classification="personal",
+                provenance=Provenance(
+                    origin_type="shadow.origin.example-extension",
+                    origin_ref=record_id,
+                ),
+                retention_policy_ref=StableRecordRef(record_id="retention-default"),
+                typed_payload=typed_payload,
+            )
+            result = app.state.authority.commit(
+                CommitPlan(
+                    commit_request_id=f"commit-request-{record_id}",
+                    idempotency_scope=f"example:{principal_ref}:{space_id}",
+                    idempotency_key=idempotency_key,
+                    request_digest=sha256_digest(typed_payload),
+                    actor_ref=principal_ref,
+                    operations=[operation],
+                    prepared_at=utc_timestamp(),
+                )
+            )
+            assert result.outcome in {"committed", "idempotent_replay"}
+            return {"record": app.state.repository.get(record_id)}
+
+    app.state.input_handlers.register("example.profile.create", ExampleInputHandler())
+    client = TestClient(app)
     headers = {
         "X-Principal-Ref": "owner-example",
         "X-Space-Id": "space-example",
@@ -97,17 +148,13 @@ def test_example_profile_can_create_and_query_through_generic_api() -> None:
         json={"input_type": "example.profile.create", "label": "hello"},
         headers=headers,
     )
-    assert submitted.status_code == 202
+    assert submitted.status_code == 202, submitted.text
     record_id = submitted.json()["record"]["record_id"]
     queried = client.get(f"/v1/records/{record_id}", headers=headers)
     assert queried.status_code == 200
     assert queried.json()["record"]["record_type"] == "shadow.profile.example"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R1/R2 migration gate: Runtime discovery is not yet backed by a shared ExtensionRegistry",
-)
 def test_example_runtime_is_discoverable_without_core_changes() -> None:
     source = (ROOT / "packages/shadow-application/src/shadow_application/runtime_management.py").read_text(
         encoding="utf-8"
@@ -140,10 +187,6 @@ def test_runtime_port_accepts_typed_execution_request() -> None:
     assert "def execute(self, request:" in source
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R5 migration gate: generic records/extensions/inputs routes are not yet public",
-)
 def test_generic_api_routes_are_present() -> None:
     source = (ROOT / "apps/shadow-server/shadow_server/app.py").read_text(encoding="utf-8")
     assert '"/v1/extensions"' in source
@@ -151,14 +194,11 @@ def test_generic_api_routes_are_present() -> None:
     assert '"/v1/inputs"' in source
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R5 migration gate: CanonicalRepository optional capabilities are not split yet",
-)
 def test_repository_port_keeps_optional_capabilities_out_of_the_base_protocol() -> None:
     source = (ROOT / "packages/shadow-kernel/src/shadow_kernel/repository.py").read_text(
         encoding="utf-8"
     )
     assert "class EventStoreCapability" in source
     assert "class ErasureCapability" in source
-    assert "def erase_history" not in source.split("class CanonicalRepository", 1)[1]
+    base_port = source.split("class EventStoreCapability", 1)[0]
+    assert "def erase_history" not in base_port

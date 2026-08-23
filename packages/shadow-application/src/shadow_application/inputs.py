@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 
 
@@ -192,8 +192,8 @@ class _ActionProposalHandler:
         )
 
 
-class ProposalHandlerRegistry:
-    """Namespaced proposal dispatch; generic Server never branches on Profile classes."""
+class InputHandlerRegistry:
+    """Generic namespaced input dispatch boundary."""
 
     def __init__(self) -> None:
         self._handlers: dict[str, Any] = {}
@@ -225,9 +225,33 @@ class ProposalHandlerRegistry:
                 )
             ) from exc
 
-    def submit(self, command: ProposalCommand, *, principal_ref: str, space_id: str, idempotency_key: str) -> dict[str, Any]:
+    def submit(self, command: Any, *, principal_ref: str, space_id: str, idempotency_key: str) -> dict[str, Any]:
         return self.handler_for(command.input_type).submit(
             command,
+            principal_ref=principal_ref,
+            space_id=space_id,
+            idempotency_key=idempotency_key,
+        )
+
+    def submit_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        principal_ref: str,
+        space_id: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        input_type = payload.get("input_type")
+        if not isinstance(input_type, str) or not input_type:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.input.type-required",
+                    category="validation",
+                    message="Generic input requires a namespaced input_type.",
+                )
+            )
+        return self.handler_for(input_type).submit(
+            payload,
             principal_ref=principal_ref,
             space_id=space_id,
             idempotency_key=idempotency_key,
@@ -246,9 +270,47 @@ class ProposalHandlerRegistry:
         return tuple(sorted(self._handlers))
 
 
+class ProposalHandlerRegistry(InputHandlerRegistry):
+    """Proposal-specialized registry with typed built-in command parsing."""
+
+    _builtin_types = frozenset(
+        {
+            "shadow.state-proposal",
+            "shadow.durable-task-proposal",
+            "shadow.action-proposal",
+            "shadow.action-approval-proposal",
+        }
+    )
+
+    def submit_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        principal_ref: str,
+        space_id: str,
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        input_type = payload.get("input_type")
+        if input_type in self._builtin_types:
+            command = TypeAdapter(ProposalCommand).validate_python(payload)
+            return self.submit(
+                command,
+                principal_ref=principal_ref,
+                space_id=space_id,
+                idempotency_key=idempotency_key,
+            )
+        return super().submit_payload(
+            payload,
+            principal_ref=principal_ref,
+            space_id=space_id,
+            idempotency_key=idempotency_key,
+        )
+
+
 __all__ = [
     "ActionApprovalProposalCommand",
     "ActionProposalCommand",
+    "InputHandlerRegistry",
     "ProposalCommand",
     "ProposalHandlerRegistry",
     "StateProposalCommand",

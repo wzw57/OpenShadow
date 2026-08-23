@@ -7,7 +7,7 @@ from .models import CommitBatchResult, CommitPlan
 
 
 class CanonicalRepository(Protocol):
-    """Port implemented by a durable Store Adapter."""
+    """Minimal port implemented by a durable Store Adapter."""
 
     available: bool
 
@@ -20,11 +20,42 @@ class CanonicalRepository(Protocol):
     def query(self, **kwargs: Any) -> list[dict[str, Any]]: ...
     def commit_batch(self, plan: CommitPlan) -> CommitBatchResult: ...
     def idempotency_result(self, idempotency_scope: str, idempotency_key: str) -> dict[str, Any] | None: ...
-    def erase_history(self, record_id: str, keep_version: int) -> int: ...
+
+
+class EventStoreCapability(Protocol):
+    """Optional durable Run event stream capability."""
+
     def append_event(
         self, run_id: str, event_type: str, payload: dict[str, Any]
     ) -> dict[str, Any]: ...
     def events(self, run_id: str, after_sequence: int = 0) -> list[dict[str, Any]]: ...
 
 
-__all__ = ["CanonicalRepository", "RepositoryUnavailable"]
+class ErasureCapability(Protocol):
+    """Optional irreversible-history capability."""
+
+    def erase_history(self, record_id: str, keep_version: int) -> int: ...
+
+
+class PortableTransferCapability(Protocol):
+    """Optional export/import capability supplied by Store Adapters."""
+
+    def export_records(self, **kwargs: Any) -> dict[str, Any]: ...
+
+    def import_records(self, **kwargs: Any) -> dict[str, Any]: ...
+
+
+class StoreFactory(Protocol):
+    """Injectable Store construction boundary used by the Server composition root."""
+
+    def __call__(self, database_url: str) -> CanonicalRepository: ...
+
+
+__all__ = [
+    "CanonicalRepository",
+    "ErasureCapability",
+    "EventStoreCapability",
+    "PortableTransferCapability",
+    "RepositoryUnavailable",
+    "StoreFactory",
+]

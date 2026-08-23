@@ -659,3 +659,23 @@ def test_runtime_management_gate_contract_and_implementation_are_synchronized() 
         assert path in openapi["paths"]
         assert method in openapi["paths"][path]
         assert path in static_openapi
+
+
+def test_v02_r5_generic_surface_is_synchronized() -> None:
+    status = _read("docs/v02-r5-status.md")
+    sync = _read("docs/documentation-sync.md")
+    openapi = _read("contracts/openapi/openapi.yaml")
+    runtime_schema = create_app("sqlite://").openapi()
+
+    assert "Generic Records API" in status
+    assert "290 passed" in status
+    assert "v0.2 R5 Generic surface" in sync
+    for path, method in (
+        ("/v1/extensions", "get"),
+        ("/v1/records", "get"),
+        ("/v1/records/{record_id}", "get"),
+        ("/v1/inputs", "post"),
+    ):
+        assert path in runtime_schema["paths"]
+        assert method in runtime_schema["paths"][path]
+        assert path in openapi

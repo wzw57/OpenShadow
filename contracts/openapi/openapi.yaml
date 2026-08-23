@@ -737,6 +737,112 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/extensions:
+    get:
+      operationId: listExtensions
+      description: List registered Profile, Runtime and Contract extensions.
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      responses:
+        "200":
+          description: Extension descriptors visible to the composition root
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtensionListResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/records:
+    get:
+      operationId: listGenericRecords
+      description: Query canonical records through the generic extension-neutral read boundary.
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+        - name: record_type
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+        - name: record_state
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Canonical records isolated by Owner and Space
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecordPage"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/records/{record_id}:
+    parameters:
+      - name: record_id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/StableId"
+    get:
+      operationId: getGenericRecord
+      description: Read a canonical record through the generic extension-neutral boundary.
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      responses:
+        "200":
+          description: Canonical record visible in the caller context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/inputs:
+    post:
+      operationId: submitGenericInput
+      description: Submit a namespaced input resolved by the composition-time InputHandlerRegistry.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenericInputPayload"
+      responses:
+        "202":
+          description: Input accepted and committed by its registered handler
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalRecordResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/proposals:
     get:
       operationId: listProposals
@@ -1431,6 +1537,48 @@ components:
       properties:
         result_ref:
           $ref: "#/components/schemas/StableRecordRef"
+      unevaluatedProperties: false
+    GenericInputPayload:
+      type: object
+      description: Namespaced input payload resolved by an InputHandlerRegistry.
+      required: [input_type]
+      properties:
+        input_type:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: "^(shadow|[a-z0-9]+(?:[.-][a-z0-9]+)+)\\.[a-z0-9][a-z0-9._-]*$"
+      additionalProperties: true
+    ExtensionDescriptor:
+      type: object
+      required: [extension_id, version, contract_packs, record_types, input_types, execution_target_kinds, capabilities]
+      properties:
+        extension_id: { type: string }
+        version: { type: string }
+        contract_packs:
+          type: array
+          items: { type: string }
+        record_types:
+          type: array
+          items: { type: string }
+        input_types:
+          type: array
+          items: { type: string }
+        execution_target_kinds:
+          type: array
+          items: { type: string }
+        capabilities:
+          type: array
+          items: { type: string }
+      unevaluatedProperties: false
+    ExtensionListResponse:
+      type: object
+      required: [extensions]
+      properties:
+        extensions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionDescriptor"
       unevaluatedProperties: false
     CanonicalRecordResponse:
       type: object
