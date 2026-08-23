@@ -13,6 +13,7 @@ export type CanonicalRecord = {
 
 export type Conversation = CanonicalRecord;
 export type Message = CanonicalRecord;
+export type ProfileKind = "memories" | "states" | "tasks" | "actions";
 
 export type Run = CanonicalRecord & {
   typed_payload?: JsonObject & {

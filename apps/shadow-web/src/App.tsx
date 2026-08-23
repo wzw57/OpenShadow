@@ -6,6 +6,7 @@ import {
   getRun,
   getRunEvents,
   getRuntime,
+  listProfileRecords,
   listConversations,
   listMessages,
   messageKind,
@@ -14,9 +15,12 @@ import {
   retryRun,
   submitTurn,
 } from "./api";
-import type { Conversation, Message, Run, RunEvent, RuntimeStatus } from "./types";
+import ProfileView, { PROFILE_LABELS } from "./ProfileView";
+import type { CanonicalRecord, Conversation, Message, ProfileKind, Run, RunEvent, RuntimeStatus } from "./types";
 
 const TERMINAL_LIFECYCLES = new Set(["completed", "failed", "unknown", "cancelled", "canceled"]);
+type WorkspaceView = "conversation" | ProfileKind;
+const PROFILE_NAV: ProfileKind[] = ["memories", "states", "tasks", "actions"];
 
 function formatTime(value?: string): string {
   if (!value) return "";
@@ -54,6 +58,9 @@ export default function App() {
   const [run, setRun] = useState<Run | null>(null);
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [runtime, setRuntime] = useState<RuntimeStatus | null>(null);
+  const [view, setView] = useState<WorkspaceView>("conversation");
+  const [profileRecords, setProfileRecords] = useState<CanonicalRecord[]>([]);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState("");
   const [newTitle, setNewTitle] = useState("");
@@ -98,12 +105,23 @@ export default function App() {
     setRuntime(runtimeBody);
   }, []);
 
+  const refreshProfiles = useCallback(async (profileKind: ProfileKind) => {
+    setProfileLoading(true);
+    try {
+      const records = await listProfileRecords(profileKind);
+      setProfileRecords(records);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
+
   const refreshWorkspace = useCallback(async () => {
     setRefreshing(true);
     setError(null);
     try {
       const records = await refreshConversations();
       await refreshStatus();
+      if (view !== "conversation") await refreshProfiles(view);
       const conversationId = selectedId ?? records[0]?.record_id;
       if (conversationId) await refreshMessages(conversationId);
       if (run?.record_id) await refreshRun(run.record_id);
@@ -112,7 +130,7 @@ export default function App() {
     } finally {
       setRefreshing(false);
     }
-  }, [refreshConversations, refreshMessages, refreshRun, refreshStatus, run?.record_id, selectedId]);
+  }, [refreshConversations, refreshMessages, refreshProfiles, refreshRun, refreshStatus, run?.record_id, selectedId, view]);
 
   useEffect(() => {
     let active = true;
@@ -141,6 +159,15 @@ export default function App() {
   }, [refreshMessages, selectedId]);
 
   useEffect(() => {
+    if (view === "conversation") {
+      setProfileRecords([]);
+      return;
+    }
+    setError(null);
+    refreshProfiles(view).catch((profileError) => setError(errorMessage(profileError)));
+  }, [refreshProfiles, view]);
+
+  useEffect(() => {
     const activeRun = run;
     if (!activeRun || isTerminalRun(activeRun)) return;
     const runId = activeRun.record_id;
@@ -164,6 +191,7 @@ export default function App() {
     try {
       const conversation = await createConversation(newTitle);
       setConversations((current) => [conversation, ...current]);
+      setView("conversation");
       setSelectedId(conversation.record_id);
       setMessages([]);
       setRun(null);
@@ -243,6 +271,26 @@ export default function App() {
           </div>
         </form>
 
+        <nav className="workspace-nav" aria-label="Workspace views">
+          <button
+            className={view === "conversation" ? "selected" : ""}
+            onClick={() => setView("conversation")}
+          >
+            <span className="workspace-nav-icon">↗</span>
+            <span>Conversations</span>
+          </button>
+          {PROFILE_NAV.map((profileKind) => (
+            <button
+              className={view === profileKind ? "selected" : ""}
+              key={profileKind}
+              onClick={() => setView(profileKind)}
+            >
+              <span className="workspace-nav-icon">◇</span>
+              <span>{PROFILE_LABELS[profileKind]}</span>
+            </button>
+          ))}
+        </nav>
+
         <div className="sidebar-section-label">Conversations</div>
         <nav className="conversation-list" aria-label="Conversations">
           {loading && <div className="empty-sidebar">Loading…</div>}
@@ -253,7 +301,10 @@ export default function App() {
             <button
               className={`conversation-item ${conversation.record_id === selectedId ? "selected" : ""}`}
               key={conversation.record_id}
-              onClick={() => setSelectedId(conversation.record_id)}
+              onClick={() => {
+                setView("conversation");
+                setSelectedId(conversation.record_id);
+              }}
             >
               <span className="conversation-dot" />
               <span className="conversation-item-copy">
@@ -273,8 +324,14 @@ export default function App() {
       <main className="main-panel">
         <header className="topbar">
           <div>
-            <div className="eyebrow">Conversation</div>
-            <h1>{selectedConversation ? recordTitle(selectedConversation) : "Your workspace"}</h1>
+            <div className="eyebrow">{view === "conversation" ? "Conversation" : "Profile"}</div>
+            <h1>
+              {view === "conversation"
+                ? selectedConversation
+                  ? recordTitle(selectedConversation)
+                  : "Your workspace"
+                : PROFILE_LABELS[view]}
+            </h1>
           </div>
           <div className="topbar-actions">
             <button className="text-button refresh-button" onClick={refreshWorkspace} disabled={refreshing}>
@@ -297,7 +354,17 @@ export default function App() {
           </div>
         )}
 
-        <section className="conversation-view" aria-live="polite">
+        {view !== "conversation" ? (
+          <ProfileView
+            kind={view}
+            records={profileRecords}
+            loading={profileLoading}
+            refreshing={refreshing}
+            onRefresh={() => refreshProfiles(view).catch((profileError) => setError(errorMessage(profileError)))}
+          />
+        ) : (
+          <>
+          <section className="conversation-view" aria-live="polite">
           {!selectedConversation && !loading && (
             <div className="welcome-card">
               <div className="welcome-orb">✦</div>
@@ -333,7 +400,7 @@ export default function App() {
               </div>
             </article>
           )}
-        </section>
+          </section>
 
         <section className="composer-section">
           {run && (
@@ -384,7 +451,9 @@ export default function App() {
             </button>
           </form>
           <div className="composer-note">Enter to send · Shift + Enter for a new line</div>
-        </section>
+          </section>
+          </>
+        )}
       </main>
     </div>
   );

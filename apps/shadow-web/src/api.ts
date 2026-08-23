@@ -2,6 +2,7 @@ import type {
   CanonicalRecord,
   Conversation,
   Message,
+  ProfileKind,
   Run,
   RunEvent,
   RuntimeStatus,
@@ -88,6 +89,11 @@ export async function listMessages(conversationId: string): Promise<Message[]> {
   const body = await request<{ records: Message[] }>(
     `/v1/conversations/${encodeURIComponent(conversationId)}/messages`,
   );
+  return body.records;
+}
+
+export async function listProfileRecords(kind: ProfileKind): Promise<CanonicalRecord[]> {
+  const body = await request<{ records: CanonicalRecord[] }>(`/v1/${kind}`);
   return body.records;
 }
 

@@ -37,6 +37,11 @@ input:focus, textarea:focus { border-color: rgba(139, 224, 193, 0.65); box-shado
 input { width: 100%; min-width: 0; border-radius: 9px; padding: 10px 11px; font-size: 12px; }
 input::placeholder, textarea::placeholder { color: #647381; }
 .icon-button { width: 38px; flex: 0 0 38px; border: 1px solid rgba(139, 224, 193, 0.35); border-radius: 9px; color: var(--accent); background: rgba(139, 224, 193, 0.08); font-size: 21px; line-height: 1; }
+.workspace-nav { display: grid; gap: 3px; padding: 0 4px 24px; }
+.workspace-nav button { display: flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 8px; color: var(--muted); background: transparent; padding: 9px 10px; text-align: left; font-size: 11px; }
+.workspace-nav button:hover { color: var(--muted-bright); background: rgba(255, 255, 255, 0.035); }
+.workspace-nav button.selected { color: var(--text); border-color: rgba(139, 224, 193, 0.16); background: rgba(139, 224, 193, 0.07); }
+.workspace-nav-icon { width: 15px; color: var(--accent); text-align: center; font-size: 13px; }
 .sidebar-section-label { padding: 0 10px 10px; }
 .conversation-list { display: grid; gap: 4px; overflow-y: auto; }
 .conversation-item { width: 100%; display: flex; align-items: center; gap: 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--muted-bright); text-align: left; padding: 11px 10px; }
@@ -64,6 +69,28 @@ h1 { margin: 0; color: var(--text); font-size: clamp(17px, 2vw, 22px); font-weig
 .error-banner button, .text-button { border: 0; background: transparent; color: var(--accent); font-size: 11px; font-weight: 700; }
 .error-actions { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
 .conversation-view { width: min(840px, calc(100% - 48px)); flex: 1; margin: 0 auto; padding: 45px 0 32px; }
+.profile-view { width: min(920px, calc(100% - 48px)); flex: 1; margin: 0 auto; padding: 36px 0 32px; }
+.profile-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--line); padding: 0 4px 14px; }
+.profile-toolbar p { margin: 0 0 3px; color: var(--muted-bright); font-size: 12px; font-weight: 650; }
+.profile-toolbar span { color: var(--muted); font-size: 10px; }
+.profile-list { display: grid; gap: 8px; }
+.profile-card { border: 1px solid var(--line); border-radius: 11px; background: rgba(17, 24, 32, 0.72); overflow: hidden; }
+.profile-card summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; list-style: none; padding: 13px 15px; }
+.profile-card summary::-webkit-details-marker { display: none; }
+.profile-card summary:hover { background: rgba(255, 255, 255, 0.025); }
+.profile-card-heading { min-width: 0; display: grid; gap: 4px; }
+.profile-card-heading strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 12px; }
+.profile-card-heading small { color: var(--muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
+.profile-card-meta { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+.profile-card-meta em { border-radius: 999px; color: var(--accent); background: rgba(139, 224, 193, 0.08); padding: 3px 7px; font-style: normal; }
+.profile-card-body { border-top: 1px solid var(--line); padding: 14px 15px 15px; }
+.profile-summary { margin: 0 0 12px; color: var(--muted-bright); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.profile-card-facts { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 11px; color: #667783; font-size: 10px; }
+.profile-card-body pre { max-height: 250px; margin: 0; overflow: auto; border: 1px solid rgba(230, 237, 243, 0.07); border-radius: 7px; color: #90a0ab; background: rgba(0, 0, 0, 0.16); padding: 11px; font: 10px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.profile-empty { display: grid; place-items: center; min-height: 280px; color: var(--muted); text-align: center; }
+.profile-empty .welcome-orb { margin-bottom: 13px; }
+.profile-empty h2 { margin: 0 0 8px; color: var(--text); font-size: 18px; }
+.profile-empty p { margin: 0; font-size: 12px; }
 .welcome-card { max-width: 420px; margin: 16vh auto 0; text-align: center; }
 .welcome-card.compact { margin-top: 15vh; }
 .welcome-orb { width: 42px; height: 42px; display: grid; place-items: center; margin: 0 auto 19px; border: 1px solid rgba(139, 224, 193, 0.32); border-radius: 15px; color: var(--accent); background: rgba(139, 224, 193, 0.08); font-size: 21px; }
@@ -121,6 +148,11 @@ h1 { margin: 0; color: var(--text); font-size: clamp(17px, 2vw, 22px); font-weig
   .refresh-button { display: none; }
   .runtime-pill { padding: 7px 9px; font-size: 10px; }
   .conversation-view, .composer-section { width: calc(100% - 34px); }
+  .profile-view { width: calc(100% - 34px); padding-top: 25px; }
+  .workspace-nav { display: flex; overflow-x: auto; padding-bottom: 12px; }
+  .workspace-nav button { min-width: max-content; }
+  .profile-card summary { align-items: flex-start; }
+  .profile-card-meta { display: grid; justify-items: end; gap: 5px; }
   .conversation-view { padding-top: 30px; }
   .message-row { margin-bottom: 25px; }
   .message-content { font-size: 13px; }

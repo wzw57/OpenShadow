@@ -20,7 +20,7 @@ Service 或 Agent Runtime。它只通过公开 HTTP/SSE 边界读取和提交数
 首版不覆盖：
 
 - 多用户登录、注册、ACL 或远程暴露；
-- Memory、State、Task、Action 管理页面；
+- Memory、State、Task、Action 的写入、审批、纠正或删除页面；
 - Hermes 工具调用、Secret、Session resume；
 - token 级流式渲染；
 - 浏览器直连 Hermes 或任何 Model Provider；
@@ -134,3 +134,18 @@ endpoint_ref  = endpoint-local-web
 验收：前端构建通过；发送后非 terminal Run 会自动收敛；事件面板可展开且不重复；
 ready/runtime 手动刷新可见；失败和网络错误可以重新加载；Vendor-neutrality 与现有
 全量 API 测试保持通过。
+
+## 8. Profile 只读视图切片
+
+本切片只为已经存在的 Profile 查询 API 提供导航和只读呈现：
+
+- `GET /v1/memories`、`GET /v1/states`、`GET /v1/tasks`、`GET /v1/actions` 作为四个
+  独立视图按需读取；
+- UI 可以显示稳定 ID、版本、Profile 关键摘要、生命周期/新鲜度和可展开的 typed payload；
+- 所有请求继续使用当前单用户 `X-Principal-Ref` / `X-Space-Id`，不在浏览器实现 ACL；
+- 不新增路由、写入按钮、Proposal 接受、审批、纠正、删除、执行或 Secret 读取；
+- Profile 视图彼此独立，不构造跨 Profile 的万能聚合或派生事实；
+- Runtime status 继续是通用 descriptor，Profile 视图不得判断任何具体 Vendor。
+
+验收：四个列表按需加载并显示空态、错误和刷新状态；详情 payload 可折叠；切换回
+Conversation 后原有对话闭环不变；构建、文档同步和 Vendor-neutrality 检查通过。
