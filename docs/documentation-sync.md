@@ -16,6 +16,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | Runtime Reliability / durable dispatch | `docs/runtime-reliability-design-gate.md`、ADR-0023 | Run/Attempt Service、Hermes Adapter、OpenAPI/错误体、恢复测试和 runtime 状态文档 |
 | Phase 5 identity / endpoint / Space ACL | `docs/phase5-design-gate.md`、ADR-0024 | Identity Schema、fixtures、FastAPI routes、ACL tests、Web context 和 `phase5-status.md` |
 | Runtime Management / Hermes launcher / Codex Adapter | `docs/runtime-management-design-gate.md`、ADR-0025、`docs/runtime-management-status.md` | Runtime profile schema、Supervisor/API、Adapter tests、Management UI、启动脚本和 runtime 状态文档 |
+| Production Readiness / Release boundary | `docs/production-readiness-design-gate.md`、ADR-0026 | Auth/Secret/Store/Runtime/Backup/Operations slices、状态文档、release/restore/security evidence |
 
 ## Vendor isolation rule
 
@@ -85,3 +86,8 @@ Phase 5 Core Slice 必须同步 `phase5-design-gate.md`、ADR-0024、Identity Sc
 Membership/Invitation fixtures、OpenAPI、ACL service surface、Web context 和 `phase5-status.md`。
 真实 OAuth/OIDC、Voice、远程 Store 与设备同步必须另建 Adapter 闸门，不能以本地 membership
 实现替代。
+
+Production Readiness 必须先同步 `production-readiness-design-gate.md`、ADR-0026 和对应 Slice
+状态文档；认证、Secret、远程 Store、Runtime reliability、Voice/Device 和发布运维不得在
+总体闸门接受前直接进入业务代码。每个 Slice PR 必须附 migration/restore、故障、安全和
+documentation-drift 证据。

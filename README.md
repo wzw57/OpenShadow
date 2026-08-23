@@ -526,6 +526,8 @@ OpenShadow 自行实现的范围收紧为：
 - [Runtime 集成状态](docs/runtime-integration-status.md)
 - [Runtime Management 实现状态](docs/runtime-management-status.md)
 - [Phase 5 Core Slice 状态](docs/phase5-status.md)
+- [Production Readiness 设计闸门](docs/production-readiness-design-gate.md)
+- [ADR-0026 Production Readiness](docs/adr/0026-production-readiness-and-release-boundary.md)
 
 ## 当前状态
 

@@ -184,6 +184,10 @@ Phase 5 Core Slice 已按 ADR-0024 接受设计闸门并完成 Endpoint pairing�
 Invitation、读 ACL 与 Web context；真实 OAuth/OIDC、Voice、远程 Store 和设备同步仍为
 Contract-only，详见 [Phase 5 状态](phase5-status.md)。
 
+生产化路线已建立总体设计闸门 [Production Readiness](production-readiness-design-gate.md)
+和 ADR-0026；当前等待维护者确认 OIDC issuer、生产 Store、Secret 管理、部署形态和首个
+Runtime Provider。确认前不实现生产认证、远程 Store 或 Voice 业务代码。
+
 ## 延后实现与重新评估
 
 以下只有在真实用例和测量证据出现后实现：

@@ -259,7 +259,14 @@ ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 
 - 引入不可重建的外部私有状态；
 - 改变参考实现且影响 Stable Contract。
 - 引入 Runtime Supervisor、Runtime selection、外部 Runtime process lifecycle 或 Codex
-  CLI integration。
+    CLI integration。
+
+## ADR-0026：Production Readiness 与 Release Boundary
+
+95. 生产化按 Auth/Security、Runtime Reliability、Store/Backup/Sync、Voice/Device/Integration、
+    Operations/Release 切片推进；每个切片先经过独立设计闸门和退出验收，不把未来能力一次性
+    写入 Kernel。详见 [ADR-0026](0026-production-readiness-and-release-boundary.md) 和
+    [Production Readiness 设计闸门](../production-readiness-design-gate.md)。
 
 ## 核心原则
 
