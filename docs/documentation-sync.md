@@ -20,7 +20,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | Production Auth / Session / Secret boundary | `docs/production-auth-design-gate.md`、ADR-0027 | AuthContext/Verifier、SessionStore、auth OpenAPI、redaction/CSRF tests、`production-auth-status.md` |
 | Production Store / Backup / Portable Sync | `docs/production-store-backup-design-gate.md`、ADR-0028 | Repository profile/configuration、Portable Import/Export、Backup Metadata、restore/outage tests、`production-store-status.md` |
 | Production Voice / Device / Integration | `docs/production-device-integration-design-gate.md`、ADR-0029 | Generic Adapter Port、capability/consent checks、deterministic fixtures、unknown/reconcile tests、`production-device-integration-status.md` |
-| Production Operations / Release | `docs/production-operations-design-gate.md`、ADR-0030 | correlation/redaction middleware、metrics/health、config validation、deployment scripts、release evidence、状态文档 |
+| Production Operations / Release | `docs/production-operations-design-gate.md`、ADR-0030 | correlation/redaction middleware、metrics/health、config validation、deployment scripts、release evidence、`production-operations-status.md` |
 
 ## Vendor isolation rule
 

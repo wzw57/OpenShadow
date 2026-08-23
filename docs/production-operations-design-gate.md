@@ -35,3 +35,6 @@ Worker 或新的业务状态模型。
 - production 配置错误不会启动，local-dev 仍可显式运行；
 - Docker/Windows 启动说明与 README/架构文档同步；
 - release check 脚本在干净 SQLite 上通过，且文档列明远程 PostgreSQL/Provider 的外部前置条件。
+
+实现状态：correlation、redacted telemetry、metrics、配置快速失败、Docker/Compose 和
+release-check 已完成；外部监控平台、压力/混沌/依赖扫描仍由部署环境负责。

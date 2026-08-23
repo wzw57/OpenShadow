@@ -198,8 +198,10 @@ Voice/Device/Integration 已按 ADR-0029 完成 Adapter 设计闸门接受。通
 Contract、确定性 Adapter 和 Secret/consent/expiry 边界测试已实现；真实
 硬件、语音、OAuth/webhook 仍为 Contract-only，详见
 [Production Device/Integration 状态](production-device-integration-status.md)。
-Operations/Release 已按 ADR-0030 完成设计闸门接受，下一步实现轻量 telemetry、配置快速
-失败、参考部署与 release check，不引入外部监控平台或编排系统。
+Operations/Release 已按 ADR-0030 完成设计闸门接受。轻量 telemetry、metrics、配置快速
+失败、Docker/Compose 和 release-check 已实现；外部
+压力/混沌/依赖扫描仍是部署环境的发布前置，详见
+[Production Operations 状态](production-operations-status.md)。
 
 ## 延后实现与重新评估
 

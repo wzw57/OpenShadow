@@ -32,6 +32,18 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /metrics:
+    get:
+      operationId: metrics
+      security: []
+      description: Low-cardinality Prometheus text metrics; no user or secret fields.
+      responses:
+        "200":
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
   /v1/auth/config:
     get:
       operationId: authConfig

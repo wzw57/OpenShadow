@@ -414,6 +414,7 @@ API 的完整契约以 [`contracts/openapi/openapi.yaml`](contracts/openapi/open
 | 类别 | 入口 |
 | --- | --- |
 | 状态 | `GET /healthz`、`GET /readyz`、`GET /v1/runtime` |
+| 运维指标 | `GET /metrics`（低基数 Prometheus 文本，不含主体、Token、Secret 或 prompt） |
 | Conversation | `GET/POST /v1/conversations`、`POST /v1/conversations/{id}/turns` |
 | Run | `GET /v1/runs/{id}`、`GET /v1/runs/{id}/events`、`POST /v1/runs/{id}/retry` |
 | Profile 查询 | `GET /v1/memories`、`GET /v1/states`、`GET /v1/tasks`、`GET /v1/actions` |
@@ -423,7 +424,8 @@ API 的完整契约以 [`contracts/openapi/openapi.yaml`](contracts/openapi/open
 
 Runtime 的 start/stop/restart/select 写操作要求 `Idempotency-Key`。需要身份或 Space
 边界的写入使用 `X-Principal-Ref`、`X-Space-Id` 等契约 Header；当前默认是单用户本地上下文，
-完整生产认证和多用户发行仍是后续能力。
+生产模式可使用 OIDC-compatible verifier 或 signed-session 验证；local-dev header 兼容仅在
+显式 `SHADOW_AUTH_MODE=local-dev` 下开启，多用户完整发行仍是后续能力。
 
 ## 本地开发与验收
 
@@ -459,6 +461,23 @@ git diff --check
 当前基线验收包括 Contract/Repository/API、幂等重放、Store unavailable、重启恢复、Runtime
 生命周期、Web UI Chromium smoke 和 Alembic upgrade/downgrade。测试用 SQLite 内存库或隔离
 文件库；真实 Hermes Provider 和 Codex 模型请求属于部署联调，不是默认测试前置条件。
+
+### 生产参考启动
+
+SQLite 仍是 local-dev 默认；生产必须显式选择 Store，不会从错误 URL 静默回退：
+
+```powershell
+$env:SHADOW_DATABASE_URL = "postgresql+psycopg://shadow:<password>@localhost:5432/shadow"
+$env:SHADOW_AUTH_MODE = "oidc"
+$env:SHADOW_AUTH_SESSION_SECRET = "<deployment-secret>"
+python -m pip install -e ".[dev,postgres]"
+python -m uvicorn shadow_server.app:app --host 0.0.0.0 --port 8080
+```
+
+也可使用仓库中的 `docker compose up --build`（需要先设置 `POSTGRES_PASSWORD`）。发布前
+运行 `./scripts/release-check.ps1`，它会执行全量测试、Ruff、SQLite migration upgrade/
+downgrade 和 `git diff --check`。生产部署仍需在目标环境完成真实 PostgreSQL、OIDC、
+Runtime Provider、备份恢复和压力/安全演练。
 
 ## 代码目录
 

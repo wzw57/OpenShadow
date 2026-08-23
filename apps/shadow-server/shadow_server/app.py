@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import importlib
 import json
+import logging
 import os
+import time
+import uuid
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -273,6 +276,13 @@ def create_app(
         if not os.getenv("SHADOW_AUTH_SESSION_SECRET"):
             raise ValueError("SHADOW_AUTH_SESSION_SECRET is required outside local-dev auth mode")
     if auth_mode == "oidc":
+        required_oidc = {
+            "SHADOW_OIDC_ISSUER": os.getenv("SHADOW_OIDC_ISSUER", "").strip(),
+            "SHADOW_OIDC_AUDIENCE": os.getenv("SHADOW_OIDC_AUDIENCE", "").strip(),
+            "SHADOW_OIDC_JWKS_URL": os.getenv("SHADOW_OIDC_JWKS_URL", "").strip(),
+        }
+        if any(not value for value in required_oidc.values()):
+            raise ValueError("OIDC auth mode requires SHADOW_OIDC_ISSUER, SHADOW_OIDC_AUDIENCE and SHADOW_OIDC_JWKS_URL")
         auth_verifier = OidcAuthVerifier(
             issuer=os.getenv("SHADOW_OIDC_ISSUER", ""),
             audience=os.getenv("SHADOW_OIDC_AUDIENCE", ""),
@@ -311,6 +321,8 @@ def create_app(
     app.state.sessions = sessions
     app.state.runtime_adapter = conversations.runtime_adapter
     app.state.runtime_supervisor = supervisor
+    app.state.telemetry = {"requests_total": 0, "errors_total": 0, "request_duration_seconds_sum": 0.0}
+    telemetry_logger = logging.getLogger("shadow.http")
 
     def _runtime_selection_guard() -> bool:
         try:
@@ -346,6 +358,25 @@ def create_app(
                 request.scope["headers"] = headers
         return await call_next(request)
 
+    @app.middleware("http")
+    async def request_telemetry(request: Request, call_next: Any) -> JSONResponse | Any:
+        correlation_id = request.headers.get("X-Correlation-Id") or f"correlation-{uuid.uuid4().hex}"
+        request.state.correlation_id = correlation_id
+        started = time.perf_counter()
+        response = await call_next(request)
+        elapsed = time.perf_counter() - started
+        metrics = app.state.telemetry
+        metrics["requests_total"] += 1
+        metrics["request_duration_seconds_sum"] += elapsed
+        if response.status_code >= 400:
+            metrics["errors_total"] += 1
+        response.headers["X-Correlation-Id"] = correlation_id
+        telemetry_logger.info(
+            "http_request",
+            extra={"route": request.url.path, "method": request.method, "status": response.status_code, "correlation_id": correlation_id, "duration_ms": round(elapsed * 1000, 3)},
+        )
+        return response
+
     def _context(principal_ref: str, space_id: str, *, endpoint_ref: str | None = None, write: bool = False):
         return identity.require(principal_ref, space_id, endpoint_ref=endpoint_ref, write=write)
 
@@ -370,6 +401,23 @@ def create_app(
             "durable": repository.available,
         }
         return JSONResponse(status_code=200 if repository.available else 503, content=body)
+
+    @app.get("/metrics", include_in_schema=False)
+    async def metrics() -> Response:
+        values = app.state.telemetry
+        body = "\n".join(
+            (
+                "# TYPE shadow_http_requests_total counter",
+                f"shadow_http_requests_total {values['requests_total']}",
+                "# TYPE shadow_http_errors_total counter",
+                f"shadow_http_errors_total {values['errors_total']}",
+                "# TYPE shadow_http_request_duration_seconds_sum counter",
+                f"shadow_http_request_duration_seconds_sum {values['request_duration_seconds_sum']}",
+                "# TYPE shadow_store_ready gauge",
+                f"shadow_store_ready {1 if repository.available else 0}",
+            )
+        ) + "\n"
+        return Response(content=body, media_type="text/plain; version=0.0.4")
 
     @app.get("/v1/auth/config")
     async def auth_config() -> dict[str, Any]:

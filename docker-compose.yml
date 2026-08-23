@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shadow
+      POSTGRES_USER: shadow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shadow -d shadow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - shadow-postgres:/var/lib/postgresql/data
+
+  shadow:
+    build: .
+    environment:
+      SHADOW_DATABASE_URL: postgresql+psycopg://shadow:${POSTGRES_PASSWORD}@postgres:5432/shadow
+      SHADOW_AUTH_MODE: local-dev
+      SHADOW_RUNTIME_PROFILE_PATH: /app/config/runtime-profiles.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+volumes:
+  shadow-postgres:
