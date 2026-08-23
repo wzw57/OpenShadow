@@ -1,6 +1,6 @@
 # ADR-0027：Production Auth & Security Boundary
 
-- 状态：**Accepted / 获准 Slice A 实现**
+- 状态：**Accepted / Slice A 已实现并合并到 `main`**
 - 范围：AuthContext、AuthVerifier、Session、SecretResolver、local-dev bootstrap、审计
 - 设计闸门：[production-auth-design-gate.md](../production-auth-design-gate.md)
 

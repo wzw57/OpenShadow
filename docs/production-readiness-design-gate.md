@@ -1,6 +1,6 @@
 # Production Readiness 总体设计闸门
 
-状态：**Accepted for Slice A / B–E 仍为 Draft**
+状态：**Accepted for Slices A–E / 本地发布基线已合并**
 范围：生产化路线、认证与安全、Runtime 可靠性、远程 Store、备份同步、设备/语音、可观测性与发布
 
 本闸门把“可运行参考项目”推进到“可发布产品”的工作拆成有依赖的切片。它不把尚未
@@ -39,7 +39,8 @@ Vendor 分支绕过现有 Admission、CommitAuthority、CAS 和 Canonical 生命
 ```
 
 每个切片都必须单独拥有设计稿、ADR、Schema/fixtures（如有）、实现、测试、运行证据和
-状态文档；前一切片的退出条件未满足时，后一切片不得把依赖假设为已完成。
+状态文档。PR #25 已将 A–E 的本地参考实现合并到 `main`；真实外部部署验收仍按各状态文档
+列出的前置条件执行。
 
 ## 2. 不变量
 
@@ -73,7 +74,7 @@ Vendor 分支绕过现有 Admission、CommitAuthority、CAS 和 Canonical 生命
   prompt、token、Cookie 或 Provider 私有 payload。
 - 本 Slice 不实现 Voice、远程 Store、真实 Provider Tool Bridge 或密码找回 UI。
 
-推荐的首批通用边界（仍需闸门接受）：
+已实现的通用边界：
 
 ```text
 GET  /v1/auth/session       → 当前已验证 AuthContext 的非敏感摘要
@@ -129,8 +130,8 @@ POST /v1/auth/exchange      → Adapter 验证外部 credential，不返回 Secr
 | Runtime Provider | Hermes 或 Codex 二选一作为首个生产验证对象 | 决定真实 SSE、resume、tool 和凭据验收 |
 | Voice/Device 首个目标 | 暂缓，先完成 Auth/Store/Runtime reliability | 避免在基础安全和恢复未稳定前扩展副作用面 |
 
-本轮按推荐默认值获准进入 Slice A；OIDC issuer、远程 Store、Voice/Device 和真实 Provider
-仍需在各自 Slice 闸门接受前保持 Contract-only，不得提前提交业务代码。
+推荐默认值已用于本地实现；OIDC issuer、远程 Store、Voice/Device 和真实 Provider 的具体
+部署值与联调证据仍不写入 Core，必须在部署环境补充。
 
 ## 5. 总体退出条件
 
@@ -142,5 +143,5 @@ POST /v1/auth/exchange      → Adapter 验证外部 credential，不返回 Secr
 - 有可复现启动、升级、回滚、备份、恢复、停机和故障处理 runbook；
 - Release candidate 在隔离环境通过测试、负载、故障、安全和恢复验收。
 
-本闸门接受后，首先建立 `production/auth-design-gate`，只提交 Slice A 的设计、Schema、
-fixtures、OpenAPI contract 和同步测试；完成 Slice A 合并后再进入 Slice B。
+本闸门现已接受，Slice A–E 的设计、实现、测试和状态文档已在 PR #25 合并到 `main`。
+后续只补部署环境的真实连接、压力/故障/安全演练，不提前扩大 Core 或引入 Vendor 耦合。
