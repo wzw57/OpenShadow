@@ -17,7 +17,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | Phase 5 identity / endpoint / Space ACL | `docs/phase5-design-gate.md`、ADR-0024 | Identity Schema、fixtures、FastAPI routes、ACL tests、Web context 和 `phase5-status.md` |
 | Runtime Management / Hermes launcher / Codex Adapter | `docs/runtime-management-design-gate.md`、ADR-0025、`docs/runtime-management-status.md` | Runtime profile schema、Supervisor/API、Adapter tests、Management UI、启动脚本和 runtime 状态文档 |
 | Production Readiness / Release boundary | `docs/production-readiness-design-gate.md`、ADR-0026 | Auth/Secret/Store/Runtime/Backup/Operations slices、状态文档、release/restore/security evidence |
-| Production Auth / Session / Secret boundary | `docs/production-auth-design-gate.md`、ADR-0027 | AuthContext/Verifier、SessionStore、auth OpenAPI、redaction/CSRF tests、security status |
+| Production Auth / Session / Secret boundary | `docs/production-auth-design-gate.md`、ADR-0027 | AuthContext/Verifier、SessionStore、auth OpenAPI、redaction/CSRF tests、`production-auth-status.md` |
 
 ## Vendor isolation rule
 

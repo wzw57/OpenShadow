@@ -194,10 +194,29 @@ class ConversationService:
             )
         }
         now = utc_timestamp()
-        output = self.runtime_adapter.execute(text)
+        request_digest = sha256_digest({"conversation_id": conversation_id, "text": text})
+        prior = self.repository.idempotency_result(f"turn:{conversation_id}", idempotency_key)
+        if prior is not None and prior.get("request_digest") != request_digest:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.repository.idempotency-mismatch",
+                    category="conflict",
+                    message="The idempotency key was already used for a different conversation turn.",
+                )
+            )
         current_payload = ConversationPayload.model_validate(conversation["typed_payload"])
         owner_ref = conversation["owner_ref"]
         space_id = conversation["space_id"]
+        if prior is not None:
+            return TurnResult(
+                conversation=self.repository.get(conversation_id) or {},
+                run=self.repository.get(ids["run"]) or {},
+                user_message=self.repository.get(ids["message-user"]) or {},
+                assistant_message=self.repository.get(ids["message-assistant"]) or {},
+                admission=self.repository.get(ids["admission"]) or {},
+                ephemeral=False,
+                replayed=True,
+            )
         user_message = MessagePayload(
             conversation_ref=StableRecordRef(record_id=conversation_id),
             sequence=len(current_payload.message_refs) + 1,
@@ -211,22 +230,6 @@ class ConversationService:
                 )
             ],
             finalized_at=now,
-        )
-        assistant_message = MessagePayload(
-            conversation_ref=StableRecordRef(record_id=conversation_id),
-            sequence=len(current_payload.message_refs) + 2,
-            message_type="shadow.message.assistant",
-            author_ref=self.runtime_descriptor.descriptor_id,
-            content_blocks=[
-                ContentBlock(
-                    block_type="shadow.content.text",
-                    content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
-                    typed_content={"text": output.text},
-                )
-            ],
-            finalized_at=now,
-            source_request_ref=RecordVersionRef(record_id=ids["request"], version=1),
-            produced_by_run_ref=RecordVersionRef(record_id=ids["run"], version=1),
         )
         admission = AdmissionRecordPayload(
             admission_id=ids["admission"],
@@ -295,30 +298,29 @@ class ConversationService:
         )
         run = RunPayload(
             request_ref=RecordVersionRef(record_id=ids["request"], version=1),
-            lifecycle="completed",
+            lifecycle="running",
             requirements_ref=RecordVersionRef(record_id=ids["requirements"], version=1),
             binding_refs=[RecordVersionRef(record_id=ids["binding"], version=1)],
             attempt_refs=[RecordVersionRef(record_id=ids["attempt"], version=1)],
             active_attempt_ref=StableRecordRef(record_id=ids["attempt"]),
-            result_ref=RecordVersionRef(record_id=ids["message-assistant"], version=1),
-            usage_summary=output.usage,
+            result_ref=None,
+            usage_summary=None,
             started_at=now,
-            terminal_at=now,
-            last_event_cursor="2",
+            terminal_at=None,
+            last_event_cursor=None,
         )
         attempt = ExecutionAttemptPayload(
             run_ref=StableRecordRef(record_id=ids["run"]),
             binding_ref=RecordVersionRef(record_id=ids["binding"], version=1),
-            lifecycle="succeeded",
+            lifecycle="dispatching",
             attempt_number=1,
-            execution_ref=getattr(output, "execution_ref", None) or f"deterministic:{token}",
-            result_ref=RecordVersionRef(record_id=ids["message-assistant"], version=1),
+            execution_ref=None,
+            result_ref=None,
             started_at=now,
-            finished_at=now,
+            finished_at=None,
         )
         new_refs = current_payload.message_refs + [
             RecordVersionRef(record_id=ids["message-user"], version=1),
-            RecordVersionRef(record_id=ids["message-assistant"], version=1),
         ]
         conversation_update = ConversationPayload(
             title=current_payload.title,
@@ -429,18 +431,6 @@ class ConversationService:
                 provenance,
             ),
             self._operation(
-                f"operation-{ids['message-assistant']}",
-                "create",
-                ids["message-assistant"],
-                "shadow.profile.message",
-                f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
-                owner_ref,
-                space_id,
-                self.runtime_descriptor.descriptor_id,
-                assistant_message.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
                 f"operation-conversation-{token}",
                 "update",
                 conversation_id,
@@ -458,7 +448,7 @@ class ConversationService:
             commit_request_id=f"commit-request-turn-{token}",
             idempotency_scope=f"turn:{conversation_id}",
             idempotency_key=idempotency_key,
-            request_digest=sha256_digest({"conversation_id": conversation_id, "text": text}),
+            request_digest=request_digest,
             actor_ref=principal_ref,
             operations=operations,
             prepared_at=now,
@@ -474,19 +464,124 @@ class ConversationService:
                     typed_details=result.structured_error,
                 )
             )
-        if result.outcome != "idempotent_replay":
-            for event_type, payload in (
-                ("shadow.run.started", {"run_id": ids["run"], "attempt_id": ids["attempt"]}),
-                (
-                    "shadow.run.completed",
-                    {
-                        "run_id": ids["run"],
-                        "result_message_id": ids["message-assistant"],
-                        "usage": output.usage,
-                    },
+        if result.outcome == "idempotent_replay":
+            return TurnResult(
+                conversation=self.repository.get(conversation_id) or {},
+                run=self.repository.get(ids["run"]) or {},
+                user_message=self.repository.get(ids["message-user"]) or {},
+                assistant_message=self.repository.get(ids["message-assistant"]) or {},
+                admission=self.repository.get(ids["admission"]) or {},
+                ephemeral=False,
+                replayed=True,
+            )
+        self.repository.append_event(ids["run"], "shadow.run.started", {"run_id": ids["run"], "attempt_id": ids["attempt"]})
+        try:
+            output = self.runtime_adapter.execute(text)
+            output_text = getattr(output, "text", None)
+            if not isinstance(output_text, str):
+                raise TypeError("Runtime Adapter result did not contain text.")
+            runtime_failure: dict[str, Any] | None = None
+        except Exception as exc:  # Provider failures are durable unknown outcomes, never successful turns.
+            output = None
+            output_text = None
+            runtime_failure = {"code": "shadow.runtime.outcome-unknown", "reason": str(exc)[:500]}
+
+        initial_run = self.repository.get(ids["run"])
+        initial_attempt = self.repository.get(ids["attempt"])
+        initial_conversation = self.repository.get(conversation_id)
+        if initial_run is None or initial_attempt is None or initial_conversation is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.runtime.dispatch-boundary-missing",
+                    category="internal",
+                    message="Durable dispatch records could not be recovered after the initial commit.",
+                )
+            )
+        final_provenance = Provenance(origin_type="shadow.origin.runtime-result", origin_ref=f"result-{token}")
+        if runtime_failure is not None:
+            final_run = RunPayload.model_validate(initial_run["typed_payload"]).model_copy(
+                update={"lifecycle": "waiting", "failure_summary": runtime_failure, "terminal_at": None}
+            )
+            final_attempt = ExecutionAttemptPayload.model_validate(initial_attempt["typed_payload"]).model_copy(
+                update={"lifecycle": "outcome_unknown", "failure_summary": runtime_failure, "finished_at": None}
+            )
+            final_operations = [
+                self._operation(
+                    f"operation-result-attempt-{token}", "update", ids["attempt"], "shadow.kernel.execution-attempt",
+                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload", owner_ref, space_id, principal_ref,
+                    final_attempt.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_attempt["version"],
                 ),
-            ):
-                self.repository.append_event(ids["run"], event_type, payload)
+                self._operation(
+                    f"operation-result-run-{token}", "update", ids["run"], "shadow.kernel.run",
+                    f"{KERNEL_SCHEMA}#/$defs/RunPayload", owner_ref, space_id, principal_ref,
+                    final_run.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_run["version"],
+                ),
+            ]
+        else:
+            assistant_message = MessagePayload(
+                conversation_ref=StableRecordRef(record_id=conversation_id),
+                sequence=len(current_payload.message_refs) + 2,
+                message_type="shadow.message.assistant",
+                author_ref=self.runtime_descriptor.descriptor_id,
+                content_blocks=[ContentBlock(
+                    block_type="shadow.content.text",
+                    content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
+                    typed_content={"text": output_text},
+                )],
+                finalized_at=utc_timestamp(),
+                source_request_ref=RecordVersionRef(record_id=ids["request"], version=1),
+                produced_by_run_ref=RecordVersionRef(record_id=ids["run"], version=1),
+            )
+            final_run = RunPayload.model_validate(initial_run["typed_payload"]).model_copy(update={
+                "lifecycle": "completed", "result_ref": RecordVersionRef(record_id=ids["message-assistant"], version=1),
+                "usage_summary": getattr(output, "usage", None), "terminal_at": utc_timestamp(), "last_event_cursor": "2",
+            })
+            final_attempt = ExecutionAttemptPayload.model_validate(initial_attempt["typed_payload"]).model_copy(update={
+                "lifecycle": "succeeded", "execution_ref": getattr(output, "execution_ref", None) or f"deterministic:{token}",
+                "result_ref": RecordVersionRef(record_id=ids["message-assistant"], version=1), "finished_at": utc_timestamp(),
+            })
+            final_conversation = ConversationPayload(
+                title=current_payload.title, conversation_state=current_payload.conversation_state,
+                message_refs=current_payload.message_refs + [RecordVersionRef(record_id=ids["message-user"], version=1), RecordVersionRef(record_id=ids["message-assistant"], version=1)],
+                queued_run_refs=current_payload.queued_run_refs, foreground_run_ref=StableRecordRef(record_id=ids["run"]), profile_settings=current_payload.profile_settings,
+            )
+            final_operations = [
+                self._operation(
+                    f"operation-result-message-{token}", "create", ids["message-assistant"], "shadow.profile.message",
+                    f"{PROFILE_SCHEMA}#/$defs/MessagePayload", owner_ref, space_id, self.runtime_descriptor.descriptor_id,
+                    assistant_message.model_dump(mode="json", exclude_none=True), final_provenance,
+                ),
+                self._operation(
+                    f"operation-result-attempt-{token}", "update", ids["attempt"], "shadow.kernel.execution-attempt",
+                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload", owner_ref, space_id, principal_ref,
+                    final_attempt.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_attempt["version"],
+                ),
+                self._operation(
+                    f"operation-result-run-{token}", "update", ids["run"], "shadow.kernel.run",
+                    f"{KERNEL_SCHEMA}#/$defs/RunPayload", owner_ref, space_id, principal_ref,
+                    final_run.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_run["version"],
+                ),
+                self._operation(
+                    f"operation-result-conversation-{token}", "update", conversation_id, "shadow.profile.conversation",
+                    f"{PROFILE_SCHEMA}#/$defs/ConversationPayload", owner_ref, space_id, principal_ref,
+                    final_conversation.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_conversation["version"],
+                ),
+            ]
+        final_result = self.authority.commit(CommitPlan(
+            commit_request_id=f"commit-request-result-{token}", idempotency_scope=f"turn-result:{conversation_id}",
+            idempotency_key=idempotency_key, request_digest=request_digest, actor_ref=principal_ref,
+            operations=final_operations, prepared_at=utc_timestamp(), correlation_id=f"correlation-{token}",
+        ))
+        if final_result.outcome in {"failed", "conflict"}:
+            raise ShadowDomainError(ShadowError(
+                code="shadow.runtime.result-commit-failed", category="unavailable" if final_result.outcome == "failed" else "conflict",
+                message="Runtime result could not be durably committed; the dispatch boundary remains recoverable.",
+                typed_details=final_result.structured_error, retryable=final_result.outcome == "failed",
+            ))
+        self.repository.append_event(ids["run"], "shadow.run.unknown" if runtime_failure else "shadow.run.completed", {
+            "run_id": ids["run"], "attempt_id": ids["attempt"], "result_message_id": ids["message-assistant"] if not runtime_failure else None,
+            "usage": getattr(output, "usage", None) if not runtime_failure else None,
+        })
         return TurnResult(
             conversation=self.repository.get(conversation_id) or {},
             run=self.repository.get(ids["run"]) or {},
@@ -494,7 +589,7 @@ class ConversationService:
             assistant_message=self.repository.get(ids["message-assistant"]) or {},
             admission=self.repository.get(ids["admission"]) or {},
             ephemeral=False,
-            replayed=result.outcome == "idempotent_replay",
+            replayed=final_result.outcome == "idempotent_replay",
         )
 
     def retry_run(

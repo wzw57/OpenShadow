@@ -119,4 +119,5 @@ Token delta 可以作为传输事件，但首版不承诺逐 token 的 Canonical
 - [x] Hermes event/session 的 opaque reference 边界已冻结；
 - [x] Reliability Core、公共 Contract 和 Web UI 不依赖任何 Vendor 名称或类型；
 - [x] 不新增表、工具或公开临时路由；
-- [ ] implementation branch 的代码、测试、迁移和真实 Hermes 验收完成。
+- [x] implementation branch 的代码、测试和迁移验收完成；真实 Hermes session resume 与远程
+  Provider 故障演练仍保留为后续收口项。

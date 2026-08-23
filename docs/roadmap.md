@@ -185,9 +185,10 @@ Invitation、读 ACL 与 Web context；真实 OAuth/OIDC、Voice、远程 Store 
 Contract-only，详见 [Phase 5 状态](phase5-status.md)。
 
 生产化路线已建立总体设计闸门 [Production Readiness](production-readiness-design-gate.md)
-和 ADR-0026；当前等待维护者确认 OIDC issuer、生产 Store、Secret 管理、部署形态和首个
-Runtime Provider。Slice A Auth/Security 已按 ADR-0027 获准进入实现；B–E 仍保持
-Contract-only，详见 [Production Auth 闸门](production-auth-design-gate.md)。
+和 ADR-0026。Slice A Auth/Security 已按 ADR-0027 实现并通过本地验收；Slice B Runtime
+Reliability 已完成基础 durable dispatch/unknown outcome 实现，真实 Hermes resume 和
+远程 Provider 故障演练仍未完成。Slice C–E 继续保持 Contract-only，详见
+[Production Auth 状态](production-auth-status.md) 和 [Runtime Reliability 状态](runtime-reliability-status.md)。
 
 ## 延后实现与重新评估
 
