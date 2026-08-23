@@ -1,6 +1,6 @@
 # v0.2 R0 状态：架构测试与 Extension Fixtures
 
-状态：**Scaffolded / migration gates recorded**
+状态：**Completed / migration gates recorded**
 分支：`v02/r0-architecture-tests`
 
 R0 已完成“先写验收测试”的部分：

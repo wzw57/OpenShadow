@@ -2,8 +2,9 @@
 
 from .admission import AdmissionResult, AdmissionService
 from .commit import CommitAuthority
+from .extensions import ExtensionDescriptor, ExtensionRegistry
 from .models import CanonicalEnvelope, CommitBatchResult, CommitPlan
-from .registry import ContractRegistry
+from .registry import ContractPack, ContractRegistry
 from .repository import CanonicalRepository, RepositoryUnavailable
 from .runtime import RuntimeAdapter
 
@@ -15,7 +16,10 @@ __all__ = [
     "CommitAuthority",
     "CommitBatchResult",
     "CommitPlan",
+    "ContractPack",
     "ContractRegistry",
+    "ExtensionDescriptor",
+    "ExtensionRegistry",
     "RepositoryUnavailable",
     "RuntimeAdapter",
 ]
