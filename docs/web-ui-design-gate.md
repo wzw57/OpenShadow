@@ -169,3 +169,13 @@ ready/runtime 手动刷新可见；失败和网络错误可以重新加载；Ven
 验收：四个列表按需加载并显示空态、错误和刷新状态；受控操作要求当前 version，
 写入后列表刷新；详情 payload 可折叠；切换回 Conversation 后原有对话闭环不变；
 构建、文档同步和 Vendor-neutrality 检查通过。
+
+## 9. Phase 5 Identity / Space context 切片
+
+- UI 通过现有 Identity API 切换当前 Space 和 Endpoint context；
+- 可在单用户兼容模式下 pair 当前 Web Endpoint、创建 shared Space 和发出 editor/viewer
+  invitation；邀请 token 只在响应后短暂展示，不能写入 localStorage；
+- Profile/Conversation 请求继续只发送通用 `X-Principal-Ref`、`X-Space-Id`、
+  `X-Endpoint-Ref`，不在前端实现 ACL 或认证算法；
+- 多用户访问结果由服务端 Membership/role 决定，viewer 的写入拒绝显示为结构化错误；
+- OAuth/OIDC、Voice、远程同步仍不进入 Web UI。

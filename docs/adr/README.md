@@ -222,6 +222,17 @@ ADR-0019：Phase 4 跨组件 Erasure 与 Backup Metadata 边界。
 89. Backup 只冻结加密 Export metadata、digest、manifest、opaque key ref、retention 和
     erase schedule；不保存 Secret、Provider 私有状态或不可重建索引。
 
+### Phase 5 Identity / Endpoint / Space ACL
+
+ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 边界。
+
+90. Endpoint、Space、Membership、Invitation 使用 typed Profile 和现有 Canonical version rows；
+    不新增认证平台、SQL 表或通用 Queue。
+91. Space membership 的 owner/editor/viewer 是共享读写授权唯一权威，默认 deny；邀请只保存
+    一次性 token digest、expiry、revocation 和 accepted 状态，不保存明文 token。
+92. local-dev headers 只能兼容单用户 bootstrap；启用 session verifier 后服务端认证 context
+    覆盖客户端主体声明。真实 OAuth/OIDC、Voice、远程同步另立 Adapter ADR。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；

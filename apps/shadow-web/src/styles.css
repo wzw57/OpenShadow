@@ -37,6 +37,21 @@ input:focus, textarea:focus { border-color: rgba(139, 224, 193, 0.65); box-shado
 input { width: 100%; min-width: 0; border-radius: 9px; padding: 10px 11px; font-size: 12px; }
 input::placeholder, textarea::placeholder { color: #647381; }
 .icon-button { width: 38px; flex: 0 0 38px; border: 1px solid rgba(139, 224, 193, 0.35); border-radius: 9px; color: var(--accent); background: rgba(139, 224, 193, 0.08); font-size: 21px; line-height: 1; }
+.context-panel { margin: 0 4px 22px; border: 1px solid rgba(139, 224, 193, 0.15); border-radius: 10px; background: rgba(139, 224, 193, 0.035); padding: 10px; display: grid; gap: 8px; }
+.context-heading { display: flex; justify-content: space-between; gap: 8px; color: var(--muted-bright); font-size: 10px; }
+.context-heading span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.context-field { display: grid; gap: 4px; color: var(--muted); font-size: 9px; }
+.context-field input, .context-field select, .context-create input, .context-create select { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--panel); padding: 7px; font-size: 10px; }
+.context-endpoint-row { display: flex; align-items: end; gap: 7px; }
+.context-endpoint-row .context-field { flex: 1; }
+.context-endpoint-row .text-button { padding-bottom: 8px; }
+.context-create { display: grid; grid-template-columns: 1fr 1fr auto; gap: 5px; }
+.context-create .text-button { padding: 0 2px; white-space: nowrap; }
+.context-notice { color: var(--accent); font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
+.context-error { color: var(--danger); font-size: 9px; line-height: 1.4; }
+.context-members { display: grid; gap: 4px; color: var(--muted); font-size: 9px; }
+.context-member { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: var(--muted-bright); }
+.context-member .text-button { padding: 0; font-size: 9px; }
 .workspace-nav { display: grid; gap: 3px; padding: 0 4px 24px; }
 .workspace-nav button { display: flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 8px; color: var(--muted); background: transparent; padding: 9px 10px; text-align: left; font-size: 11px; }
 .workspace-nav button:hover { color: var(--muted-bright); background: rgba(255, 255, 255, 0.035); }

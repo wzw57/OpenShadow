@@ -32,6 +32,18 @@ export type RuntimeStatus = {
   health?: JsonObject | null;
 };
 
+export type SpaceRecord = CanonicalRecord & {
+  typed_payload?: JsonObject & { display_name?: string; space_kind?: string; owner_ref?: string };
+};
+
+export type MembershipRecord = CanonicalRecord & {
+  typed_payload?: JsonObject & { principal_ref?: string; role?: string; lifecycle?: string };
+};
+
+export type EndpointRecord = CanonicalRecord & {
+  typed_payload?: JsonObject & { endpoint_ref?: string; trust?: string; lifecycle?: string; label?: string };
+};
+
 export type RunEvent = {
   sequence?: number;
   event_type?: string;

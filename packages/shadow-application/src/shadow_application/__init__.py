@@ -20,6 +20,7 @@ from .erasure_backup import (
     ErasureRequestCandidate,
     ErasureService,
 )
+from .identity import AccessContext, IdentityService
 from .index import (
     MemoryIndexAdapter,
     MemoryIndexBuildArtifact,
@@ -88,6 +89,8 @@ __all__ = [
     "IntegrationRegistrationRequest",
     "IntegrationRegistrationResult",
     "IntegrationService",
+    "AccessContext",
+    "IdentityService",
     "integration_result_digest",
     "MemoryCandidate",
     "MemoryIndexAdapter",

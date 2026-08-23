@@ -445,9 +445,9 @@ class ActionService:
             "replayed": result.outcome == "idempotent_replay",
         }
 
-    def list_actions(self, *, owner_ref: str, space_id: str, limit: int = 50) -> list[dict[str, Any]]:
+    def list_actions(self, *, owner_ref: str | None, space_id: str, limit: int = 50) -> list[dict[str, Any]]:
         records = self.repository.query(
-            owner_refs={owner_ref}, space_ids={space_id}, record_types={ACTION_RECORD_TYPE},
+            owner_refs={owner_ref} if owner_ref else None, space_ids={space_id}, record_types={ACTION_RECORD_TYPE},
             record_states={"active", "logically_deleted", "erased"}, limit=1_000_000,
         )
         heads: dict[str, dict[str, Any]] = {}
@@ -456,12 +456,14 @@ class ActionService:
                 heads[record["record_id"]] = record
         return sorted(heads.values(), key=lambda item: item["record_id"])[:limit]
 
-    def get_action(self, action_id: str, principal_ref: str | None = None, space_id: str | None = None) -> dict[str, Any] | None:
+    def get_action(self, action_id: str, principal_ref: str | None = None, space_id: str | None = None, enforce_owner: bool = True) -> dict[str, Any] | None:
         record = self.repository.get(action_id)
         if record is None or record["record_type"] != ACTION_RECORD_TYPE:
             return None
-        if principal_ref is not None and space_id is not None:
+        if principal_ref is not None and space_id is not None and enforce_owner:
             self._assert_boundary(record, principal_ref, space_id)
+        elif space_id is not None and record["space_id"] != space_id:
+            raise _error("shadow.action.space-mismatch", "Action does not belong to the requested Space.", category="unauthorized")
         return record
 
     def _accept_action_proposal(

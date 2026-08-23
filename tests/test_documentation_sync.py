@@ -174,6 +174,33 @@ def test_phase4_completion_status_is_explicit() -> None:
     assert "加密设备 Backup 内容" in status
 
 
+def test_phase5_identity_gate_contract_and_status_are_synchronized() -> None:
+    gate = _read("docs/phase5-design-gate.md")
+    adr = _read("docs/adr/0024-phase5-identity-endpoint-space-acl.md")
+    status = _read("docs/phase5-status.md")
+    schema = _read("contracts/schemas/identity/1.0.0/schema.json")
+    openapi = _read("contracts/openapi/openapi.yaml")
+    index = _read("docs/adr/README.md")
+    sync = _read("docs/documentation-sync.md")
+
+    assert "Accepted / Phase 5 Core Slice" in gate
+    assert "- Status: Accepted" in adr
+    assert "Core Slice 已完成" in status
+    for definition in ("EndpointPayload", "SpacePayload", "MembershipPayload", "InvitationPayload"):
+        assert definition in schema
+    for path in (
+        "/v1/endpoints/pair",
+        "/v1/endpoints/{endpoint_id}/revoke",
+        "/v1/spaces",
+        "/v1/spaces/{space_id}/members",
+        "/v1/spaces/{space_id}/invitations",
+        "/v1/invitations/{invitation_id}/accept",
+    ):
+        assert path in openapi
+    assert "ADR-0024" in index
+    assert "phase5-design-gate.md" in sync
+
+
 def test_next_phase2_slice_is_accepted_before_implementation() -> None:
     gate = _read("docs/phase2-recall-maintenance-design-gate.md")
     adr = _read("docs/adr/0006-phase2-recall-maintenance.md")

@@ -290,10 +290,10 @@ class StateService:
         }
 
     def list_states(
-        self, *, owner_ref: str, space_id: str, state_key: str | None = None, limit: int = 50
+        self, *, owner_ref: str | None, space_id: str, state_key: str | None = None, limit: int = 50
     ) -> list[dict[str, Any]]:
         records = self.repository.query(
-            owner_refs={owner_ref},
+            owner_refs={owner_ref} if owner_ref else None,
             space_ids={space_id},
             record_types={STATE_RECORD_TYPE},
             record_states={"active", "logically_deleted", "erased"},
@@ -310,13 +310,15 @@ class StateService:
         return result[:limit]
 
     def get_state(
-        self, state_id: str, *, principal_ref: str | None = None, space_id: str | None = None
+        self, state_id: str, *, principal_ref: str | None = None, space_id: str | None = None, enforce_owner: bool = True
     ) -> dict[str, Any] | None:
         record = self.repository.get(state_id)
         if record is None or record["record_type"] != STATE_RECORD_TYPE:
             return None
-        if principal_ref is not None and space_id is not None:
+        if principal_ref is not None and space_id is not None and enforce_owner:
             self._assert_boundary(record, principal_ref, space_id)
+        elif space_id is not None and record["space_id"] != space_id:
+            raise _error("shadow.state.space-mismatch", "State does not belong to the requested Space.", category="unauthorized")
         return self._with_freshness(record)
 
     @staticmethod

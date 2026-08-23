@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from shadow_application import (
     ActionService,
     ConversationService,
+    IdentityService,
     MemoryService,
     OutboxService,
     StateService,
@@ -135,6 +136,32 @@ class ActionApprovalProposalCommand(BaseModel):
     proposal_reason: str | None = None
 
 
+class EndpointPairCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    endpoint_ref: str = Field(min_length=1, max_length=255)
+    endpoint_kind: str = Field(default="shadow.endpoint.web", min_length=1, max_length=255)
+    label: str | None = Field(default=None, max_length=200)
+    capabilities: list[str] = Field(default_factory=list, max_length=100)
+
+
+class SpaceCreateCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    space_id: str = Field(min_length=1, max_length=255)
+    display_name: str = Field(min_length=1, max_length=200)
+
+
+class InvitationCreateCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    invitee_ref: str = Field(min_length=1, max_length=255)
+    role: str = Field(pattern="^(editor|viewer)$")
+    expires_at: str
+
+
+class InvitationAcceptCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    invitation_token: str = Field(min_length=1, max_length=255)
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -212,6 +239,7 @@ def create_app(
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
     actions = ActionService(repository, authority, registry)
+    identity = IdentityService(repository, authority, registry)
     outbox = OutboxService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
@@ -221,8 +249,15 @@ def create_app(
     app.state.tasks = tasks
     app.state.admission = admission
     app.state.actions = actions
+    app.state.identity = identity
     app.state.outbox = outbox
     app.state.runtime_adapter = conversations.runtime_adapter
+
+    def _context(principal_ref: str, space_id: str, *, endpoint_ref: str | None = None, write: bool = False):
+        return identity.require(principal_ref, space_id, endpoint_ref=endpoint_ref, write=write)
+
+    def _owner_filter(context: Any) -> str | None:
+        return context.principal_ref if identity._space(context.space_id) is None else None
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:
@@ -266,16 +301,149 @@ def create_app(
             }
         }
 
+    @app.post("/v1/endpoints/pair", status_code=status.HTTP_201_CREATED)
+    async def pair_endpoint(
+        command: EndpointPairCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.pair_endpoint(
+            principal_ref=x_principal_ref,
+            space_id=x_space_id,
+            endpoint_ref=command.endpoint_ref,
+            endpoint_kind=command.endpoint_kind,
+            label=command.label,
+            capabilities=command.capabilities,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.get("/v1/endpoints")
+    async def list_endpoints(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        records = [
+            row for row in identity._records("shadow.profile.endpoint")
+            if row["typed_payload"].get("principal_ref") == x_principal_ref
+        ]
+        return {"records": records}
+
+    @app.post("/v1/endpoints/{endpoint_id}/revoke", status_code=status.HTTP_202_ACCEPTED)
+    async def revoke_endpoint(
+        endpoint_id: str,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.revoke_endpoint(
+            principal_ref=x_principal_ref,
+            endpoint_ref=endpoint_id,
+            expected_version=expected_version,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.post("/v1/spaces", status_code=status.HTTP_201_CREATED)
+    async def create_space(
+        command: SpaceCreateCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.create_space(
+            principal_ref=x_principal_ref,
+            space_id=command.space_id,
+            display_name=command.display_name,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.get("/v1/spaces")
+    async def list_spaces(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"records": identity.list_spaces(x_principal_ref)}
+
+    @app.get("/v1/spaces/{space_id}")
+    async def get_space(
+        space_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        identity.require(x_principal_ref, space_id)
+        record = identity._space(space_id)
+        if record is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.space.not-found",
+                    category="validation",
+                    message="Space was not found.",
+                )
+            )
+        return {"record": record}
+
+    @app.get("/v1/spaces/{space_id}/members")
+    async def list_space_members(
+        space_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"records": identity.list_members(principal_ref=x_principal_ref, space_id=space_id)}
+
+    @app.post("/v1/spaces/{space_id}/invitations", status_code=status.HTTP_202_ACCEPTED)
+    async def create_invitation(
+        space_id: str,
+        command: InvitationCreateCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.invite(
+            principal_ref=x_principal_ref,
+            space_id=space_id,
+            invitee_ref=command.invitee_ref,
+            role=command.role,  # type: ignore[arg-type]
+            expires_at=command.expires_at,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.post("/v1/invitations/{invitation_id}/accept", status_code=status.HTTP_202_ACCEPTED)
+    async def accept_invitation(
+        invitation_id: str,
+        command: InvitationAcceptCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.accept_invitation(
+            principal_ref=x_principal_ref,
+            invitation_id=invitation_id,
+            invitation_token=command.invitation_token,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.delete("/v1/spaces/{space_id}/members/{principal_ref}", status_code=status.HTTP_202_ACCEPTED)
+    async def revoke_space_member(
+        space_id: str,
+        principal_ref: str,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.revoke_member(
+            principal_ref=x_principal_ref,
+            space_id=space_id,
+            target_principal=principal_ref,
+            expected_version=expected_version,
+            idempotency_key=idempotency_key,
+        )
+
     @app.post("/v1/conversations", status_code=status.HTTP_201_CREATED)
     async def create_conversation(
         command: CreateConversationCommand,
         x_principal_ref: Annotated[str | None, Header()] = None,
         x_space_id: Annotated[str, Header()] = "space-personal",
+        x_endpoint_ref: Annotated[str | None, Header(alias="X-Endpoint-Ref")] = None,
         idempotency_key: Annotated[str | None, Header()] = None,
     ) -> dict[str, Any]:
+        principal_ref = _principal(x_principal_ref)
+        identity.require(principal_ref, x_space_id, endpoint_ref=x_endpoint_ref, write=True)
         return {
             "record": conversations.create_conversation(
-                owner_ref=_principal(x_principal_ref),
+                owner_ref=principal_ref,
                 space_id=x_space_id,
                 title=command.title,
                 idempotency_key=idempotency_key or command.title or "default",
@@ -285,11 +453,12 @@ def create_app(
     @app.get("/v1/memories")
     async def list_memories(
         x_principal_ref: Annotated[str | None, Header()] = None,
-        x_space_id: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
     ) -> dict[str, Any]:
+        context = _context(_principal(x_principal_ref), x_space_id)
         return {
             "records": memories.list_memories(
-                owner_ref=_principal(x_principal_ref), space_id=x_space_id
+                owner_ref=_owner_filter(context), space_id=x_space_id
             )
         }
 
@@ -301,6 +470,7 @@ def create_app(
         idempotency_key: Annotated[str | None, Header()] = None,
     ) -> dict[str, Any]:
         principal_ref = _principal(x_principal_ref)
+        _context(principal_ref, x_space_id, write=True)
         key = idempotency_key or sha256_digest(command.model_dump(mode="json"))
         candidate = memories.propose_create(
             submitted_by=principal_ref,
@@ -316,10 +486,23 @@ def create_app(
         return {"record": memories.commit_candidate(candidate, idempotency_key=key)}
 
     @app.get("/v1/memories/{memory_id}")
-    async def get_memory(memory_id: str) -> dict[str, Any]:
+    async def get_memory(
+        memory_id: str,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
+    ) -> dict[str, Any]:
         record = memories.get_memory(memory_id)
         if record is None:
             raise HTTPException(404, detail="Memory not found")
+        context = _context(_principal(x_principal_ref), x_space_id)
+        if record["space_id"] != context.space_id:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.space.membership-denied",
+                    category="unauthorized",
+                    message="Memory is not in the requested Space.",
+                )
+            )
         return {"record": record}
 
     @app.delete("/v1/memories/{memory_id}", status_code=status.HTTP_202_ACCEPTED)
@@ -331,6 +514,7 @@ def create_app(
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
         principal_ref = x_principal_ref
+        _context(principal_ref, x_space_id, write=True)
         return {
             "record": memories.logical_delete(
                 memory_id=memory_id,
@@ -352,6 +536,7 @@ def create_app(
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
         principal_ref = x_principal_ref
+        _context(principal_ref, x_space_id, write=True)
         candidate = memories.propose_correction(
             submitted_by=principal_ref,
             owner_ref=principal_ref,
@@ -374,9 +559,10 @@ def create_app(
         state_key: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
+        context = _context(x_principal_ref, x_space_id)
         return {
             "records": states.list_states(
-                owner_ref=x_principal_ref, space_id=x_space_id, state_key=state_key, limit=limit
+                owner_ref=_owner_filter(context), space_id=x_space_id, state_key=state_key, limit=limit
             )
         }
 
@@ -386,8 +572,9 @@ def create_app(
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
+        context = _context(x_principal_ref, x_space_id)
         record = states.get_state(
-            state_id, principal_ref=x_principal_ref, space_id=x_space_id
+            state_id, principal_ref=x_principal_ref, space_id=x_space_id, enforce_owner=identity._space(context.space_id) is None
         )
         if record is None:
             raise HTTPException(404, detail="State not found")
@@ -400,6 +587,7 @@ def create_app(
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
     ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id, write=True)
         if isinstance(command, TaskProposalCommand):
             target_task_id = command.target_ref.get("record_id") if command.target_ref else None
             candidate = tasks.propose(
@@ -494,6 +682,7 @@ def create_app(
         proposal = repository.get(proposal_id)
         if proposal is None:
             raise HTTPException(404, detail="Proposal not found")
+        _context(x_principal_ref, x_space_id, write=True)
         proposal_type = proposal.get("typed_payload", {}).get("proposal_type")
         if proposal_type == "shadow.durable-task-proposal":
             return tasks.accept_proposal(
@@ -525,7 +714,8 @@ def create_app(
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         limit: int = 50,
     ) -> dict[str, Any]:
-        return {"records": actions.list_actions(owner_ref=x_principal_ref, space_id=x_space_id, limit=limit)}
+        context = _context(x_principal_ref, x_space_id)
+        return {"records": actions.list_actions(owner_ref=_owner_filter(context), space_id=x_space_id, limit=limit)}
 
     @app.get("/v1/actions/{action_id}")
     async def get_action(
@@ -533,7 +723,8 @@ def create_app(
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
-        record = actions.get_action(action_id, x_principal_ref, x_space_id)
+        context = _context(x_principal_ref, x_space_id)
+        record = actions.get_action(action_id, x_principal_ref, x_space_id, enforce_owner=identity._space(context.space_id) is None)
         if record is None:
             raise HTTPException(404, detail="Action not found")
         return {"record": record}
@@ -544,7 +735,8 @@ def create_app(
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         limit: int = 50,
     ) -> dict[str, Any]:
-        return {"records": tasks.list_tasks(owner_ref=x_principal_ref, space_id=x_space_id, limit=limit)}
+        context = _context(x_principal_ref, x_space_id)
+        return {"records": tasks.list_tasks(owner_ref=_owner_filter(context), space_id=x_space_id, limit=limit)}
 
     @app.get("/v1/tasks/{task_id}")
     async def get_task(
@@ -552,7 +744,8 @@ def create_app(
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
-        record = tasks.get_task(task_id, x_principal_ref, x_space_id)
+        context = _context(x_principal_ref, x_space_id)
+        record = tasks.get_task(task_id, x_principal_ref, x_space_id, enforce_owner=identity._space(context.space_id) is None)
         if record is None:
             raise HTTPException(404, detail="Task not found")
         return {"record": record}
@@ -566,6 +759,7 @@ def create_app(
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id, write=True)
         return tasks.create_checkpoint(
             task_id=task_id,
             expected_task_version=expected_version,
@@ -589,6 +783,7 @@ def create_app(
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id, write=True)
         current = tasks.get_task(task_id, x_principal_ref, x_space_id)
         if current is None:
             raise HTTPException(404, detail="Task not found")
@@ -616,22 +811,38 @@ def create_app(
     @app.get("/v1/conversations")
     async def list_conversations(
         x_principal_ref: Annotated[str | None, Header()] = None,
-        x_space_id: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
     ) -> dict[str, Any]:
+        context = _context(_principal(x_principal_ref), x_space_id)
         return {
-            "records": conversations.list_conversations(_principal(x_principal_ref), x_space_id)
+            "records": conversations.list_conversations(_owner_filter(context), x_space_id)
         }
 
     @app.get("/v1/conversations/{conversation_id}")
-    async def get_conversation(conversation_id: str) -> dict[str, Any]:
+    async def get_conversation(
+        conversation_id: str,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
+    ) -> dict[str, Any]:
         record = conversations.get_conversation(conversation_id)
         if record is None:
+            raise HTTPException(404, detail="Conversation not found")
+        _context(_principal(x_principal_ref), x_space_id)
+        if record["space_id"] != x_space_id:
             raise HTTPException(404, detail="Conversation not found")
         return {"record": record}
 
     @app.get("/v1/conversations/{conversation_id}/messages")
-    async def list_messages(conversation_id: str) -> dict[str, Any]:
-        if conversations.get_conversation(conversation_id) is None:
+    async def list_messages(
+        conversation_id: str,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
+    ) -> dict[str, Any]:
+        conversation = conversations.get_conversation(conversation_id)
+        if conversation is None:
+            raise HTTPException(404, detail="Conversation not found")
+        _context(_principal(x_principal_ref), x_space_id)
+        if conversation["space_id"] != x_space_id:
             raise HTTPException(404, detail="Conversation not found")
         return {"records": conversations.list_messages(conversation_id)}
 
@@ -643,6 +854,16 @@ def create_app(
         x_endpoint_ref: Annotated[str, Header()] = "endpoint-local-web",
         idempotency_key: Annotated[str | None, Header()] = None,
     ) -> JSONResponse:
+        conversation = conversations.get_conversation(conversation_id)
+        if conversation is None:
+            raise HTTPException(404, detail="Conversation not found")
+        principal_ref = _principal(x_principal_ref)
+        identity.require(
+            principal_ref,
+            conversation["space_id"],
+            endpoint_ref=x_endpoint_ref,
+            write=True,
+        )
         block = submission.content_blocks[0]
         text = (
             block.typed_content.get("text")
@@ -653,7 +874,7 @@ def create_app(
             raise HTTPException(422, detail="Phase 1 text adapter requires a text content block")
         result = conversations.submit_turn(
             conversation_id=conversation_id,
-            principal_ref=_principal(x_principal_ref),
+            principal_ref=principal_ref,
             endpoint_ref=x_endpoint_ref,
             text=text,
             idempotency_key=idempotency_key or submission.submission_id,

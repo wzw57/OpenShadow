@@ -650,6 +650,141 @@ paths:
                 $ref: "#/components/schemas/ProposalDecisionResponse"
         "409":
           $ref: "#/components/responses/Conflict"
+  /v1/endpoints/pair:
+    post:
+      operationId: pairEndpoint
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndpointPairCommand"
+      responses:
+        "201": { description: Endpoint paired }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/endpoints:
+    get:
+      operationId: listEndpoints
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/RecordPage" }
+  /v1/endpoints/{endpoint_id}/revoke:
+    post:
+      operationId: revokeEndpoint
+      parameters:
+        - name: endpoint_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202": { description: Endpoint revoked }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/spaces:
+    get:
+      operationId: listSpaces
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/RecordPage" }
+    post:
+      operationId: createSpace
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpaceCreateCommand"
+      responses:
+        "201": { description: Space created }
+  /v1/spaces/{space_id}:
+    get:
+      operationId: getSpace
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/CanonicalRecord" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/spaces/{space_id}/members:
+    get:
+      operationId: listSpaceMembers
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/RecordPage" }
+  /v1/spaces/{space_id}/invitations:
+    post:
+      operationId: createSpaceInvitation
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationCreateCommand"
+      responses:
+        "202": { description: Invitation created }
+  /v1/invitations/{invitation_id}/accept:
+    post:
+      operationId: acceptInvitation
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationAcceptCommand"
+      responses:
+        "202": { description: Invitation accepted }
+  /v1/spaces/{space_id}/members/{principal_ref}:
+    delete:
+      operationId: revokeSpaceMember
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: principal_ref
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202": { description: Membership revoked }
+        "403": { $ref: "#/components/responses/Forbidden" }
 components:
   securitySchemes:
     bearerAuth:
@@ -759,6 +894,39 @@ components:
       schema:
         $ref: "#/components/schemas/StableId"
   schemas:
+    EndpointPairCommand:
+      type: object
+      required: [endpoint_ref]
+      properties:
+        endpoint_ref: { type: string, minLength: 1, maxLength: 255 }
+        endpoint_kind: { type: string, minLength: 1, maxLength: 255, default: shadow.endpoint.web }
+        label: { type: string, maxLength: 200 }
+        capabilities:
+          type: array
+          items: { type: string, minLength: 1 }
+          uniqueItems: true
+      unevaluatedProperties: false
+    SpaceCreateCommand:
+      type: object
+      required: [space_id, display_name]
+      properties:
+        space_id: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 200 }
+      unevaluatedProperties: false
+    InvitationCreateCommand:
+      type: object
+      required: [invitee_ref, role, expires_at]
+      properties:
+        invitee_ref: { type: string, minLength: 1, maxLength: 255 }
+        role: { enum: [editor, viewer] }
+        expires_at: { type: string, format: date-time }
+      unevaluatedProperties: false
+    InvitationAcceptCommand:
+      type: object
+      required: [invitation_token]
+      properties:
+        invitation_token: { type: string, minLength: 1, maxLength: 255 }
+      unevaluatedProperties: false
     StableId:
       $ref: "../schemas/common/1.0.0/schema.json#/$defs/StableId"
     StableRecordRef:
@@ -1067,6 +1235,18 @@ components:
             $ref: "#/components/schemas/RecordVersionRef"
       unevaluatedProperties: false
   responses:
+    RecordPage:
+      description: Canonical records visible in the caller context
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RecordPage"
+    CanonicalRecord:
+      description: Canonical record visible in the caller context
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CanonicalRecordResponse"
     ValidationError:
       description: Input or Profile validation failed
       content:

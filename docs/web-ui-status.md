@@ -20,6 +20,7 @@
 | FastAPI `/ui` 生产静态托管 | 已实现 |
 | 多用户认证和 ACL | 明确不在本切片 |
 | Memory/State/Task/Action 查询与受控操作 | 本切片实现 |
+| Phase 5 Space/Endpoint context 与邀请入口 | 本切片实现 |
 
 首版完成标准：浏览器可以在单用户 profile 下创建 Conversation、发送文本、看到
 外部 Runtime 或 Deterministic Adapter 的最终回复，刷新页面后消息仍可恢复，失败可以
@@ -27,6 +28,8 @@
 事件诊断、readiness/runtime 手动刷新，以及四个 Profile 的按需查询和受控操作面板。
 Profile 写入、审批、纠正和删除仍全部通过现有 API 与 Commit 边界完成，浏览器不执行
 Provider。
+Phase 5 context 面板支持 Space 切换、Endpoint pairing、shared Space 创建和邀请入口；
+真正的认证发行、Voice 与远程同步仍由服务端/Adapter 闸门负责。
 
 实现位置：`apps/shadow-web`。开发运行 `npm install && npm run dev`，生产运行
 `npm run build` 后启动 Shadow，访问 `/ui/`。

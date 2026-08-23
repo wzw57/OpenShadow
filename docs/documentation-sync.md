@@ -14,6 +14,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | 未授权范围 | Accepted design gate / ADR | 状态文档和 PR body；未获闸门不得实现 |
 | Web UI 参考客户端范围 | `docs/web-ui-design-gate.md`、ADR-0022 | `apps/shadow-web`、`/ui` 静态托管、Web UI 状态文档和浏览器验收 |
 | Runtime Reliability / durable dispatch | `docs/runtime-reliability-design-gate.md`、ADR-0023 | Run/Attempt Service、Hermes Adapter、OpenAPI/错误体、恢复测试和 runtime 状态文档 |
+| Phase 5 identity / endpoint / Space ACL | `docs/phase5-design-gate.md`、ADR-0024 | Identity Schema、fixtures、FastAPI routes、ACL tests、Web context 和 `phase5-status.md` |
 
 ## Vendor isolation rule
 
@@ -78,3 +79,8 @@ Phase 4 Erasure/Backup 必须同步 `phase4-erasure-backup-design-gate.md`、ADR
 ErasureRequest/BackupMetadata fixtures 和 `phase4-erasure-backup-status.md`。设计接受前禁止实现
 跨组件 Erasure、Backup Service、真实 Adapter、密钥/备份内容或公开路由；未确认组件不得报告
 completed。
+
+Phase 5 Core Slice 必须同步 `phase5-design-gate.md`、ADR-0024、Identity Schema、Endpoint/Space/
+Membership/Invitation fixtures、OpenAPI、ACL service surface、Web context 和 `phase5-status.md`。
+真实 OAuth/OIDC、Voice、远程 Store 与设备同步必须另建 Adapter 闸门，不能以本地 membership
+实现替代。

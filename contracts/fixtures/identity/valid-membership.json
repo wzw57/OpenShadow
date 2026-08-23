@@ -1,0 +1,8 @@
+{
+  "space_id": "space-shared",
+  "principal_ref": "principal-editor",
+  "role": "editor",
+  "lifecycle": "active",
+  "granted_by": "principal-owner",
+  "granted_at": "2026-08-23T00:00:00Z"
+}

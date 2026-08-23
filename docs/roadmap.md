@@ -177,6 +177,9 @@ Phase 3 完成闸门已按 ADR-0014 接受，连续性、Schedule/Clock 和 Migr
 Phase 4 已按 ADR-0015 完成并合并 Action 生命周期首片，Durable Outbox 也已按 ADR-0016
 实现并合并，Router/Policy 已按 ADR-0017 实现并合并，Semantic Pulse 也已按 ADR-0018 实现并合并，跨组件 Erasure/Backup Metadata 已按 ADR-0019 实现并合并；Phase 4 已完成，详见 [Phase 4 完成状态](phase4-completion-status.md)。
 [Phase 4 Action 状态](phase4-action-status.md)。
+Phase 5 Core Slice 已按 ADR-0024 接受设计闸门并完成 Endpoint pairing、Space membership、
+Invitation、读 ACL 与 Web context；真实 OAuth/OIDC、Voice、远程 Store 和设备同步仍为
+Contract-only，详见 [Phase 5 状态](phase5-status.md)。
 
 ## 延后实现与重新评估
 

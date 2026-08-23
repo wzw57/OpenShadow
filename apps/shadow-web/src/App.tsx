@@ -6,6 +6,7 @@ import {
   getRun,
   getRunEvents,
   getRuntime,
+  listSpaces,
   listProfileRecords,
   listConversations,
   listMessages,
@@ -13,10 +14,12 @@ import {
   messageText,
   recordTitle,
   retryRun,
+  setApiContext,
   submitTurn,
 } from "./api";
+import ContextPanel from "./ContextPanel";
 import ProfileView, { PROFILE_LABELS } from "./ProfileView";
-import type { CanonicalRecord, Conversation, Message, ProfileKind, Run, RunEvent, RuntimeStatus } from "./types";
+import type { CanonicalRecord, Conversation, Message, ProfileKind, Run, RunEvent, RuntimeStatus, SpaceRecord } from "./types";
 
 const TERMINAL_LIFECYCLES = new Set(["completed", "failed", "unknown", "cancelled", "canceled"]);
 type WorkspaceView = "conversation" | ProfileKind;
@@ -74,6 +77,7 @@ export default function App() {
   const [runtime, setRuntime] = useState<RuntimeStatus | null>(null);
   const [view, setView] = useState<WorkspaceView>("conversation");
   const [profileRecords, setProfileRecords] = useState<CanonicalRecord[]>([]);
+  const [spaces, setSpaces] = useState<SpaceRecord[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState("");
@@ -130,6 +134,21 @@ export default function App() {
     }
   }, []);
 
+  const refreshSpaces = useCallback(async () => {
+    const records = await listSpaces();
+    setSpaces(records);
+    return records;
+  }, []);
+
+  const handleContextChanged = useCallback(async (spaceId: string, endpointRef: string) => {
+    setApiContext({ spaceId, endpointRef });
+    setSelectedId(null);
+    setMessages([]);
+    setRun(null);
+    setEvents([]);
+    await Promise.all([refreshConversations(), refreshStatus()]);
+  }, [refreshConversations, refreshStatus]);
+
   const refreshWorkspace = useCallback(async () => {
     setRefreshing(true);
     setError(null);
@@ -149,7 +168,7 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([refreshConversations(), refreshStatus()])
+    Promise.all([refreshConversations(), refreshStatus(), refreshSpaces()])
       .then(() => {
         if (!active) return;
       })
@@ -158,7 +177,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [refreshConversations, refreshStatus]);
+  }, [refreshConversations, refreshSpaces, refreshStatus]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -285,6 +304,12 @@ export default function App() {
             </button>
           </div>
         </form>
+
+        <ContextPanel
+          spaces={spaces}
+          onContextChanged={handleContextChanged}
+          onSpacesChanged={async () => { await refreshSpaces(); }}
+        />
 
         <nav className="workspace-nav" aria-label="Workspace views">
           <button

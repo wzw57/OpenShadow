@@ -6,12 +6,25 @@ import type {
   Run,
   RunEvent,
   RuntimeStatus,
+  EndpointRecord,
+  MembershipRecord,
+  SpaceRecord,
 } from "./types";
 
 const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/$/, "");
 export const PRINCIPAL_REF = import.meta.env.VITE_PRINCIPAL_REF ?? "principal-local";
 export const SPACE_ID = import.meta.env.VITE_SPACE_ID ?? "space-personal";
 export const ENDPOINT_REF = import.meta.env.VITE_ENDPOINT_REF ?? "endpoint-local-web";
+
+let activeContext = { principalRef: PRINCIPAL_REF, spaceId: SPACE_ID, endpointRef: ENDPOINT_REF };
+
+export function getApiContext(): typeof activeContext {
+  return { ...activeContext };
+}
+
+export function setApiContext(context: Partial<typeof activeContext>): void {
+  activeContext = { ...activeContext, ...context };
+}
 
 export class ApiError extends Error {
   status: number;
@@ -33,8 +46,8 @@ export class ApiError extends Error {
 function requestHeaders(extra: Record<string, string> = {}): HeadersInit {
   return {
     Accept: "application/json",
-    "X-Principal-Ref": PRINCIPAL_REF,
-    "X-Space-Id": SPACE_ID,
+    "X-Principal-Ref": activeContext.principalRef,
+    "X-Space-Id": activeContext.spaceId,
     ...extra,
   };
 }
@@ -72,6 +85,61 @@ export async function getReady(): Promise<{ status: string; durable: boolean }> 
 export async function getRuntime(): Promise<RuntimeStatus> {
   const body = await request<{ runtime: RuntimeStatus }>("/v1/runtime");
   return body.runtime;
+}
+
+export async function listSpaces(): Promise<SpaceRecord[]> {
+  const body = await request<{ records: SpaceRecord[] }>("/v1/spaces");
+  return body.records;
+}
+
+export async function createSpace(spaceId: string, displayName: string): Promise<SpaceRecord> {
+  const body = await request<{ space: SpaceRecord }>("/v1/spaces", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency("space") },
+    body: JSON.stringify({ space_id: spaceId, display_name: displayName }),
+  });
+  return body.space;
+}
+
+export async function listSpaceMembers(spaceId = activeContext.spaceId): Promise<MembershipRecord[]> {
+  const body = await request<{ records: MembershipRecord[] }>(`/v1/spaces/${encodeURIComponent(spaceId)}/members`);
+  return body.records;
+}
+
+export async function pairEndpoint(endpointRef: string, label?: string): Promise<EndpointRecord> {
+  const body = await request<{ endpoint: EndpointRecord }>("/v1/endpoints/pair", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency("endpoint-pair") },
+    body: JSON.stringify({ endpoint_ref: endpointRef, label, endpoint_kind: "shadow.endpoint.web", capabilities: ["shadow.endpoint.text"] }),
+  });
+  return body.endpoint;
+}
+
+export async function createInvitation(inviteeRef: string, role: "editor" | "viewer", expiresAt: string): Promise<{ invitation: CanonicalRecord; invitationToken: string }> {
+  const body = await request<{ invitation: CanonicalRecord; invitation_token: string }>(`/v1/spaces/${encodeURIComponent(activeContext.spaceId)}/invitations`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency("invitation") },
+    body: JSON.stringify({ invitee_ref: inviteeRef, role, expires_at: expiresAt }),
+  });
+  return { invitation: body.invitation, invitationToken: body.invitation_token };
+}
+
+export async function acceptInvitation(invitationId: string, invitationToken: string): Promise<void> {
+  await request(`/v1/invitations/${encodeURIComponent(invitationId)}/accept`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency("invitation-accept") },
+    body: JSON.stringify({ invitation_token: invitationToken }),
+  });
+}
+
+export async function revokeMember(principalRef: string, expectedVersion: number): Promise<void> {
+  await request(`/v1/spaces/${encodeURIComponent(activeContext.spaceId)}/members/${encodeURIComponent(principalRef)}`, {
+    method: "DELETE",
+    headers: {
+      "Expected-Version": String(expectedVersion),
+      "Idempotency-Key": idempotency("member-revoke"),
+    },
+  });
 }
 
 export async function listConversations(): Promise<Conversation[]> {
@@ -207,7 +275,7 @@ export async function submitTurn(conversationId: string, text: string): Promise<
     method: "POST",
     headers: {
       "Idempotency-Key": key,
-      "X-Endpoint-Ref": ENDPOINT_REF,
+      "X-Endpoint-Ref": activeContext.endpointRef,
     },
     body: JSON.stringify({
       submission_id: key,
