@@ -187,12 +187,11 @@ Contract-only，详见 [Phase 5 状态](phase5-status.md)。
 生产化路线已建立总体设计闸门 [Production Readiness](production-readiness-design-gate.md)
 和 ADR-0026。Slice A Auth/Security 已按 ADR-0027 实现并通过本地验收；Slice B Runtime
 Reliability 已完成基础 durable dispatch/unknown outcome 实现，真实 Hermes resume 和
-远程 Provider 故障演练仍未完成。Slice C–E 继续保持 Contract-only，详见
-[Production Auth 状态](production-auth-status.md) 和 [Runtime Reliability 状态](runtime-reliability-status.md)。
+远程 Provider 故障演练仍未完成；Slice C–E 的本地实现也已完成，详见各 Slice 状态文档。
 Store/Backup/Portable Sync 已按 ADR-0028 完成设计闸门接受，下一步仅实现 Store profile
 选择与可重复 restore/outage 证据，不引入后台同步或云备份业务。
 Store profile 选择、显式 PostgreSQL Adapter boundary 和 readiness unavailable 语义已实现；
-真实 PostgreSQL 连接、云备份和跨设备同步仍保持 Contract-only，详见
+真实 PostgreSQL 连接、云备份和跨设备同步仍需部署环境验收，详见
 [Production Store 状态](production-store-status.md)。
 Voice/Device/Integration 已按 ADR-0029 完成 Adapter 设计闸门接受。通用 Peripheral
 Contract、确定性 Adapter 和 Secret/consent/expiry 边界测试已实现；真实

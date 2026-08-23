@@ -1,7 +1,7 @@
 # Production Auth & Security 设计闸门
 
-状态：**Accepted / 获准 Slice A 实现**  
-分支：`production/auth-design-gate` → `production/auth-implementation`  
+状态：**Accepted / Slice A 已实现并合并到 `main`**
+交付：PR #25（设计与实现分支保留为历史记录）
 依赖：`production-readiness-design-gate.md`、ADR-0024、ADR-0026
 
 本闸门只授权生产身份、Session、Secret reference、审计和请求上下文收口。它不授权

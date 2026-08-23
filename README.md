@@ -549,7 +549,13 @@ OpenShadow 自行实现的范围收紧为：
 - [ADR-0026 Production Readiness](docs/adr/0026-production-readiness-and-release-boundary.md)
 - [Production Auth 设计闸门](docs/production-auth-design-gate.md)
 - [ADR-0027 Production Auth](docs/adr/0027-production-auth-and-security.md)
+- [Production Auth 状态](docs/production-auth-status.md)
+- [Runtime Reliability 状态](docs/runtime-reliability-status.md)
+- [Production Store / Backup 状态](docs/production-store-status.md)
+- [Production Device / Integration 状态](docs/production-device-integration-status.md)
+- [Production Operations / Release 状态](docs/production-operations-status.md)
+- [Production 发布闸门](docs/production-operations-design-gate.md)
 
 ## 当前状态
 
-Stage 0–3 已形成需求、责任、用例和领域基线，Stage 4 的 Action 等能力也已按切片完成设计与实现。当前仓库已具备 Phase 0–4 的核心基线和 Phase 5 Core Slice，以及可选的外部 Agent Runtime Adapter：默认配置使用确定性 Adapter，Codex CLI profile 可由项目管理页启停和切换，Hermes profile 默认关闭并需按本机部署配置启用。FastAPI、Application、Kernel 和 Web UI 不包含任何厂商分支。首版 Web UI 已完成，可通过 FastAPI `/ui/` 使用；Shadow 没有自研 Agent Loop，也不直接连接模型 Provider。Hermes + DeepSeek `deepseek-v4-flash` 仍是已验证的可选联调路径；细粒度 Runtime SSE/Session resume 和受治理的工具桥接仍未完成。
+Stage 0–3 已形成需求、责任、用例和领域基线，Stage 4 的 Action 等能力也已按切片完成设计与实现。当前仓库已具备 Phase 0–4 的核心基线和 Phase 5 Core Slice，以及可选的外部 Agent Runtime Adapter：默认配置使用确定性 Adapter，Codex CLI profile 可由项目管理页启停和切换，Hermes profile 默认关闭并需按本机部署配置启用。FastAPI、Application、Kernel 和 Web UI 不包含任何厂商分支。首版 Web UI 已完成，可通过 FastAPI `/ui/` 使用；Shadow 没有自研 Agent Loop，也不直接连接模型 Provider。生产化 A–E 本地参考切片已通过 PR #25 合并到 `main`，包含认证、durable Runtime、Store profile、Peripheral Contract 和 Operations/Release 基线；真实 OIDC、PostgreSQL、Provider、硬件和压力/安全演练仍需部署环境完成。

@@ -1,6 +1,6 @@
 # ADR-0026：Production Readiness 与 Release Boundary
 
-- 状态：**Accepted for Slice A / B–E 仍为 Draft**
+- 状态：**Accepted for Slices A–E / 本地发布基线已合并**
 - 范围：生产化总体路线、认证安全、Runtime/Store/Backup、设备集成和发布验收
 - 依赖：ADR-0021、ADR-0023、ADR-0024、ADR-0025，以及 `production-readiness-design-gate.md`
 
@@ -40,6 +40,7 @@ SQLite 或 Adapter health 假设中自动推出。若一次性把这些能力写
 ## Consequences
 
 - 生产化会比当前参考项目多出部署和验收工作，但每个风险都有独立退出条件；
-- 需要维护者先确认 OIDC issuer、生产 Store、Secret 管理、部署形态和首个 Runtime Provider；
+- 具体 OIDC issuer、生产 Store、Secret 管理、部署形态和首个 Runtime Provider 仍由部署环境提供；
 - 当前 README、roadmap、documentation-sync 和状态文档必须在每个 Slice PR 同步更新；
-- 本 ADR 当前只授权 Slice A；Slice B–E 仍必须分别建立设计闸门并接受后实现。
+- Slice A–E 已分别建立并接受设计闸门，基础实现已通过 PR #25 合并；外部部署验收不等同于
+  本地代码验收，仍需按各 Slice 状态文档执行。
