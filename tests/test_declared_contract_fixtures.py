@@ -75,6 +75,8 @@ FIXTURE_SCHEMA_REFS = {
     "identity/valid-membership.json": "identity#/$defs/MembershipPayload",
     "runtime-management/valid-profile.json": "runtime-management#/$defs/RuntimeProfile",
     "runtime-management/invalid-profile-shell.json": "runtime-management#/$defs/RuntimeProfile",
+    "auth/valid-session.json": "auth#/$defs/SessionPayload",
+    "auth/invalid-inline-token.json": "auth#/$defs/SessionPayload",
 }
 
 
@@ -104,6 +106,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "erasure/invalid",
             "identity/invalid",
             "runtime-management/invalid",
+            "auth/invalid",
             "repository/invalid",
         )
     )

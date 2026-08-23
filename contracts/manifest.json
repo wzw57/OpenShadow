@@ -85,6 +85,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/runtime-management/1.0.0",
       "path": "schemas/runtime-management/1.0.0/schema.json",
       "sha256": "56b595dc1213c004c475b0037a2467c0fa5c4c28a45e0637fa55deb32f96d3f0"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/auth/1.0.0",
+      "path": "schemas/auth/1.0.0/schema.json",
+      "sha256": "c76b9143ff4587ac98f17aca6d983a7681ab940a78e6bfbe7d06b0a4770b9347"
     }
   ]
 }

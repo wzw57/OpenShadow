@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115,<1",
   "jsonschema>=4.23,<5",
+  "PyJWT>=2.9,<3",
   "alembic>=1.13,<2",
   "pydantic>=2.8,<3",
   "sqlalchemy>=2.0,<3",

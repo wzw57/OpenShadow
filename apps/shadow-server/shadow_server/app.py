@@ -6,18 +6,24 @@ import os
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from shadow_application import (
     ActionService,
+    AuthContext,
     ConversationService,
+    DeterministicAuthVerifier,
+    EnvironmentSecretResolver,
     IdentityService,
     MemoryService,
+    OidcAuthVerifier,
     OutboxService,
     RuntimeSupervisor,
+    SessionService,
     StateService,
+    StaticSecretResolver,
     TaskService,
 )
 from shadow_kernel.admission import AdmissionService
@@ -163,6 +169,14 @@ class InvitationAcceptCommand(BaseModel):
     invitation_token: str = Field(min_length=1, max_length=255)
 
 
+class AuthSessionCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    credential: str = Field(min_length=1, max_length=20_000)
+    endpoint_ref: str | None = Field(default=None, max_length=255)
+    ttl_seconds: int = Field(default=3600, ge=60, le=86_400)
+    use_cookie: bool = True
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -181,6 +195,15 @@ def _error_response(error: ShadowDomainError) -> JSONResponse:
         "unauthorized": 403,
         "incompatible": 409,
     }.get(code, 500)
+    if error.error.code in {
+        "shadow.auth.unauthenticated",
+        "shadow.auth.invalid-credential",
+        "shadow.auth.session-expired",
+        "shadow.auth.session-revoked",
+    }:
+        status_code = 401
+    elif error.error.code in {"shadow.auth.context-mismatch", "shadow.auth.csrf-failed"}:
+        status_code = 403
     return JSONResponse(
         status_code=status_code,
         content=error.error.as_dict(),
@@ -234,6 +257,27 @@ def create_app(
     repository = SqliteCanonicalRepository(database_url)
     authority = CommitAuthority(repository, registry)
     admission = AdmissionService(repository, authority)
+    auth_mode = os.getenv("SHADOW_AUTH_MODE", "local-dev").strip().lower()
+    if auth_mode not in {"local-dev", "oidc", "signed-session"}:
+        raise ValueError("SHADOW_AUTH_MODE must be local-dev, oidc or signed-session")
+    if auth_mode == "local-dev" and not os.getenv("SHADOW_AUTH_SESSION_SECRET"):
+        secret_resolver = StaticSecretResolver(f"local-dev:{root.resolve()}")
+        secret_ref = "memory:local-dev"
+    else:
+        secret_resolver = EnvironmentSecretResolver()
+        secret_ref = "env:SHADOW_AUTH_SESSION_SECRET"
+        if not os.getenv("SHADOW_AUTH_SESSION_SECRET"):
+            raise ValueError("SHADOW_AUTH_SESSION_SECRET is required outside local-dev auth mode")
+    if auth_mode == "oidc":
+        auth_verifier = OidcAuthVerifier(
+            issuer=os.getenv("SHADOW_OIDC_ISSUER", ""),
+            audience=os.getenv("SHADOW_OIDC_AUDIENCE", ""),
+            jwks_url=os.getenv("SHADOW_OIDC_JWKS_URL", ""),
+            algorithms=[item.strip() for item in os.getenv("SHADOW_OIDC_ALGORITHMS", "RS256").split(",") if item.strip()],
+        )
+    else:
+        auth_verifier = DeterministicAuthVerifier()
+    sessions = SessionService(repository, authority, registry, secret_resolver, secret_ref=secret_ref)
     selected_runtime = runtime_adapter if runtime_adapter is not None else _runtime_from_environment()
     profile_path = Path(os.getenv("SHADOW_RUNTIME_PROFILE_PATH", str(root / "config" / "runtime-profiles.json")))
     supervisor = RuntimeSupervisor.from_file(profile_path) if profile_path.is_file() else RuntimeSupervisor.default()
@@ -258,6 +302,9 @@ def create_app(
     app.state.actions = actions
     app.state.identity = identity
     app.state.outbox = outbox
+    app.state.auth_mode = auth_mode
+    app.state.auth_verifier = auth_verifier
+    app.state.sessions = sessions
     app.state.runtime_adapter = conversations.runtime_adapter
     app.state.runtime_supervisor = supervisor
 
@@ -269,6 +316,31 @@ def create_app(
         return any(row.get("typed_payload", {}).get("lifecycle") in {"created", "queued", "running", "waiting", "paused", "cancelling"} for row in runs)
 
     supervisor.set_selection_guard(_runtime_selection_guard)
+
+    @app.middleware("http")
+    async def authenticate_request(request: Request, call_next: Any) -> JSONResponse | Any:
+        path = request.url.path
+        auth_exchange = path == "/v1/auth/session" and request.method == "POST"
+        auth_config = path == "/v1/auth/config" and request.method == "GET"
+        if path.startswith("/v1") and not auth_exchange and not auth_config:
+            authorization = request.headers.get("Authorization", "")
+            token = authorization.removeprefix("Bearer ").strip() if authorization else request.cookies.get("shadow_session")
+            context: AuthContext | None = None
+            if token:
+                try:
+                    context = sessions.verify_session(token)
+                except ShadowDomainError as exc:
+                    return _error_response(exc)
+            elif auth_mode != "local-dev":
+                return _error_response(ShadowDomainError(ShadowError(code="shadow.auth.unauthenticated", category="unauthorized", message="Authentication is required.")))
+            if context is not None:
+                request.state.auth_context = context
+                # Production routes still declare the legacy header for API compatibility. Replace
+                # any client-supplied value so it cannot override the verified principal.
+                headers = [(key, value) for key, value in request.scope["headers"] if key.lower() != b"x-principal-ref"]
+                headers.append((b"x-principal-ref", context.principal_ref.encode("utf-8")))
+                request.scope["headers"] = headers
+        return await call_next(request)
 
     def _context(principal_ref: str, space_id: str, *, endpoint_ref: str | None = None, write: bool = False):
         return identity.require(principal_ref, space_id, endpoint_ref=endpoint_ref, write=write)
@@ -294,6 +366,56 @@ def create_app(
             "durable": repository.available,
         }
         return JSONResponse(status_code=200 if repository.available else 503, content=body)
+
+    @app.get("/v1/auth/config")
+    async def auth_config() -> dict[str, Any]:
+        return {
+            "mode": auth_mode,
+            "local_dev": auth_mode == "local-dev",
+            "methods": ["deterministic"] if auth_mode == "local-dev" else ["oidc", "signed-session"],
+            "session_cookie": "shadow_session",
+        }
+
+    @app.get("/v1/auth/session")
+    async def auth_session(request: Request) -> dict[str, Any]:
+        context = getattr(request.state, "auth_context", None)
+        if context is None:
+            raise ShadowDomainError(ShadowError(code="shadow.auth.unauthenticated", category="unauthorized", message="Authentication is required."))
+        return {"context": context.as_dict()}
+
+    @app.post("/v1/auth/session", status_code=status.HTTP_201_CREATED)
+    async def create_auth_session(
+        command: AuthSessionCommand,
+        response: Response,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        if auth_mode == "signed-session":
+            raise ShadowDomainError(ShadowError(code="shadow.auth.exchange-unsupported", category="unsupported", message="Signed-session mode verifies existing tokens and does not exchange credentials."))
+        identity = auth_verifier.verify(command.credential)
+        result = sessions.create_session(identity, idempotency_key=idempotency_key, ttl_seconds=command.ttl_seconds, endpoint_ref=command.endpoint_ref)
+        # The token is returned only at exchange time; the canonical session stores its digest.
+        if command.use_cookie:
+            response.set_cookie("shadow_session", result["token"], httponly=True, secure=auth_mode != "local-dev", samesite="lax", max_age=command.ttl_seconds)
+        return {
+            "session": result["session"],
+            "context": result["context"].as_dict(),
+            "token": result["token"],
+            "replayed": result["replayed"],
+        }
+
+    @app.post("/v1/auth/logout", status_code=status.HTTP_202_ACCEPTED)
+    async def logout_auth_session(
+        request: Request,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> JSONResponse:
+        context = getattr(request.state, "auth_context", None)
+        if context is None:
+            raise ShadowDomainError(ShadowError(code="shadow.auth.unauthenticated", category="unauthorized", message="Authentication is required."))
+        result = sessions.revoke(context, idempotency_key=idempotency_key)
+        body = {"session": result["session"], "replayed": result["replayed"]}
+        output = JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=body)
+        output.delete_cookie("shadow_session")
+        return output
 
     @app.get("/v1/runtime")
     async def runtime_status() -> dict[str, Any]:

@@ -1,4 +1,16 @@
 from .action import ActionProposalCandidate, ActionProvider, ActionService
+from .auth import (
+    AuthContext,
+    AuthVerifier,
+    DeterministicAuthVerifier,
+    EnvironmentSecretResolver,
+    OidcAuthVerifier,
+    SecretLease,
+    SecretResolver,
+    SessionService,
+    StaticSecretResolver,
+    VerifiedIdentity,
+)
 from .continuity import (
     DeterministicClock,
     DeterministicMigrationAdapter,
@@ -83,6 +95,16 @@ __all__ = [
     "ActionProposalCandidate",
     "ActionProvider",
     "ActionService",
+    "AuthContext",
+    "AuthVerifier",
+    "DeterministicAuthVerifier",
+    "EnvironmentSecretResolver",
+    "OidcAuthVerifier",
+    "SecretLease",
+    "SecretResolver",
+    "SessionService",
+    "StaticSecretResolver",
+    "VerifiedIdentity",
     "DeterministicClock",
     "DeterministicMigrationAdapter",
     "DeterministicScheduleAdapter",

@@ -32,6 +32,68 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/auth/config:
+    get:
+      operationId: authConfig
+      security: []
+      description: Non-secret authentication mode and enabled methods.
+      responses:
+        "200":
+          description: Authentication configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthConfigResponse"
+  /v1/auth/session:
+    get:
+      operationId: getAuthSession
+      responses:
+        "200":
+          description: Verified session context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionContextResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createAuthSession
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthSessionCommand"
+      responses:
+        "201":
+          description: Session created; token is returned only at exchange time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/auth/logout:
+    post:
+      operationId: logoutAuthSession
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Session revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthLogoutResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/runtime:
     get:
       operationId: runtimeStatus
@@ -1421,6 +1483,60 @@ components:
           items:
             $ref: "#/components/schemas/RecordVersionRef"
       unevaluatedProperties: false
+    AuthSessionCommand:
+      type: object
+      required: [credential]
+      properties:
+        credential: { type: string, minLength: 1, maxLength: 20000 }
+        endpoint_ref: { type: string, nullable: true, maxLength: 255 }
+        ttl_seconds: { type: integer, minimum: 60, maximum: 86400, default: 3600 }
+        use_cookie: { type: boolean, default: true }
+      unevaluatedProperties: false
+    AuthContext:
+      type: object
+      required: [principal_ref, issuer, audience, auth_method, authenticated_at, expires_at, session_ref]
+      properties:
+        principal_ref: { type: string }
+        issuer: { type: string }
+        audience: { type: string }
+        auth_method: { enum: [deterministic, oidc, signed-session] }
+        authenticated_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        session_ref: { type: string }
+        endpoint_ref: { type: string, nullable: true }
+        claims_digest: { type: string, nullable: true, pattern: "^sha256:[0-9a-f]{64}$" }
+      unevaluatedProperties: false
+    AuthConfigResponse:
+      type: object
+      required: [mode, local_dev, methods, session_cookie]
+      properties:
+        mode: { enum: [local-dev, oidc, signed-session] }
+        local_dev: { type: boolean }
+        methods: { type: array, items: { type: string } }
+        session_cookie: { type: string }
+      unevaluatedProperties: false
+    AuthSessionContextResponse:
+      type: object
+      required: [context]
+      properties:
+        context: { $ref: "#/components/schemas/AuthContext" }
+      unevaluatedProperties: false
+    AuthSessionResponse:
+      type: object
+      required: [session, context, token, replayed]
+      properties:
+        session: { $ref: "#/components/schemas/CanonicalEnvelope" }
+        context: { $ref: "#/components/schemas/AuthContext" }
+        token: { type: string }
+        replayed: { type: boolean }
+      unevaluatedProperties: false
+    AuthLogoutResponse:
+      type: object
+      required: [session, replayed]
+      properties:
+        session: { $ref: "#/components/schemas/CanonicalEnvelope" }
+        replayed: { type: boolean }
+      unevaluatedProperties: false
   responses:
     RecordPage:
       description: Canonical records visible in the caller context
@@ -1448,6 +1564,12 @@ components:
             $ref: "#/components/schemas/ShadowError"
     Forbidden:
       description: Policy or authority denied the operation
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"
+    Unauthorized:
+      description: Authentication is missing, invalid, expired or revoked
       content:
         application/problem+json:
           schema:
