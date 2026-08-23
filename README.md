@@ -1,17 +1,325 @@
-# OpenShadow
+<h1 align="center">OpenShadow</h1>
 
-**中文版** | [English](README_EN.md)
+<p align="center">
+  <strong>让个人 AI 的身份、记忆、任务与治理能力，独立于模型和 Agent Runtime 长期存在。</strong>
+</p>
 
-> **Shadow 是一个可以长期存在、持续升级的个人 AI。**
+<p align="center">
+  <em>Replace the runtime. Keep the Shadow.</em>
+</p>
 
-OpenShadow 是一个本地优先、实现无关的个人 AI 资产与能力平台。用户始终在使用同一个 Shadow；Agent Runtime、模型、Memory Intelligence、Router、Runner、数据库、语音、设备与其他快速演进能力都通过可替换组件接入。
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="Python 3.12+" />
+  <img src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111" alt="React 19" />
+  <img src="https://img.shields.io/badge/Architecture-Modular%20Monolith-6E56CF" alt="Modular Monolith" />
+  <img src="https://img.shields.io/badge/Status-Reference%20Implementation-2EA44F" alt="Reference Implementation" />
+</p>
 
-Shadow 不重新实现所有 AI 基础设施。它用一个小而稳定的主权内核，组合外部优秀项目，同时保证用户长期积累的身份、资料索引、记忆、任务、能力和治理记录不会随某个组件被替换而消失。
+<p align="center">
+  <strong>中文</strong> · <a href="README_EN.md">English</a> · <a href="docs/architecture.md">Architecture</a> · <a href="docs/roadmap.md">Roadmap</a> · <a href="docs/adr/README.md">ADR</a>
+</p>
 
-## 快速开始（Windows）
+---
 
-当前参考部署是单机、单用户、SQLite 和本地 Web UI。Python 要求 `>=3.12`；构建 Web UI
-需要 Node.js/npm。Codex CLI 和 Hermes 都是可选的外部 Runtime，不是安装 OpenShadow 的前置条件。
+## OpenShadow 是什么？
+
+OpenShadow 是一个 **local-first、vendor-neutral 的 Personal AI Continuity & Sovereignty Layer**。
+
+它不试图重新实现一个更大的 Agent Framework，也不把某个模型、Agent Runtime、Memory Engine 或数据库永久绑定到用户身上。它解决的是另一个问题：
+
+> **如果明天替换模型、Runtime、Memory Engine，甚至底层数据库，这个 AI 还能不能保持“还是同一个 Shadow”？**
+
+OpenShadow 把真正需要长期存在的东西——身份、Space、Conversation、Memory、State、Task、Action、Skill/Integration 元数据、治理记录——保存在自己的 Canonical Store 中；快速变化的智能与执行能力通过 Adapter 接入。
+
+```text
+Runtime / Model / Memory Engine 可以替换
+                 ↓
+      ┌─────────────────────┐
+      │     OpenShadow      │
+      │ identity · memory   │
+      │ task · state · run  │
+      │ policy · ownership  │
+      └──────────┬──────────┘
+                 ↓
+          User-owned Assets
+```
+
+一句话概括：
+
+> **Runtime 负责“想和做”；OpenShadow 负责“我是谁、我拥有什么、什么修改算数、工作如何继续，以及数据如何迁移和删除”。**
+
+---
+
+## 为什么做这个项目？
+
+今天的 AI 基础设施变化非常快：模型在换、Agent Runtime 在换、Memory 方案在换、Tool/Workflow 生态也在换。如果用户的长期资产直接依附在某个 Runtime 的私有 Session、Memory 或数据库里，组件一换，用户积累就很容易被一起带走。
+
+OpenShadow 的设计目标是把 **长期稳定的用户主权层** 和 **快速变化的智能执行层** 分开。
+
+| 常见问题 | OpenShadow 的处理方式 |
+| --- | --- |
+| 换 Runtime 就要重做上下文和状态 | Runtime 通过 vendor-neutral Adapter 接入，长期资产不属于 Runtime |
+| Agent 可以直接把推测写成“事实” | 外部智能只能返回 Result / Observation / Proposal，最终 Canonical Commit 由 Shadow 决定 |
+| Memory 被某个向量库或 Memory Engine 锁死 | Canonical Memory 独立保存；Embedding、Index、Graph、Rerank 都是可重建派生能力 |
+| 长任务和 Runtime Session 绑定 | Shadow 自己维护 Request / Run / Attempt / Durable Task 连续性 |
+| 用户很难迁移、纠正或彻底删除数据 | Stable ID、Version/CAS、Correction、Tombstone、Export、Erasure 都属于 Shadow 治理边界 |
+| 为了“可扩展”把系统做成万能框架 | Tiny Kernel 只保留长期不可替代的控制语义，其余能力放在 typed Profile / Adapter 中 |
+
+---
+
+# 系统真实架构
+
+> 下图只展示 **当前仓库已经存在的主要运行时组件与真实数据流**，不是未来愿景图。
+
+```mermaid
+flowchart TB
+    subgraph SURFACE["User Surfaces"]
+        WEB["React / Vite Web UI"]
+        API["CLI / REST / OpenAPI"]
+    end
+
+    SERVER["FastAPI Shadow Server<br/>routing · auth/space context · static UI · error mapping"]
+
+    subgraph APP["Application Layer"]
+        SERVICES["Application Services<br/>Conversation · Memory · State · Task · Action<br/>Identity · Integration · Outbox · Erasure"]
+        SUPERVISOR["Runtime Supervisor<br/>profile lifecycle · start/stop · health · probe · select"]
+    end
+
+    subgraph KERNEL["Sovereignty & Continuity Kernel"]
+        ADMISSION["Admission<br/>Request · Run · Attempt"]
+        AUTHORITY["Proposal → Validate → Commit"]
+        CANONICAL["Canonical Envelope<br/>Owner · Space · Version/CAS · Lifecycle"]
+        GOVERNANCE["Binding · Capability · Deterministic Policy"]
+    end
+
+    RUNTIME_PORT["Vendor-neutral RuntimeAdapter Port"]
+
+    subgraph RUNTIMES["Replaceable Runtime Adapters"]
+        DETERMINISTIC["Deterministic Adapter"]
+        CODEX["Codex CLI Adapter"]
+        HERMES["Hermes HTTP Adapter"]
+    end
+
+    REPO_PORT["Canonical Repository Port"]
+    SQLITE[("SQLite / SQLAlchemy<br/>Alembic migrations")]
+    PROVIDER["Runtime-owned Model Provider"]
+    CONTRACTS["Contracts<br/>OpenAPI · JSON Schema · fixtures"]
+
+    WEB --> SERVER
+    API --> SERVER
+
+    SERVER --> SERVICES
+    SERVER --> SUPERVISOR
+
+    SERVICES --> ADMISSION
+    ADMISSION --> AUTHORITY
+    AUTHORITY --> CANONICAL
+    CANONICAL --> GOVERNANCE
+    CANONICAL --> REPO_PORT
+    REPO_PORT --> SQLITE
+
+    SERVICES --> RUNTIME_PORT
+    SUPERVISOR --> RUNTIME_PORT
+    RUNTIME_PORT --> DETERMINISTIC
+    RUNTIME_PORT --> CODEX
+    RUNTIME_PORT --> HERMES
+    HERMES --> PROVIDER
+
+    CONTRACTS -. schema / API contract .-> SERVER
+    CONTRACTS -. profile / mutation contract .-> AUTHORITY
+```
+
+### 这张图最重要的三件事
+
+1. **OpenShadow 是模块化单体，不是微服务集合。** Kernel、Application、FastAPI 组合根在同一参考部署中；只有部分 Runtime / Provider 通过进程或 HTTP 边界外置。
+2. **Runtime 不能直接写 Canonical Store。** Runtime 只通过通用 Port 返回结果或 Proposal，长期状态最终仍经过 Shadow 的 Authority / CAS / lifecycle。
+3. **模型 Provider 不属于 Shadow 核心。** Codex 自己管理登录与 Provider；Hermes 也在自己的 Runtime 边界内连接模型。Shadow 不直接绑定某个模型厂商。
+
+---
+
+## 一次请求是怎么跑的？
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Shadow Server
+    participant A as Admission
+    participant C as Application Service
+    participant R as Runtime Adapter
+    participant K as Commit Authority
+    participant DB as Canonical Store
+
+    U->>S: Work-bearing request
+    S->>A: identity / space / idempotency context
+    A->>DB: create Request / Root Run / Attempt
+    A->>C: accepted work
+    C->>R: execute normalized request
+    R-->>C: Result / Observation / Proposal
+    C->>K: validate + commit candidate changes
+    K->>DB: versioned Canonical Commit (CAS)
+    DB-->>S: durable state / events
+    S-->>U: response + run state
+```
+
+对于 Conversation turn，核心路径可以压缩成：
+
+```text
+HTTP Request
+   → Admission
+   → ConversationService
+   → selected RuntimeAdapter
+   → Result / Proposal
+   → CommitAuthority + CAS
+   → Canonical Store
+```
+
+这也是 OpenShadow 的核心不变量：
+
+> **External intelligence may propose. Only Shadow commits.**
+
+---
+
+# 当前实现到什么程度？
+
+当前 `main` 已覆盖 **Phase 0–4 的 reference implementation + Phase 5 Core Slice**。下面按“用户真正能从代码得到什么”来列，而不是按设计文档章节堆概念。
+
+| 能力域 | 状态 | 当前实现 |
+| --- | :---: | --- |
+| Tiny Kernel | ✅ | Stable ID、Owner/Space、Canonical Envelope、Version/CAS、Admission、Request/Run/Attempt、Binding、Capability、Commit Authority |
+| Conversation Loop | ✅ | Conversation / Message、Runtime dispatch、Run events、retry、幂等重放、Store unavailable 路径、Web UI |
+| Memory | ✅ | Candidate → Commit、correction、merge contract、logical delete、physical erase、Recall/Maintenance Adapter、source invalidation、derived index rebuild |
+| Skill / Integration | ✅ | Agent Skills-compatible SkillAsset sidecar、digest/pinned revision、Integration Profile、external asset governance |
+| State | ✅ | Observation / StateProposal、typed state、evidence、TTL、fresh / stale / unknown、source unavailable |
+| Durable Continuity | ✅ | Durable Task、Checkpoint/Handoff、Schedule/Clock、restart recovery、Migration/Integrity boundary |
+| Action & Side Effects | ✅ | Action Proposal、approval、pending-before-call、idempotency、success/failure/unknown、reconciliation |
+| Reliability | ✅ | Durable Outbox、unknown outcome semantics、restricted commit behavior、runtime lifecycle control |
+| Router / Policy / Pulse | ✅ | Binding Proposal、deterministic policy checks、Router/Policy slice、Semantic Pulse proposal path |
+| Identity / Multi-endpoint Core | ✅ | Endpoint pairing、Space membership、Invitation、owner/editor/viewer 读 ACL、Web context |
+| Runtime Management | ✅ | Deterministic、Codex CLI、Hermes profiles；start/stop/restart/health/probe/select；Management UI |
+| Portability / Erasure | ✅ | Portable export/import contract、restore boundary、Tombstone、cross-component erasure metadata、backup metadata |
+| Operations Baseline | ✅ | health/readiness、low-cardinality metrics、redaction/config validation、Docker/Compose、release-check |
+
+### 当前仍依赖真实部署环境验证的部分
+
+这些能力已经有边界、代码或参考实现，但 **不能因为本地测试通过就宣称已经完成生产部署验证**：
+
+| 范围 | 当前真实状态 |
+| --- | --- |
+| OIDC | Auth / verifier / session / secret 边界已实现；真实 IdP/Vendor 联调仍需目标环境验证 |
+| PostgreSQL | Store profile 与显式 PostgreSQL boundary 已实现；真实连接、迁移、故障恢复需要部署环境验收 |
+| Hermes / Codex Provider | Adapter 已实现；真实 Provider、Session/resume、长时间运行故障演练不是默认测试前置 |
+| Backup / Restore | Portable restore、metadata 和边界已存在；真实加密备份介质/云备份不属于当前本地基线 |
+| Voice / Device | 通用 Peripheral Contract、consent/capability/expiry 边界已实现；真实语音、硬件和 Vendor SDK 尚未产品化 |
+| Multi-user / Sync | Phase 5 Core Slice 已完成；完整多用户发行、remote Store、跨设备同步仍是后续能力 |
+| Production validation | 压测、混沌、真实依赖扫描、目标环境安全演练仍属于发布前置 |
+
+### Phase 交付概览
+
+```text
+Phase 0  Kernel Foundation              ✅
+Phase 1  Personal Shadow Loop           ✅
+Phase 2  Memory & Capability Profiles   ✅
+Phase 3  Continuity & State             ✅
+Phase 4  Action & Proactivity            ✅
+Phase 5  Multi-endpoint / Multi-user    ✅ Core Slice  ·  ⏳ Full rollout
+```
+
+详细状态以 [`docs/roadmap.md`](docs/roadmap.md) 和各 `phase*-status.md` / `production-*-status.md` 为准。
+
+---
+
+# 核心设计原则
+
+## 1. 用户资产属于 Shadow，不属于某个组件
+
+Canonical Store 保存的是用户长期拥有的资产和治理状态，不保存 Provider Secret、Runtime 私有 Memory、缓存或可以重建的 Index。
+
+```text
+User-owned
+├─ Conversations
+├─ Canonical Memories
+├─ State
+├─ Durable Tasks
+├─ Action History
+├─ Skill / Integration metadata
+└─ Ownership / Policy / Binding records
+
+Replaceable / Derived
+├─ Runtime session
+├─ Model provider state
+├─ Embedding / Vector index
+├─ Memory ranking cache
+├─ Runtime projection
+└─ Vendor-private state
+```
+
+## 2. Tiny Kernel 保持小而稳定
+
+Kernel 只理解那些即使未来 AI 范式变化仍然必须由 Shadow 自己掌握的东西：
+
+- Identity / Ownership / Space
+- Canonical Record / Lifecycle
+- Proposal / Validate / Commit
+- Work Admission
+- Request / Run / Attempt
+- Binding / Capability
+- Deterministic enforcement
+- Portability / Erasure intent
+
+Memory、State、Task、Action、Skill 等业务语义通过 **versioned typed Profile** 演进，而不是不断把 Kernel 膨胀成一个万能对象系统。
+
+## 3. 不重造整个 AI 基础设施
+
+OpenShadow **明确不自研**：基础模型、通用 Agent Loop、向量数据库、Memory Intelligence、知识图谱、Workflow Engine、通用脚本沙箱、语音引擎、Coding Agent、浏览器 Agent 或设备协议栈。
+
+这些能力应该通过 Adapter / Profile / Capability Contract 组合已有优秀项目。
+
+## 4. Vendor Isolation
+
+除了具体 Adapter、它自己的测试和部署配置之外，Kernel、Application、公共 Schema、OpenAPI 和 Web UI 不应该出现针对 Codex、Hermes 或其他 Vendor 的业务分支。
+
+新增 Runtime 的理想路径是：
+
+```text
+New Runtime
+   ↓
+AdapterDescriptor + Capability
+   ↓
+RuntimeAdapter Port
+   ↓
+OpenShadow
+```
+
+而不是修改 Core 主流程。
+
+---
+
+# Runtime 与可替换组件
+
+默认 Runtime profile 位于 [`config/runtime-profiles.json`](config/runtime-profiles.json)。
+
+| Runtime | 默认状态 | 用途 |
+| --- | --- | --- |
+| `deterministic` | active / auto-start | 无外部模型、无副作用；作为开发、测试和验收基线 |
+| `codex` | enabled / on-demand | 通过 `codex exec --json` 调用已安装的 Codex CLI；登录与 Provider 由 Codex 自己管理 |
+| `hermes` | disabled | 通过 HTTP Adapter 接入 Hermes；需要本机填写真实 launch / health / Provider 配置 |
+
+Runtime 基础 Port 保持很小：
+
+```text
+describe()
+execute(execution_request)
+events(execution_ref)
+```
+
+`cancel`、`checkpoint`、`native_resume`、`semantic_handoff`、`progress`、`usage`、`reconciliation` 等能力通过 Capability Negotiation 声明，Adapter 不允许伪造自己不支持的能力。
+
+---
+
+# 快速开始
+
+当前参考部署：**Windows + Python 3.12+ + SQLite + local Web UI**。Node.js/npm 只用于构建 Web UI；Codex CLI 和 Hermes 都是可选 Runtime，不是启动 OpenShadow 的前置条件。
 
 ```powershell
 git clone https://github.com/wzw57/OpenShadow.git
@@ -22,37 +330,24 @@ py -3.12 -m venv .venv
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 
-# 初始化/校验本地 SQLite 迁移
 New-Item -ItemType Directory -Force .shadow | Out-Null
 alembic upgrade head
 
-# 构建 Web UI、启动 FastAPI，并打开项目管理页
 powershell -NoProfile -ExecutionPolicy Bypass `
   -File .\scripts\start-shadow-management.ps1 -Build -OpenBrowser
 ```
 
-启动后访问：
+启动后：
 
-- Web UI：<http://127.0.0.1:8765/ui/>；
-- FastAPI 文档：<http://127.0.0.1:8765/docs>；
-- 存活检查：<http://127.0.0.1:8765/healthz>；
-- 可服务检查：<http://127.0.0.1:8765/readyz>；
-- OpenAPI：<http://127.0.0.1:8765/openapi.json>。
-
-默认数据文件是 `.shadow/shadow.db`，属于本地运行产物，不提交到 Git。按 `Ctrl+C` 可停止
-由启动脚本拉起的 Shadow 进程。
-
-### 启动脚本参数
-
-| 参数 | 作用 |
+| 入口 | 地址 |
 | --- | --- |
-| `-Port 8765` | 修改 FastAPI 监听端口 |
-| `-Build` | 执行 `npm install`（首次需要时）和 `npm run build` |
-| `-OpenBrowser` | 服务就绪后打开 `/ui/` |
-| `-RuntimeId codex` | 启动时选择指定 Runtime profile |
-| `-AutoStartRuntime` | 与 `-RuntimeId` 一起使用，先启动该 Runtime |
+| Web UI | `http://127.0.0.1:8765/ui/` |
+| FastAPI Docs | `http://127.0.0.1:8765/docs` |
+| Health | `http://127.0.0.1:8765/healthz` |
+| Readiness | `http://127.0.0.1:8765/readyz` |
+| OpenAPI | `http://127.0.0.1:8765/openapi.json` |
 
-例如，使用已安装的 Codex CLI：
+使用本机已安装的 Codex CLI：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass `
@@ -60,502 +355,127 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -Build -RuntimeId codex -AutoStartRuntime -OpenBrowser
 ```
 
-不使用管理脚本时，也可以在仓库根目录直接启动服务（Web UI 必须先构建）：
+默认数据文件为 `.shadow/shadow.db`，不会提交到 Git。
 
-```powershell
-python -m uvicorn shadow_server.app:app --host 127.0.0.1 --port 8765 --reload
-```
+---
 
-如果 PowerShell 阻止虚拟环境脚本，只对当前进程放宽策略即可：
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-```
-
-## 当前已实现架构（代码事实）
-
-OpenShadow 是模块化单体加进程外 Adapter，不是微服务集合。长期用户资产只写入
-Canonical Store；外部智能和 Provider 只能通过通用 Port 返回结果或 Proposal，不能绕过
-Admission、CommitAuthority、CAS 和版本生命周期。
-
-```text
-浏览器 / CLI
-    │ REST
-    ▼
-FastAPI Shadow Server ───────────────► RuntimeSupervisor（本地控制面）
-    │                                      │ profile lifecycle / select / health
-    ▼                                      ▼
-Application Services ───────────────► RuntimeAdapter Port
-    │                                      ├─ Deterministic Adapter
-    │                                      ├─ Codex CLI Adapter ──► codex exec --json
-    │                                      └─ Hermes Adapter ─────► Hermes API Server
-    │                                                                    │
-    └─ Admission + CommitAuthority ──► SQLite Canonical Store              └─► Model Provider
-       Run / Attempt / Message / Event
-```
-
-一次 Conversation turn 的主路径是：
-
-```text
-HTTP request
-  → Admission
-  → ConversationService
-  → selected RuntimeAdapter
-  → Run / Attempt / Message / Event
-  → CommitAuthority + CAS
-  → SQLite Canonical Store
-```
-
-管理页面的 Runtime 操作（start、stop、restart、health、probe、select）只改变后续请求的
-Adapter binding。它不提供任意 prompt 或 shell 执行入口；正在执行的 Run/Attempt 会阻止
-切换，实际工作仍走 Conversation/Admission/Run/Attempt 路径。
-
-### 当前代码项目结构
-
-下面这棵树对应当前仓库已经存在的目录和主要职责，不是未来模块的占位图：
+# 项目结构
 
 ```text
 OpenShadow/
 ├─ packages/
-│  ├─ shadow-kernel/src/shadow_kernel/       Kernel Port、Envelope、Commit、Admission、CAS
-│  └─ shadow-application/src/shadow_application/
-│                                             Conversation、Profiles、Identity、Supervisor
+│  ├─ shadow-kernel/          # Admission / Commit / Envelope / CAS / Capability
+│  └─ shadow-application/     # Conversation / Memory / State / Task / Action / Identity ...
+│
 ├─ adapters/
-│  ├─ store-sqlite/src/shadow_store/         SQLite Canonical Repository
-│  ├─ test-deterministic/src/shadow_adapters/  确定性 Runtime（默认开发基线）
-│  ├─ hermes-agent/src/shadow_hermes/        Hermes HTTP Adapter（独立边界）
-│  └─ codex-agent/src/shadow_codex/          Codex CLI JSONL Adapter（独立边界）
+│  ├─ store-sqlite/           # SQLite Canonical Repository
+│  ├─ test-deterministic/     # deterministic Runtime baseline
+│  ├─ codex-agent/            # Codex CLI Adapter
+│  └─ hermes-agent/           # Hermes HTTP Adapter
+│
 ├─ apps/
-│  ├─ shadow-server/shadow_server/            FastAPI 组合根、OpenAPI、静态 UI 托管
-│  └─ shadow-web/src/                         React/Vite Conversation、Profile、Management UI
-├─ config/runtime-profiles.json              本地 Runtime profile（非敏感配置）
-├─ contracts/                                 OpenAPI、JSON Schema、fixtures、manifest
-├─ migrations/                                Alembic 迁移
-├─ scripts/start-shadow-management.ps1       Windows 启动/管理脚本
-├─ tests/                                     Contract、Service、Repository、API、UI、故障测试
-├─ docs/                                      设计闸门、ADR、架构和交付状态
-├─ pyproject.toml                             Python 包、依赖和测试/lint 配置
-└─ alembic.ini                                SQLite migration 默认配置
-```
-
-### 当前实现的分层图
-
-```text
-┌────────────────────────────────────────────────────────────────────┐
-│ Web UI (React/Vite) │ curl/SDK │ FastAPI /docs / OpenAPI            │
-└───────────────────────────────┬────────────────────────────────────┘
-                                │ HTTP
-                                ▼
-┌────────────────────────────────────────────────────────────────────┐
-│ apps/shadow-server: 组合根、身份/Space context、路由、错误映射      │
-└───────────────┬───────────────────────────────┬────────────────────┘
-                │                               │
-                ▼                               ▼
-┌──────────────────────────────┐  ┌─────────────────────────────────┐
-│ Application Services          │  │ RuntimeSupervisor               │
-│ Conversation / Memory /      │  │ profile lifecycle、health、      │
-│ State / Task / Action /      │  │ select；不承载业务数据           │
-│ Identity / Outbox            │  └───────────────┬─────────────────┘
-└───────────────┬──────────────┘                  │ 通用 Adapter Port
-                ▼                                 ▼
-┌──────────────────────────────┐  ┌─────────────────────────────────┐
-│ shadow-kernel                 │  │ Deterministic │ Codex │ Hermes  │
-│ Admission / CommitAuthority  │  │ Adapter       │ CLI   │ HTTP    │
-│ Envelope / CAS / Policy       │  └─────────────────────────────────┘
-└───────────────┬──────────────┘
-                │ Canonical writes / reads
-                ▼
-┌────────────────────────────────────────────────────────────────────┐
-│ adapters/store-sqlite: SQLAlchemy Repository → SQLite               │
-│ canonical_records / idempotency receipts / run_events               │
-└────────────────────────────────────────────────────────────────────┘
-```
-
-当前已经实现的是一套模块化单体：Runtime Adapter 可以是外部进程或 HTTP 服务，但 Kernel、
-Application 和 Web UI 不导入 Hermes/Codex 私有类型，也不直接连接 Model Provider。
-
-## 技术栈
-
-| 层 | 技术 | 当前用途 |
-| --- | --- | --- |
-| 后端语言 | Python `>=3.12` | Kernel、Application、Adapter、FastAPI 组合根 |
-| HTTP/API | FastAPI `>=0.115`、Uvicorn | REST、OpenAPI、健康检查、静态 Web UI |
-| 数据模型 | Pydantic 2、Python typing | 请求校验、Profile payload、Runtime descriptor |
-| 持久化 | SQLAlchemy 2 + SQLite | Canonical version rows、幂等 receipt、Run events |
-| 数据库迁移 | Alembic | `upgrade head` / `downgrade base` |
-| Contract | JSON Schema、`jsonschema`、OpenAPI YAML | Profile、fixtures、错误体和文档同步 |
-| Web UI | React 19、TypeScript 5.7、Vite 6 | Conversation、Memory/State/Task/Action 查询、项目管理 |
-| Python 测试 | pytest、pytest-asyncio、httpx | Contract、Service、Repository、API 和故障路径 |
-| Python 质量 | Ruff | E/F/I/B/UP 规则集和导入排序 |
-| Agent Runtime | Deterministic Adapter、Hermes Adapter、Codex CLI Adapter | 通过 `shadow.agent-runtime` Port 接入，不进入核心 |
-| 外部 Agent/Provider | Hermes API、Codex CLI、可选 Model Provider | 由 Adapter 隔离；不是 OpenShadow 自研组件 |
-
-Node.js/npm 只用于 Web UI 的依赖安装和构建；运行 FastAPI 不需要 Node 进程。默认不需要
-Ollama、本地模型或 GPU。
-
-## 设计总架构（长期目标）
-
-下面是设计层面的完整目标，不等于所有模块都已经实现。`[已实现]` 表示当前代码已有闭环，
-`[Contract]` 表示已有 Schema/ADR/接口边界但不保证完整运行，`[后续]` 表示尚未进入实现。
-
-```text
-                           User-owned Shadow
-┌──────────────────────────────────────────────────────────────────────────┐
-│ User Surfaces                                                             │
-│ [已实现] Web / API / Conversation    [后续] Voice / Device / Connectors  │
-└──────────────────────────────────┬───────────────────────────────────────┘
-                                   │ work-bearing input
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Sovereignty & Continuity Kernel [已实现]                                  │
-│ Identity / Owner / Space · Canonical Envelope · Version/CAS              │
-│ Proposal → Validate → Commit · Admission · Run/Attempt · Erasure Intent │
-└──────────────────────────────────┬───────────────────────────────────────┘
-                                   │ typed Profile records / Proposals
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Official Profiles                                                        │
-│ [已实现] Conversation · Memory · State · Task · Action · Outbox           │
-│ [已实现] SkillAsset · Integration · Pulse · Router/Policy · Erasure meta │
-│ [Contract/延后] Voice · OAuth/OIDC · remote sync · full multi-user        │
-└──────────────────────────────────┬───────────────────────────────────────┘
-                                   │ normalized Port / Adapter boundary
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Replaceable Intelligence & Execution                                     │
-│ [已实现 Adapter] Deterministic · Hermes · Codex CLI                      │
-│ [Contract/延后] Model Worker · Memory Recall/Index · Resolver · Router    │
-│ [后续] Tool/Capability bridge · Provider execution · device/voice runtime │
-└──────────────────────────────────┬───────────────────────────────────────┘
-                                   │
-                                   ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Store / Portability / Reliability                                         │
-│ [已实现] SQLite Canonical Repository · migrations · integrity checks      │
-│ [已实现] export/import contract · tombstone/erase boundary · outbox      │
-│ [后续] remote Store · encrypted device backup · cross-device sync         │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-### 设计总架构的关键边界
-
-- 外部 Runtime、Model、Memory Engine、Resolver、Router 和 Provider 只能返回结果、
-  Observation 或 Proposal；最终写入始终回到 Shadow 的 Authority/CAS。
-- Web UI 只依赖 vendor-neutral API；Hermes/Codex 名称只出现在 Adapter 和部署 profile。
-- Canonical Store 保存用户长期资产，不保存 Provider Secret、Runtime 私有 Memory、缓存或
-  可重建索引。
-- Phase 0–4 和 Phase 5 Core Slice 已完成当前授权范围；OAuth/OIDC、Voice、远程 Store、
-  跨设备同步和生产级多用户发行仍保持 Contract-only 或后续闸门。
-
-### 设计总架构的产品视图
-
-上面的设计总架构展示责任和数据流；下面补充用户看到的产品与资产分层：
-
-~~~text
-Shadow
-├─ Tiny Kernel
-│  ├─ Identity & Ownership
-│  ├─ Canonical Record & Lifecycle
-│  ├─ Proposal / Validate / Commit Authority
-│  ├─ Work Admission & Minimal Continuity
-│  ├─ Extension Contract & Binding
-│  └─ Portability & Erasure Intent
+│  ├─ shadow-server/          # FastAPI composition root / OpenAPI / static UI
+│  └─ shadow-web/             # React / TypeScript / Vite Web UI
 │
-├─ Official Profiles
-│  ├─ Conversation / Memory / State
-│  ├─ Durable Task / Action
-│  ├─ Skill / Capability / Integration
-│  └─ Profile-specific schemas and invariants
-│
-├─ Replaceable Components
-│  ├─ Runtime / Model / Runner / Workflow / Router
-│  ├─ Memory Intelligence / Retrieval / State Resolver
-│  ├─ Store / Search / Scheduler / Policy Engine
-│  ├─ Source / Provider / MCP / Skill Runtime
-│  └─ Web / Voice / Device Interfaces
-│
-└─ User-owned Assets
-   ├─ Conversations / Memories / Tasks / State
-   ├─ Skills / Executables / Integrations
-   ├─ External Asset Catalog / Artifacts
-   └─ Bindings / Policies / Action History
-~~~
-
-Shadow 是完整产品。Tiny Kernel 只理解长期主权和连续性所必需的控制语义；Memory、World State、Task、Skill 等由版本化 Profile 定义，不被硬编码成不可演进的内核模块。
-
-## 核心不变量
-
-### 所有承载工作的输入经过 Shadow
-
-Chat、Voice、Schedule、Event、API Command 和 Semantic Pulse Proposal 等工作入口都经过 Admission。一个被接受的工作 Request 创建一个 Root Run；准入失败只形成最小 Admission Record。
-
-健康检查、静态资源、只读控制面查询、已有 Run 的事件订阅和内部恢复步骤不创建 Root Run，但仍受身份、权限和审计约束。
-
-### 所有执行受 Shadow 治理，但不都经过 Agent Runtime
-
-Execution Binding 使用可扩展、带命名空间的 `target_kind`。首批 well-known kinds 是：
-
-- `shadow.agent-runtime`；
-- `shadow.model-worker`；
-- `shadow.deterministic-runner`；
-- `shadow.workflow-target`；
-- `shadow.capability-provider`。
-
-它们不是永久封闭枚举。Core 根据 Capability、数据边界、副作用、预算和健康状态治理执行，不为每种 Target 硬编码业务分支。
-
-### 外部智能只能提议，Shadow 才能提交
-
-~~~text
-External Intelligence / Execution
-                ↓
-          Typed Proposal
-                ↓
-   Schema + Authority + Policy Validation
-                ↓
-        Canonical Commit
-                ↓
-  Versioned Canonical Record / Profile
-~~~
-
-Memory Engine 不能直接改 Memory，Router 不能直接改 Binding，Runtime 不能直接完成 Durable Task，State Resolver 不能直接改当前状态，Provider 不能绕过 Action Authority 产生现实副作用。
-
-### Canonical Record 统一治理，但不退化成万能 JSON
-
-所有长期记录共享最小治理信封：
-
-~~~text
-CanonicalEnvelope
-├─ record_id / record_type / schema_ref
-├─ owner_ref / space_id / created_by
-├─ classification / provenance
-├─ version / lifecycle / retention
-└─ typed_payload
-~~~
-
-Envelope 负责身份、归属、版本、来源和生命周期。各 Profile 继续定义必要的类型化 Schema、合法状态转换和迁移规则；仅更换 JSON Schema 不能替代语义迁移。
-
-## Memory 与 World State
-
-Canonical Memory 是 `memory` Profile 的用户资产，必须在更换 Memory Intelligence 后继续存在。外部组件负责提取、整理、召回、去重、Embedding、Graph 和排序；Shadow 只治理 Candidate、版本、来源、纠正、删除和提交。
-
-World State 是官方 `state` Profile，不是 Tiny Kernel 内建知识图谱。Kernel 只提供通用身份、来源、证据、时间有效性和提交机制；State Profile 定义 state key、Observation、fresh / stale / unknown 与迁移语义；采集、融合、预测、本体和领域查询全部外置。
-
-~~~text
-Source Adapter / State Resolver
-             ↓
-       State Proposal
-             ↓
-     Shadow validates
-             ↓
-Versioned State Profile Record
-~~~
-
-Accepted State 可恢复和迁移，但允许过期。Shadow 不要求实时访问所有外部知识库或设备，只在需要时调用并诚实表达 stale / unknown。
-
-## Skill 与能力资产
-
-Shadow 不自创 Skill 内容格式。官方 Profile 原生兼容 [Agent Skills 规范](https://github.com/agentskills/agentskills/blob/main/docs/specification.mdx)：保留标准 `SKILL.md` 以及可选的 `scripts/`、`references/`、`assets/`。
-
-Shadow 的 `SkillAsset` 只保存治理信息：稳定 ID、Owner / Space、来源、固定版本或 revision、digest、信任、权限策略、数据等级、安装状态和 Runtime Projection。标准 Skill Bundle 不因 Shadow 元数据而被修改；Provider Skill ID 只是外部引用。
-
-具体 Skill 发现、加载、Prompt 投影、脚本执行和 Provider 上传由 Adapter 完成。Shadow 独立执行权限和信任边界，不能把实验性的 `allowed-tools` 当作最终授权。
-
-外部资料也遵循同一原则：Notion、Obsidian、Drive、Email 和文件系统中的原始内容继续由外部来源持有；Shadow 的 Asset Catalog 默认只记录“存在什么、在哪里、如何访问”，需要时再读取。
-
-## Adapter 与基础设施边界
-
-通用 `AdapterDescriptor` 保持最小：
-
-~~~text
-adapter_id
-adapter_family
-contract_versions
-capabilities
-config_schema_ref
-implementation_ref
-health
-~~~
-
-权限、Secret、迁移、Checkpoint、数据边界和 Reconciliation 是按 Adapter Family 声明的可选能力，不进入一个万能 Manifest。
-
-Runtime 基础 Port 只要求 `describe`、`execute` 和 `events`；cancel、checkpoint、native resume、semantic handoff、progress、usage 与 reconciliation 通过 Capability Negotiation 声明。Adapter 不得伪造不支持的能力。
-
-Shadow 也不抽象整套数据库。Store Family 分成 Canonical Repository、Migration、Portable Export / Import、Backup、Outbox 和 Integrity Capability。只有 Canonical 语义和标准可移植导出需要跨 Store 一致；物理 Schema、复制、备份和队列实现属于外部基础设施。
-
-### Runtime 配置与替换
-
-本地 Runtime profile 位于 [`config/runtime-profiles.json`](config/runtime-profiles.json)。当前
-默认值是：
-
-| Runtime | 默认状态 | 说明 |
-| --- | --- | --- |
-| `deterministic` | active / auto-start | 无外部模型、无副作用，用于稳定开发和验收 |
-| `codex` | enabled / 按需启动 | 通过已安装的 `codex exec --json` CLI 调用；Provider/登录由 Codex 自己管理 |
-| `hermes` | disabled | 需填写实际 `launch.command`、health URL 和 Hermes 侧 Provider 配置 |
-
-Runtime Management 只读取经过 Schema 校验的 profile，不保存 API key、Secret 原文、Hermes
-私有 Session 或 Codex 内部 State。也可以使用兼容旧部署的环境变量注入单个 Adapter：
-
-```powershell
-$env:SHADOW_RUNTIME_ADAPTER_FACTORY = "shadow_hermes:create_runtime_adapter"
-$env:SHADOW_RUNTIME_KIND = "hermes"
-python -m uvicorn shadow_server.app:app --host 127.0.0.1 --port 8765
+├─ contracts/                 # JSON Schema / OpenAPI / fixtures / manifests
+├─ config/                    # Runtime profiles and non-secret config
+├─ migrations/                # Alembic migrations
+├─ docs/                      # Architecture / ADR / design gates / delivery status
+├─ scripts/                   # Startup / release / management scripts
+└─ tests/                     # Contract / Service / Repository / API / failure / UI tests
 ```
 
-在配置 Hermes 前不要猜测其启动命令；将真实安装方式写入本地 profile，并保持 Hermes
-工具默认关闭。DeepSeek `deepseek-v4-flash` 是 Hermes 下游的 Model Provider，不是
-Shadow 的直连 Runtime，也不会被 Web UI 直接调用。
+---
 
-### 公开 API 入口
+# 技术栈
 
-API 的完整契约以 [`contracts/openapi/openapi.yaml`](contracts/openapi/openapi.yaml) 和运行时
-`/openapi.json` 为准。常用入口如下：
-
-| 类别 | 入口 |
+| 层 | 技术 |
 | --- | --- |
-| 状态 | `GET /healthz`、`GET /readyz`、`GET /v1/runtime` |
-| 运维指标 | `GET /metrics`（低基数 Prometheus 文本，不含主体、Token、Secret 或 prompt） |
-| Conversation | `GET/POST /v1/conversations`、`POST /v1/conversations/{id}/turns` |
-| Run | `GET /v1/runs/{id}`、`GET /v1/runs/{id}/events`、`POST /v1/runs/{id}/retry` |
-| Profile 查询 | `GET /v1/memories`、`GET /v1/states`、`GET /v1/tasks`、`GET /v1/actions` |
-| Proposal | `POST /v1/proposals`、`POST /v1/proposals/{id}/accept` |
-| Runtime 管理 | `GET /v1/management/overview`、`GET /v1/runtime/instances` |
-| Runtime 生命周期 | `POST /v1/runtime/instances/{id}/start`, `.../stop`, `.../restart`, `.../select`；`GET .../{id}/health`；`POST .../{id}/probe` |
+| Backend | Python `>=3.12` |
+| API | FastAPI + Uvicorn |
+| Models / Validation | Pydantic 2 + Python typing + JSON Schema |
+| Persistence | SQLAlchemy 2 + SQLite |
+| Migration | Alembic |
+| Web | React 19 + TypeScript 5.7 + Vite 6 |
+| Contract | OpenAPI 3.1 + checked-in JSON Schema + fixtures |
+| Testing | pytest + pytest-asyncio + httpx |
+| Quality | Ruff |
+| Runtime | Deterministic / Codex CLI / Hermes Adapter |
+| Deployment baseline | local process + Docker / Compose reference |
 
-Runtime 的 start/stop/restart/select 写操作要求 `Idempotency-Key`。需要身份或 Space
-边界的写入使用 `X-Principal-Ref`、`X-Space-Id` 等契约 Header；当前默认是单用户本地上下文，
-生产模式可使用 OIDC-compatible verifier 或 signed-session 验证；local-dev header 兼容仅在
-显式 `SHADOW_AUTH_MODE=local-dev` 下开启，多用户完整发行仍是后续能力。
+---
 
-## 本地开发与验收
+# 工程与验收
 
-代码、Schema、fixtures、API 和文档必须在同一变更中保持同步。常用检查命令：
+OpenShadow 把 **代码、Contract、测试和文档同步** 当作工程约束，而不是事后补文档。公共 API、Canonical 生命周期、Profile Schema、Phase 状态发生变化时，对应实现和测试需要一起更新。
+
+常用检查：
 
 ```powershell
-# Python 依赖（已安装可跳过）
-python -m pip install -e ".[dev]"
-
-# 后端质量与全量测试
 ruff check packages/shadow-kernel/src packages/shadow-application/src `
   adapters/test-deterministic/src adapters/store-sqlite/src `
   adapters/hermes-agent/src adapters/codex-agent/src `
   apps/shadow-server migrations tests
+
 pytest -q
 
-# SQLite 迁移回滚（隔离数据库）
-New-Item -ItemType Directory -Force .shadow | Out-Null
 $env:SHADOW_DATABASE_URL = "sqlite://"
 alembic upgrade head
 alembic downgrade base
 Remove-Item Env:SHADOW_DATABASE_URL
 
-# Web UI 类型检查与生产构建
 Push-Location apps/shadow-web
 npm install
 npm run build
 Pop-Location
-
-git diff --check
 ```
 
-当前基线验收包括 Contract/Repository/API、幂等重放、Store unavailable、重启恢复、Runtime
-生命周期、Web UI Chromium smoke 和 Alembic upgrade/downgrade。测试用 SQLite 内存库或隔离
-文件库；真实 Hermes Provider 和 Codex 模型请求属于部署联调，不是默认测试前置条件。
-
-### 生产参考启动
-
-SQLite 仍是 local-dev 默认；生产必须显式选择 Store，不会从错误 URL 静默回退：
+发布前还可以运行：
 
 ```powershell
-$env:SHADOW_DATABASE_URL = "postgresql+psycopg://shadow:<password>@localhost:5432/shadow"
-$env:SHADOW_AUTH_MODE = "oidc"
-$env:SHADOW_AUTH_SESSION_SECRET = "<deployment-secret>"
-python -m pip install -e ".[dev,postgres]"
-python -m uvicorn shadow_server.app:app --host 0.0.0.0 --port 8080
+./scripts/release-check.ps1
 ```
 
-也可使用仓库中的 `docker compose up --build`（需要先设置 `POSTGRES_PASSWORD`）。发布前
-运行 `./scripts/release-check.ps1`，它会执行全量测试、Ruff、SQLite migration upgrade/
-downgrade 和 `git diff --check`。生产部署仍需在目标环境完成真实 PostgreSQL、OIDC、
-Runtime Provider、备份恢复和压力/安全演练。
+当前验收基线覆盖 Contract / Repository / API、幂等重放、Store unavailable、restart recovery、Runtime lifecycle、Web UI smoke、migration upgrade/downgrade，以及 production baseline 的 telemetry/config/redaction 等路径。
 
-## 代码目录
+---
 
-```text
-packages/shadow-kernel/        稳定 Kernel Port、Envelope、Commit、Admission、CAS
-packages/shadow-application/   Conversation、Profile、Task、Action、Identity、Supervisor
-adapters/store-sqlite/         SQLite Canonical Repository 与 migration boundary
-adapters/test-deterministic/   无外部依赖的确定性 Runtime Adapter
-adapters/hermes-agent/         Hermes HTTP/OpenAI-compatible Adapter（独立隔离）
-adapters/codex-agent/          Codex CLI JSONL Adapter（独立隔离）
-apps/shadow-server/             FastAPI 组合根、OpenAPI、静态 Web UI 托管
-apps/shadow-web/                React/Vite Conversation、Profile、Management UI
-contracts/                      JSON Schema、fixtures、OpenAPI 和 manifest
-migrations/                     Alembic migration
-scripts/                        本地启动和管理脚本
-docs/                           设计闸门、ADR、架构、状态与验收证据
-tests/                          Contract、Service、Repository、API、UI 和故障路径测试
-```
+# 文档导航
 
-## 治理与长期升级
+README 只负责回答“这是什么、怎么运行、现在做到哪”。完整设计细节放在 `docs/`：
 
-- 每个 Canonical Record 从第一版具有明确 Owner 和 Space；
-- 近期只实现单用户、默认 Personal Space 和隐式 Home Space；
-- Core 只执行少量确定性 Policy：数据等级、Capability、Approval、Budget、副作用、有效期和撤销；
-- 复杂 Policy 计算可以外置，但 Core 保留最终检查；
-- 用户拥有纠正、逻辑删除、最终物理清除、导出和迁移权；
-- 标准导出不依赖 Secret、缓存、索引或具体组件私有格式；
-- Store 故障时暂停 Canonical Commit，默认禁止未记录现实副作用；
-- Domain Event 只是通知信封，不采用强制 Event Sourcing；
-- Outbox 只解决跨边界副作用可靠提交；
-- OperationJob 只用于迁移、导出、备份和 Erasure 等长操作。
+| 文档 | 作用 |
+| --- | --- |
+| [`docs/architecture.md`](docs/architecture.md) | 系统定义、完整逻辑架构、Kernel / Profile / Adapter 边界 |
+| [`docs/technical-architecture.md`](docs/technical-architecture.md) | 详细技术架构与运行边界 |
+| [`docs/domain-model.md`](docs/domain-model.md) | Canonical domain model |
+| [`docs/implementation-stages.md`](docs/implementation-stages.md) | Phase 0–5 的实现顺序与退出条件 |
+| [`docs/roadmap.md`](docs/roadmap.md) | 当前 `main` 的真实交付状态 |
+| [`docs/contract-baseline.md`](docs/contract-baseline.md) | JSON Schema / OpenAPI / Contract baseline |
+| [`docs/adr/README.md`](docs/adr/README.md) | Architecture Decision Records |
+| [`docs/documentation-sync.md`](docs/documentation-sync.md) | 文档漂移与 source-of-truth 规则 |
 
-## 当前明确不自研
+更细的 Phase、Runtime、Web UI、Production Readiness 状态请直接查看 [`docs/`](docs/) 下对应 `*-status.md`。
 
-OpenShadow 不自研数据库引擎、通用 Agent Loop、基础模型、智能 Router 算法、Memory Intelligence、向量数据库、知识图谱、Workflow Engine、脚本运行时与沙箱、语音引擎、浏览器 Agent、Coding Agent、设备协议栈或领域数字孪生。
+---
 
-OpenShadow 自行实现的范围收紧为：
+# 项目边界
 
-- Stable ID、Owner、Space、Version 与 Canonical Envelope；
-- Proposal / Validate / Commit 主权边界；
-- Admission、Run / Attempt 与最小 Task Continuity；
-- 类型 Profile 注册、Schema 兼容与迁移控制；
-- 最小 Adapter Registry、Binding 与 Capability 校验；
-- 确定性数据、授权、预算和副作用执行点；
-- 标准导出、完整性校验与 Erasure Intent；
-- 用户查看、纠正、撤销、删除和导出 API。
+OpenShadow 当前首先是一个 **local-first reference implementation**，而不是已经完成所有真实生产环境验证的 SaaS 产品。
 
-## 文档
+它已经证明的核心命题是：
 
-- [需求基线](docs/requirements.md)
-- [概要设计](docs/architecture.md)
-- [Core / External 责任矩阵](docs/responsibility-matrix.md)
-- [关键用例](docs/use-cases/README.md)
-- [领域模型](docs/domain-model.md)
-- [状态机基线](docs/state-machines.md)
-- [完整技术架构](docs/technical-architecture.md)
-- [分阶段实现计划](docs/implementation-stages.md)
-- [参考实现 Profile](docs/implementation-profile.md)
-- [开发路线](docs/roadmap.md)
-- [Phase 0–1 实现状态](docs/phase0-1-status.md)
-- [Stage 4 Contract 基线](docs/contract-baseline.md)
-- [架构决策记录](docs/adr/README.md)
-- [Web UI 设计闸门](docs/web-ui-design-gate.md)
-- [Web UI 实现状态](docs/web-ui-status.md)
-- [Runtime 集成状态](docs/runtime-integration-status.md)
-- [Runtime Management 实现状态](docs/runtime-management-status.md)
-- [Phase 5 Core Slice 状态](docs/phase5-status.md)
-- [Production Readiness 设计闸门](docs/production-readiness-design-gate.md)
-- [ADR-0026 Production Readiness](docs/adr/0026-production-readiness-and-release-boundary.md)
-- [Production Auth 设计闸门](docs/production-auth-design-gate.md)
-- [ADR-0027 Production Auth](docs/adr/0027-production-auth-and-security.md)
-- [Production Auth 状态](docs/production-auth-status.md)
-- [Runtime Reliability 状态](docs/runtime-reliability-status.md)
-- [Production Store / Backup 状态](docs/production-store-status.md)
-- [Production Device / Integration 状态](docs/production-device-integration-status.md)
-- [Production Operations / Release 状态](docs/production-operations-status.md)
-- [Production 发布闸门](docs/production-operations-design-gate.md)
+- 可以把长期用户资产和 Runtime / Model 解耦；
+- 可以通过统一 Authority 管住 Canonical change；
+- 可以在不把 Kernel 做成万能框架的前提下扩展 Memory / State / Task / Action；
+- 可以替换 Runtime 而不改变 Shadow 的稳定身份、Run/Task 和长期资产模型；
+- 可以把迁移、删除、版本、来源和副作用治理放回用户自己的长期控制层。
 
-## 当前状态
+下一阶段真正有价值的工作，不是继续堆抽象，而是用真实部署、真实用户和长期运行数据去验证这些边界。
 
-Stage 0–3 已形成需求、责任、用例和领域基线，Stage 4 的 Action 等能力也已按切片完成设计与实现。当前仓库已具备 Phase 0–4 的核心基线和 Phase 5 Core Slice，以及可选的外部 Agent Runtime Adapter：默认配置使用确定性 Adapter，Codex CLI profile 可由项目管理页启停和切换，Hermes profile 默认关闭并需按本机部署配置启用。FastAPI、Application、Kernel 和 Web UI 不包含任何厂商分支。首版 Web UI 已完成，可通过 FastAPI `/ui/` 使用；Shadow 没有自研 Agent Loop，也不直接连接模型 Provider。生产化 A–E 本地参考切片已通过 PR #25 合并到 `main`，包含认证、durable Runtime、Store profile、Peripheral Contract 和 Operations/Release 基线；真实 OIDC、PostgreSQL、Provider、硬件和压力/安全演练仍需部署环境完成。
+---
+
+<p align="center">
+  <strong>OpenShadow</strong><br/>
+  A personal AI should outlive its runtime.
+</p>
