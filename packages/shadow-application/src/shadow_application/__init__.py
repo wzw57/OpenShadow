@@ -32,6 +32,7 @@ from .erasure_backup import (
     ErasureRequestCandidate,
     ErasureService,
 )
+from .execution import ExecutionCoordinator
 from .identity import AccessContext, IdentityService
 from .index import (
     MemoryIndexAdapter,
@@ -99,6 +100,7 @@ from .task import TaskProposalCandidate, TaskService
 
 __all__ = [
     "ConversationService",
+    "ExecutionCoordinator",
     "ActionProposalCandidate",
     "ActionProvider",
     "ActionService",

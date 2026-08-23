@@ -4,6 +4,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
+from shadow_adapters import DeterministicTestAdapter
 from shadow_application import ConversationService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import RepositoryUnavailable, ShadowDomainError
@@ -25,7 +26,9 @@ def _repository_with_conversation(
 ) -> tuple[SqliteCanonicalRepository, ContractRegistry]:
     repository = SqliteCanonicalRepository(tmp_path / "shadow.db")
     registry = ContractRegistry(ROOT)
-    service = ConversationService(repository, CommitAuthority(repository, registry))
+    service = ConversationService(
+        repository, CommitAuthority(repository, registry), runtime_adapter=DeterministicTestAdapter()
+    )
     conversation = service.create_conversation(
         owner_ref="principal-test", space_id="space-test", idempotency_key="export-conversation"
     )

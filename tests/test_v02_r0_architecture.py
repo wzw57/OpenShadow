@@ -128,10 +128,6 @@ def test_generic_proposal_dispatch_has_no_builtin_branches() -> None:
     assert "isinstance(command" not in source
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R3 migration gate: ConversationService still has the v0.1 durable execution pipeline",
-)
 def test_conversation_does_not_import_a_default_runtime_adapter() -> None:
     source = (ROOT / "packages/shadow-application/src/shadow_application/conversation.py").read_text(
         encoding="utf-8"

@@ -3,18 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from shadow_adapters import DeterministicTestAdapter
 from shadow_kernel.adapters import AdapterDescriptor, AdapterRegistry
 from shadow_kernel.commit import CommitAuthority
+from shadow_kernel.dispatch import ExecutionDispatcher
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest, utc_timestamp
 from shadow_kernel.models import (
     AdmissionRecordPayload,
+    CapabilityEnvelopeSnapshot,
     CommitOperation,
     CommitPlan,
     ContentBlock,
     ConversationPayload,
     ExecutionAttemptPayload,
+    ExecutionRequest,
     ExecutionRequirementsPayload,
     MessagePayload,
     Provenance,
@@ -25,6 +27,8 @@ from shadow_kernel.models import (
 )
 from shadow_kernel.repository import CanonicalRepository
 from shadow_kernel.runtime import RuntimeAdapter
+
+from .execution import ExecutionCoordinator
 
 PROFILE_SCHEMA = "https://schemas.openshadow.dev/contracts/profiles/1.0.0"
 KERNEL_SCHEMA = "https://schemas.openshadow.dev/contracts/kernel/1.0.0"
@@ -50,12 +54,13 @@ class ConversationService:
         self,
         repository: CanonicalRepository,
         authority: CommitAuthority,
-        runtime_adapter: RuntimeAdapter | None = None,
+        runtime_adapter: RuntimeAdapter,
     ):
         self.repository = repository
         self.authority = authority
         self.adapters = AdapterRegistry()
-        self.runtime_adapter = runtime_adapter or DeterministicTestAdapter()
+        self.runtime_adapter = runtime_adapter
+        self.coordinator = ExecutionCoordinator(ExecutionDispatcher(self.adapters))
         self.runtime_descriptor = self._ensure_runtime_descriptor()
         self.runtime_target_kind = self.runtime_descriptor.supported_target_kinds[0]
 
@@ -476,7 +481,32 @@ class ConversationService:
             )
         self.repository.append_event(ids["run"], "shadow.run.started", {"run_id": ids["run"], "attempt_id": ids["attempt"]})
         try:
-            output = self.runtime_adapter.execute(text)
+            execution_request = ExecutionRequest(
+                execution_request_id=f"execution-request-{token}",
+                run_ref=RecordVersionRef(record_id=ids["run"], version=1),
+                attempt_ref=RecordVersionRef(record_id=ids["attempt"], version=1),
+                binding_ref=RecordVersionRef(record_id=ids["binding"], version=1),
+                idempotency_key=idempotency_key,
+                capability_envelope_snapshot=CapabilityEnvelopeSnapshot(
+                    envelope_ref=StableRecordRef(record_id=ids["capability-envelope"]),
+                    version=1,
+                    digest=sha256_digest(cap),
+                    effective_constraints={
+                        "allowed_space_ids": [space_id],
+                        "allowed_side_effects": [],
+                    },
+                ),
+                input_schema_ref=f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+                typed_input={"text": text},
+                correlation_id=f"correlation-{token}",
+                submitted_at=now,
+            )
+            dispatch_result = self.coordinator.execute(
+                execution_request,
+                target_kind=self.runtime_target_kind,
+                idempotency_scope=f"turn:{conversation_id}",
+            )
+            output = dispatch_result.output
             output_text = getattr(output, "text", None)
             if not isinstance(output_text, str):
                 raise TypeError("Runtime Adapter result did not contain text.")
@@ -672,7 +702,56 @@ class ConversationService:
         assistant_id = f"message-assistant-retry-{token}"
         attempt_id = f"attempt-retry-{token}"
         now = utc_timestamp()
-        output = self.runtime_adapter.execute(text)
+        if not run_payload.binding_refs:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-binding-missing",
+                    category="internal",
+                    message="Retry requires the original execution binding.",
+                )
+            )
+        binding_record = self.repository.get(run_payload.binding_refs[0].record_id)
+        if not binding_record:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-binding-missing",
+                    category="internal",
+                    message="Retry binding could not be recovered.",
+                )
+            )
+        cap_ref = binding_record["typed_payload"].get("capability_envelope_ref", {})
+        cap_record = self.repository.get(cap_ref.get("record_id")) if cap_ref.get("record_id") else None
+        if not cap_record:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-capability-envelope-missing",
+                    category="internal",
+                    message="Retry capability envelope could not be recovered.",
+                )
+            )
+        execution_request = ExecutionRequest(
+            execution_request_id=f"execution-request-{token}",
+            run_ref=RecordVersionRef(record_id=run_id, version=run_record["version"]),
+            attempt_ref=RecordVersionRef(record_id=attempt_id, version=1),
+            binding_ref=run_payload.binding_refs[0],
+            idempotency_key=idempotency_key,
+            capability_envelope_snapshot=CapabilityEnvelopeSnapshot(
+                envelope_ref=StableRecordRef(record_id=cap_record["record_id"]),
+                version=cap_record["version"],
+                digest=sha256_digest(cap_record["typed_payload"]),
+                effective_constraints={},
+            ),
+            input_schema_ref=f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+            typed_input={"text": text},
+            correlation_id=f"correlation-{token}",
+            submitted_at=now,
+        )
+        dispatch_result = self.coordinator.execute(
+            execution_request,
+            target_kind=self.runtime_target_kind,
+            idempotency_scope=f"retry:{run_id}",
+        )
+        output = dispatch_result.output
         run_version = run_record["version"] + 1
         assistant_message = MessagePayload(
             conversation_ref=StableRecordRef(record_id=conversation_id),
@@ -692,14 +771,6 @@ class ConversationService:
             ),
             produced_by_run_ref=RecordVersionRef(record_id=run_id, version=run_version),
         )
-        if not run_payload.binding_refs:
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.run.retry-binding-missing",
-                    category="internal",
-                    message="Retry requires the original execution binding.",
-                )
-            )
         attempt = ExecutionAttemptPayload(
             run_ref=StableRecordRef(record_id=run_id),
             binding_ref=run_payload.binding_refs[0],
@@ -831,8 +902,7 @@ class ConversationService:
         )
 
     def _ensure_runtime_descriptor(self) -> AdapterDescriptor:
-        body = self.runtime_adapter.describe()
-        descriptor = AdapterDescriptor(**body, descriptor_digest=sha256_digest(body))
+        descriptor = self.coordinator.dispatcher.register_adapter(self.runtime_adapter)
         if not descriptor.supported_target_kinds:
             raise ShadowDomainError(
                 ShadowError(
@@ -841,7 +911,6 @@ class ConversationService:
                     message="A Runtime Adapter must declare at least one target kind.",
                 )
             )
-        self.adapters.register(descriptor)
         legacy_default = (
             descriptor.descriptor_id == "shadow.adapter.deterministic"
             and descriptor.descriptor_version == "1.0.0"
