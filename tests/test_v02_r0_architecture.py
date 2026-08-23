@@ -140,10 +140,6 @@ def test_conversation_does_not_import_a_default_runtime_adapter() -> None:
     assert "DeterministicTestAdapter()" not in source
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R2 migration gate: RuntimeAdapter still has the text-only v0.1 signature",
-)
 def test_runtime_port_accepts_typed_execution_request() -> None:
     source = (ROOT / "packages/shadow-kernel/src/shadow_kernel/runtime.py").read_text(
         encoding="utf-8"

@@ -164,6 +164,41 @@ class ExecutionRequirementsPayload(StrictModel):
     deadline: str | None = None
 
 
+class ContextItem(StrictModel):
+    item_id: str
+    source_ref: str
+    schema_ref: str
+    data_classification: Literal["public", "personal", "sensitive", "restricted"]
+    provenance: Provenance
+    inline_content: Any | None = None
+    artifact_ref: RecordVersionRef | None = None
+
+
+class CapabilityEnvelopeSnapshot(StrictModel):
+    envelope_ref: StableRecordRef
+    version: int = Field(ge=1)
+    digest: str
+    effective_constraints: dict[str, Any]
+
+
+class ExecutionRequest(StrictModel):
+    """Typed, durable input crossing the Runtime Adapter boundary."""
+
+    execution_request_id: str
+    run_ref: RecordVersionRef
+    attempt_ref: RecordVersionRef
+    binding_ref: RecordVersionRef
+    idempotency_key: str = Field(min_length=1, max_length=255)
+    capability_envelope_snapshot: CapabilityEnvelopeSnapshot
+    input_schema_ref: str
+    typed_input: Any
+    context_items: list[ContextItem] = Field(default_factory=list)
+    artifact_refs: list[RecordVersionRef] = Field(default_factory=list)
+    deadline: str | None = None
+    correlation_id: str
+    submitted_at: str
+
+
 class RunPayload(StrictModel):
     request_ref: RecordVersionRef
     lifecycle: Literal[

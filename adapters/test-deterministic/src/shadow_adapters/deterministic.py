@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from shadow_kernel.models import ExecutionRequest
+from shadow_kernel.runtime import request_text
+
 
 @dataclass(frozen=True, slots=True)
 class ExecutionResult:
@@ -31,7 +34,8 @@ class DeterministicTestAdapter:
             ),
         }
 
-    def execute(self, text: str) -> ExecutionResult:
+    def execute(self, request: ExecutionRequest | str) -> ExecutionResult:
+        text = request_text(request)
         return ExecutionResult(
             text=f"Echo: {text}",
             usage={"input_characters": len(text), "output_characters": len(text) + 6},
