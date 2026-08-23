@@ -20,6 +20,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | Production Auth / Session / Secret boundary | `docs/production-auth-design-gate.md`、ADR-0027 | AuthContext/Verifier、SessionStore、auth OpenAPI、redaction/CSRF tests、`production-auth-status.md` |
 | Production Store / Backup / Portable Sync | `docs/production-store-backup-design-gate.md`、ADR-0028 | Repository profile/configuration、Portable Import/Export、Backup Metadata、restore/outage tests、`production-store-status.md` |
 | Production Voice / Device / Integration | `docs/production-device-integration-design-gate.md`、ADR-0029 | Generic Adapter Port、capability/consent checks、deterministic fixtures、unknown/reconcile tests、`production-device-integration-status.md` |
+| Production Operations / Release | `docs/production-operations-design-gate.md`、ADR-0030 | correlation/redaction middleware、metrics/health、config validation、deployment scripts、release evidence、状态文档 |
 
 ## Vendor isolation rule
 
@@ -107,3 +108,7 @@ Production Voice/Device/Integration Slice 必须先同步 `production-device-int
 ADR-0029、generic Adapter contract、consent/capability fixtures、redaction/unknown tests 和
 状态文档；Vendor SDK 只能出现在具体 `adapters/<vendor>` 中，不能进入 Core、Application、
 OpenAPI 或 Web UI。
+
+Production Operations/Release Slice 必须同步 `production-operations-design-gate.md`、ADR-0030、
+telemetry/config/deployment 工件、redaction/health/metrics 测试和状态文档；不得把用户内容、
+Session token、Secret 或 Provider 私有 payload 写入日志/metrics。

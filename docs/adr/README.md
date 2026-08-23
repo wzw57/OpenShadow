@@ -302,3 +302,10 @@ Backup Metadata 边界；后台同步与真实云备份仍需后续 Adapter 闸�
 > **Replaceable components own intelligence, execution, protocols, and infrastructure.**
 
 > **Users retain portable data and capability assets across component generations.**
+## ADR-0030：Production Operations 与 Release Candidate
+
+- [ADR-0030](0030-production-operations-and-release.md)
+- [Production Operations / Release 设计闸门](../production-operations-design-gate.md)
+
+冻结 correlation、敏感字段 redaction、低基数 metrics、配置快速失败、参考部署和 Release
+Candidate 本地验收，不把监控平台或编排系统引入 Core。
