@@ -72,7 +72,7 @@ python -m uvicorn shadow_server.app:app --host 127.0.0.1 --port 8765 --reload
 Set-ExecutionPolicy -Scope Process Bypass
 ```
 
-## 当前架构
+## 当前已实现架构（代码事实）
 
 OpenShadow 是模块化单体加进程外 Adapter，不是微服务集合。长期用户资产只写入
 Canonical Store；外部智能和 Provider 只能通过通用 Port 返回结果或 Proposal，不能绕过
@@ -110,7 +110,146 @@ HTTP request
 Adapter binding。它不提供任意 prompt 或 shell 执行入口；正在执行的 Run/Attempt 会阻止
 切换，实际工作仍走 Conversation/Admission/Run/Attempt 路径。
 
-## 产品结构
+### 当前代码项目结构
+
+下面这棵树对应当前仓库已经存在的目录和主要职责，不是未来模块的占位图：
+
+```text
+OpenShadow/
+├─ packages/
+│  ├─ shadow-kernel/src/shadow_kernel/       Kernel Port、Envelope、Commit、Admission、CAS
+│  └─ shadow-application/src/shadow_application/
+│                                             Conversation、Profiles、Identity、Supervisor
+├─ adapters/
+│  ├─ store-sqlite/src/shadow_store/         SQLite Canonical Repository
+│  ├─ test-deterministic/src/shadow_adapters/  确定性 Runtime（默认开发基线）
+│  ├─ hermes-agent/src/shadow_hermes/        Hermes HTTP Adapter（独立边界）
+│  └─ codex-agent/src/shadow_codex/          Codex CLI JSONL Adapter（独立边界）
+├─ apps/
+│  ├─ shadow-server/shadow_server/            FastAPI 组合根、OpenAPI、静态 UI 托管
+│  └─ shadow-web/src/                         React/Vite Conversation、Profile、Management UI
+├─ config/runtime-profiles.json              本地 Runtime profile（非敏感配置）
+├─ contracts/                                 OpenAPI、JSON Schema、fixtures、manifest
+├─ migrations/                                Alembic 迁移
+├─ scripts/start-shadow-management.ps1       Windows 启动/管理脚本
+├─ tests/                                     Contract、Service、Repository、API、UI、故障测试
+├─ docs/                                      设计闸门、ADR、架构和交付状态
+├─ pyproject.toml                             Python 包、依赖和测试/lint 配置
+└─ alembic.ini                                SQLite migration 默认配置
+```
+
+### 当前实现的分层图
+
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ Web UI (React/Vite) │ curl/SDK │ FastAPI /docs / OpenAPI            │
+└───────────────────────────────┬────────────────────────────────────┘
+                                │ HTTP
+                                ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ apps/shadow-server: 组合根、身份/Space context、路由、错误映射      │
+└───────────────┬───────────────────────────────┬────────────────────┘
+                │                               │
+                ▼                               ▼
+┌──────────────────────────────┐  ┌─────────────────────────────────┐
+│ Application Services          │  │ RuntimeSupervisor               │
+│ Conversation / Memory /      │  │ profile lifecycle、health、      │
+│ State / Task / Action /      │  │ select；不承载业务数据           │
+│ Identity / Outbox            │  └───────────────┬─────────────────┘
+└───────────────┬──────────────┘                  │ 通用 Adapter Port
+                ▼                                 ▼
+┌──────────────────────────────┐  ┌─────────────────────────────────┐
+│ shadow-kernel                 │  │ Deterministic │ Codex │ Hermes  │
+│ Admission / CommitAuthority  │  │ Adapter       │ CLI   │ HTTP    │
+│ Envelope / CAS / Policy       │  └─────────────────────────────────┘
+└───────────────┬──────────────┘
+                │ Canonical writes / reads
+                ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ adapters/store-sqlite: SQLAlchemy Repository → SQLite               │
+│ canonical_records / idempotency receipts / run_events               │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+当前已经实现的是一套模块化单体：Runtime Adapter 可以是外部进程或 HTTP 服务，但 Kernel、
+Application 和 Web UI 不导入 Hermes/Codex 私有类型，也不直接连接 Model Provider。
+
+## 技术栈
+
+| 层 | 技术 | 当前用途 |
+| --- | --- | --- |
+| 后端语言 | Python `>=3.12` | Kernel、Application、Adapter、FastAPI 组合根 |
+| HTTP/API | FastAPI `>=0.115`、Uvicorn | REST、OpenAPI、健康检查、静态 Web UI |
+| 数据模型 | Pydantic 2、Python typing | 请求校验、Profile payload、Runtime descriptor |
+| 持久化 | SQLAlchemy 2 + SQLite | Canonical version rows、幂等 receipt、Run events |
+| 数据库迁移 | Alembic | `upgrade head` / `downgrade base` |
+| Contract | JSON Schema、`jsonschema`、OpenAPI YAML | Profile、fixtures、错误体和文档同步 |
+| Web UI | React 19、TypeScript 5.7、Vite 6 | Conversation、Memory/State/Task/Action 查询、项目管理 |
+| Python 测试 | pytest、pytest-asyncio、httpx | Contract、Service、Repository、API 和故障路径 |
+| Python 质量 | Ruff | E/F/I/B/UP 规则集和导入排序 |
+| Agent Runtime | Deterministic Adapter、Hermes Adapter、Codex CLI Adapter | 通过 `shadow.agent-runtime` Port 接入，不进入核心 |
+| 外部 Agent/Provider | Hermes API、Codex CLI、可选 Model Provider | 由 Adapter 隔离；不是 OpenShadow 自研组件 |
+
+Node.js/npm 只用于 Web UI 的依赖安装和构建；运行 FastAPI 不需要 Node 进程。默认不需要
+Ollama、本地模型或 GPU。
+
+## 设计总架构（长期目标）
+
+下面是设计层面的完整目标，不等于所有模块都已经实现。`[已实现]` 表示当前代码已有闭环，
+`[Contract]` 表示已有 Schema/ADR/接口边界但不保证完整运行，`[后续]` 表示尚未进入实现。
+
+```text
+                           User-owned Shadow
+┌──────────────────────────────────────────────────────────────────────────┐
+│ User Surfaces                                                             │
+│ [已实现] Web / API / Conversation    [后续] Voice / Device / Connectors  │
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                   │ work-bearing input
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Sovereignty & Continuity Kernel [已实现]                                  │
+│ Identity / Owner / Space · Canonical Envelope · Version/CAS              │
+│ Proposal → Validate → Commit · Admission · Run/Attempt · Erasure Intent │
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                   │ typed Profile records / Proposals
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Official Profiles                                                        │
+│ [已实现] Conversation · Memory · State · Task · Action · Outbox           │
+│ [已实现] SkillAsset · Integration · Pulse · Router/Policy · Erasure meta │
+│ [Contract/延后] Voice · OAuth/OIDC · remote sync · full multi-user        │
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                   │ normalized Port / Adapter boundary
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Replaceable Intelligence & Execution                                     │
+│ [已实现 Adapter] Deterministic · Hermes · Codex CLI                      │
+│ [Contract/延后] Model Worker · Memory Recall/Index · Resolver · Router    │
+│ [后续] Tool/Capability bridge · Provider execution · device/voice runtime │
+└──────────────────────────────────┬───────────────────────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Store / Portability / Reliability                                         │
+│ [已实现] SQLite Canonical Repository · migrations · integrity checks      │
+│ [已实现] export/import contract · tombstone/erase boundary · outbox      │
+│ [后续] remote Store · encrypted device backup · cross-device sync         │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 设计总架构的关键边界
+
+- 外部 Runtime、Model、Memory Engine、Resolver、Router 和 Provider 只能返回结果、
+  Observation 或 Proposal；最终写入始终回到 Shadow 的 Authority/CAS。
+- Web UI 只依赖 vendor-neutral API；Hermes/Codex 名称只出现在 Adapter 和部署 profile。
+- Canonical Store 保存用户长期资产，不保存 Provider Secret、Runtime 私有 Memory、缓存或
+  可重建索引。
+- Phase 0–4 和 Phase 5 Core Slice 已完成当前授权范围；OAuth/OIDC、Voice、远程 Store、
+  跨设备同步和生产级多用户发行仍保持 Contract-only 或后续闸门。
+
+### 设计总架构的产品视图
+
+上面的设计总架构展示责任和数据流；下面补充用户看到的产品与资产分层：
 
 ~~~text
 Shadow
