@@ -23,6 +23,8 @@ from shadow_application import (
     MemoryService,
     OidcAuthVerifier,
     OutboxService,
+    ProposalCommand,
+    ProposalHandlerRegistry,
     RuntimeSupervisor,
     SessionService,
     StateService,
@@ -70,39 +72,6 @@ class MemoryCommand(BaseModel):
     source_dependency: str = "independent"
 
 
-class StateProposalCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    input_type: str = "shadow.state-proposal"
-    proposed_operation: str
-    target_ref: dict[str, Any] | None = None
-    expected_version: int | None = Field(default=None, ge=1)
-    state_key: str
-    value_schema_ref: str
-    proposed_value: Any = None
-    evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
-    source_refs: list[str] = Field(default_factory=list)
-    observed_at: str
-    expires_at: str
-    source_status: str = "available"
-    proposal_reason: str | None = None
-
-
-class TaskProposalCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    input_type: str = "shadow.durable-task-proposal"
-    proposed_operation: str
-    target_ref: dict[str, Any] | None = None
-    expected_version: int | None = Field(default=None, ge=1)
-    task_key: str
-    goal: str
-    completion_criteria: Any
-    waiting_condition: Any | None = None
-    deadline: str | None = None
-    result_ref: dict[str, Any] | None = None
-    failure_summary: Any | None = None
-    proposal_reason: str | None = None
-
-
 class CheckpointCommand(BaseModel):
     model_config = ConfigDict(extra="forbid")
     checkpoint_kind: str
@@ -116,34 +85,6 @@ class CheckpointCommand(BaseModel):
 class CompletionCommand(BaseModel):
     model_config = ConfigDict(extra="forbid")
     result_ref: dict[str, Any] | None = None
-
-
-class ActionProposalCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    input_type: str = "shadow.action-proposal"
-    proposed_operation: str = "create"
-    action_kind: str
-    target_ref: dict[str, Any]
-    typed_parameters: dict[str, Any]
-    data_classification: str
-    side_effect_level: str
-    required_capabilities: list[str] = Field(default_factory=list)
-    deadline: str
-    secret_refs: list[str] = Field(default_factory=list)
-    provider_target_kind: str | None = None
-    proposal_reason: str | None = None
-
-
-class ActionApprovalProposalCommand(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    input_type: str = "shadow.action-approval-proposal"
-    proposed_operation: str
-    action_ref: dict[str, Any]
-    expected_version: int = Field(ge=1)
-    approver_ref: str
-    decision: str
-    evidence_refs: list[dict[str, Any]] = Field(default_factory=list)
-    proposal_reason: str | None = None
 
 
 class EndpointPairCommand(BaseModel):
@@ -304,6 +245,11 @@ def create_app(
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
     actions = ActionService(repository, authority, registry)
+    proposal_handlers = ProposalHandlerRegistry.from_services(
+        states=states,
+        tasks=tasks,
+        actions=actions,
+    )
     identity = IdentityService(repository, authority, registry)
     outbox = OutboxService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
@@ -314,6 +260,7 @@ def create_app(
     app.state.tasks = tasks
     app.state.admission = admission
     app.state.actions = actions
+    app.state.proposal_handlers = proposal_handlers
     app.state.identity = identity
     app.state.outbox = outbox
     app.state.auth_mode = auth_mode
@@ -812,87 +759,18 @@ def create_app(
 
     @app.post("/v1/proposals", status_code=status.HTTP_202_ACCEPTED)
     async def submit_proposal(
-        command: StateProposalCommand | TaskProposalCommand | ActionProposalCommand | ActionApprovalProposalCommand,
+        command: ProposalCommand,
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
     ) -> dict[str, Any]:
         _context(x_principal_ref, x_space_id, write=True)
-        if isinstance(command, TaskProposalCommand):
-            target_task_id = command.target_ref.get("record_id") if command.target_ref else None
-            candidate = tasks.propose(
-                submitted_by=x_principal_ref,
-                owner_ref=x_principal_ref,
-                space_id=x_space_id,
-                operation=command.proposed_operation,
-                task_key=command.task_key,
-                goal=command.goal,
-                completion_criteria=command.completion_criteria,
-                target_task_id=target_task_id,
-                expected_version=command.expected_version,
-                waiting_condition=command.waiting_condition,
-                deadline=command.deadline,
-                result_ref=command.result_ref,
-                failure_summary=command.failure_summary,
-                proposal_reason=command.proposal_reason,
-            )
-            return {"record": tasks.submit_proposal(candidate, idempotency_key=idempotency_key)}
-        if isinstance(command, ActionProposalCommand):
-            candidate = actions.propose_action(
-                submitted_by=x_principal_ref,
-                owner_ref=x_principal_ref,
-                space_id=x_space_id,
-                action_kind=command.action_kind,
-                target_ref=command.target_ref,
-                typed_parameters=command.typed_parameters,
-                data_classification=command.data_classification,
-                side_effect_level=command.side_effect_level,
-                required_capabilities=command.required_capabilities,
-                deadline=command.deadline,
-                secret_refs=command.secret_refs,
-                provider_target_kind=command.provider_target_kind,
-                proposal_reason=command.proposal_reason,
-            )
-            return {"record": actions.submit_proposal(candidate, idempotency_key=idempotency_key)}
-        if isinstance(command, ActionApprovalProposalCommand):
-            action_id = command.action_ref.get("record_id")
-            if not action_id:
-                raise HTTPException(422, detail="Action approval requires action_ref.record_id")
-            candidate = actions.propose_approval(
-                submitted_by=x_principal_ref,
-                owner_ref=x_principal_ref,
-                space_id=x_space_id,
-                action_id=action_id,
-                expected_version=command.expected_version,
-                approver_ref=command.approver_ref,
-                decision=command.decision,
-                evidence_refs=command.evidence_refs,
-                proposal_reason=command.proposal_reason,
-            )
-            return {"record": actions.submit_proposal(candidate, idempotency_key=idempotency_key)}
-        if command.input_type != "shadow.state-proposal":
-            raise HTTPException(422, detail="Unsupported Proposal type")
-        target_state_id = None
-        if command.target_ref is not None:
-            target_state_id = command.target_ref.get("record_id")
-        candidate = states.propose(
-            submitted_by=x_principal_ref,
-            owner_ref=x_principal_ref,
+        return proposal_handlers.submit(
+            command,
+            principal_ref=x_principal_ref,
             space_id=x_space_id,
-            operation=command.proposed_operation,
-            state_key=command.state_key,
-            value_schema_ref=command.value_schema_ref,
-            proposed_value=command.proposed_value,
-            evidence_refs=command.evidence_refs,
-            source_refs=command.source_refs,
-            observed_at=command.observed_at,
-            expires_at=command.expires_at,
-            source_status=command.source_status,
-            target_state_id=target_state_id,
-            expected_version=command.expected_version,
-            proposal_reason=command.proposal_reason,
+            idempotency_key=idempotency_key,
         )
-        return {"record": states.submit_proposal(candidate, idempotency_key=idempotency_key)}
 
     @app.get("/v1/proposals/{proposal_id}")
     async def get_proposal(proposal_id: str) -> dict[str, Any]:
@@ -914,25 +792,10 @@ def create_app(
             raise HTTPException(404, detail="Proposal not found")
         _context(x_principal_ref, x_space_id, write=True)
         proposal_type = proposal.get("typed_payload", {}).get("proposal_type")
-        if proposal_type == "shadow.durable-task-proposal":
-            return tasks.accept_proposal(
-                proposal_id=proposal_id,
-                proposal_expected_version=expected_version,
-                principal_ref=x_principal_ref,
-                space_id=x_space_id,
-                idempotency_key=idempotency_key,
-            )
-        if proposal_type in {"shadow.action-proposal", "shadow.action-approval-proposal"}:
-            return actions.accept_proposal(
-                proposal_id=proposal_id,
-                proposal_expected_version=expected_version,
-                principal_ref=x_principal_ref,
-                space_id=x_space_id,
-                idempotency_key=idempotency_key,
-            )
-        return states.accept_proposal(
+        return proposal_handlers.accept(
+            proposal_type,
             proposal_id=proposal_id,
-            proposal_expected_version=expected_version,
+            expected_version=expected_version,
             principal_ref=x_principal_ref,
             space_id=x_space_id,
             idempotency_key=idempotency_key,

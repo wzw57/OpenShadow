@@ -116,10 +116,6 @@ def test_example_runtime_is_discoverable_without_core_changes() -> None:
     assert "register_extension" in source
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="R4 migration gate: generic proposal dispatch is still Profile-specific in v0.1",
-)
 def test_generic_proposal_dispatch_has_no_builtin_branches() -> None:
     source = (ROOT / "apps/shadow-server/shadow_server/app.py").read_text(encoding="utf-8")
     assert "StateProposalCommand" not in source

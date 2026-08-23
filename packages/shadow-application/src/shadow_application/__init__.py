@@ -42,6 +42,14 @@ from .index import (
     MemoryIndexRebuildResult,
     MemoryIndexRebuildService,
 )
+from .inputs import (
+    ActionApprovalProposalCommand,
+    ActionProposalCommand,
+    ProposalCommand,
+    ProposalHandlerRegistry,
+    StateProposalCommand,
+    TaskProposalCommand,
+)
 from .integration import (
     IntegrationRegistrationRequest,
     IntegrationRegistrationResult,
@@ -100,6 +108,12 @@ from .task import TaskProposalCandidate, TaskService
 
 __all__ = [
     "ConversationService",
+    "ProposalCommand",
+    "ProposalHandlerRegistry",
+    "StateProposalCommand",
+    "TaskProposalCommand",
+    "ActionProposalCommand",
+    "ActionApprovalProposalCommand",
     "ExecutionCoordinator",
     "ActionProposalCandidate",
     "ActionProvider",

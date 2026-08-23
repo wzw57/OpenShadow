@@ -7,7 +7,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 
 | 事实 | 权威来源 | 必须同步的证据 |
 | --- | --- | --- |
-| v0.2 extensibility refactor boundary | `docs/v02-refactor-audit-and-plan.md`、`docs/v02-r0-status.md`、`docs/v02-r1-status.md`、`docs/v02-r2-status.md`、`docs/v02-r3-status.md` | R0/R1/R2/R3 architecture tests、Extension fixtures、每阶段状态文档和迁移 PR evidence |
+| v0.2 extensibility refactor boundary | `docs/v02-refactor-audit-and-plan.md`、`docs/v02-r0-status.md`、`docs/v02-r1-status.md`、`docs/v02-r2-status.md`、`docs/v02-r3-status.md`、`docs/v02-r4-status.md` | R0/R1/R2/R3/R4 architecture tests、Extension fixtures、每阶段状态文档和迁移 PR evidence |
 | Public route、method、status、headers | `contracts/openapi/openapi.yaml` | FastAPI route、API tests、对应状态文档 |
 | Canonical version / lifecycle semantics | Accepted ADR、design gate、JSON Schema | Service implementation、contract fixtures、lifecycle tests |
 | 当前交付状态 | `docs/phase*-status.md`、`docs/roadmap.md` | PR description、CI evidence；不得保留已合并分支作为当前状态 |
