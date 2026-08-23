@@ -2,6 +2,8 @@
 
 状态：**已实现 / 本地控制切片完成**
 
+更新时间：2026-08-23
+
 ## 已实现
 
 - Runtime profile JSON 与 schema 校验边界；
@@ -12,6 +14,10 @@
 - Codex CLI Adapter，通过 `codex exec --json` JSONL 进程边界调用；
 - 项目管理 Web UI 页面；
 - Windows `scripts/start-shadow-management.ps1` 启动脚本。
+
+默认 `active_runtime_id` 是 `deterministic`；Codex profile 已启用但按需启动，Hermes
+profile 默认关闭。配置文件只保存可校验的 profile、Adapter factory 和非敏感进程边界，
+不保存 API key、Secret 原文或 Provider 私有状态。
 
 ## 使用边界
 
@@ -37,6 +43,15 @@ Hermes 的 `launch.command` 必须按实际安装方式填写在 profile 中；�
 Runtime 切换只改变后续 Conversation 的 Adapter binding；正在执行的 Run 会阻止切换。
 Runtime Management API 不提供任意 prompt 执行入口，真实工作仍经过 Conversation、Admission、
 Run/Attempt 和现有 Commit 路径。
+
+## 最近验收
+
+- `pytest -q`：247 passed；
+- 规定范围 Ruff：通过；
+- 隔离 SQLite Alembic `upgrade head` / `downgrade base`：通过；
+- `apps/shadow-web` `npm run build`：通过；
+- Chromium 管理页 smoke：能够打开管理页并启停 Deterministic Runtime；
+- 已安装 Codex CLI 的 executable health probe：healthy；未在本机发起真实模型请求。
 
 ## 尚未实现
 

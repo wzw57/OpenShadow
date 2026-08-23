@@ -32,4 +32,5 @@
 - Integration / Secret / MCP / Executable 绑定和完整多用户 ACL；
 - 新增 Skill HTTP API 或独立 Skill Store。
 
-下一步必须先通过 Integration 设计闸门；未获接受前继续只维护文档。
+Integration、Portable Import/restore 和 Physical erase 后续切片已分别通过设计闸门并合并；
+SkillAsset 仍不提供公开 HTTP API 或执行权限。

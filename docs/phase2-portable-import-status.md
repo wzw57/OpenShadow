@@ -31,4 +31,5 @@
 - 公开 Import API、Provider/Secret 读取、自动 OAuth、Physical erase/Erasure Adapter；
 - 自动历史选择、细粒度 ACL 和大包分片恢复。
 
-下一步必须先通过 Physical erase/Tombstone 设计闸门；未获接受前继续只维护文档。
+Physical erase/Tombstone 后续切片已通过设计闸门并合并；Portable Import 仍保持同步、
+all-or-nothing 和不恢复 erased 原文的边界。

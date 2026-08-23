@@ -1,6 +1,6 @@
 # Runtime 集成状态
 
-更新时间：2026-08-22
+更新时间：2026-08-23
 
 ## 当前事实
 
@@ -16,21 +16,25 @@
 | Hermes Tool/Capability 映射 | 尚未实现；联调配置全部关闭工具 |
 | 单用户 Web UI Conversation Client | 已实现；通过 `/ui/` 使用 Shadow API |
 | Runtime Supervisor / Management UI | 已实现；本地 profile、受控 lifecycle 和切换 |
-| Codex CLI Runtime Adapter | 已实现；`codex exec --json` 进程边界，默认 profile 禁用 |
+| Codex CLI Runtime Adapter | 已实现；`codex exec --json` 进程边界，profile 默认启用但需本机 CLI/Provider |
 
 ## 当前边界
 
-现有 ConversationService 默认仍使用 Deterministic Test Adapter。部署通过
-`SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入具体 Adapter；当前参考配置将
-工厂指向独立 Hermes Adapter，调用 Hermes API Server；Hermes 再通过 DeepSeek
-OpenAI-compatible API 使用 `deepseek-v4-flash`。Shadow 不直接调用 DeepSeek，也不把
-Hermes 私有 Session 或 Memory 写入 Canonical Repository。Server 只解析通用工厂引用，
-不导入或判断 Hermes。
+默认配置的 active runtime 是 Deterministic Adapter；Codex CLI profile 已启用但不会自动
+启动，Hermes profile 默认关闭。部署可通过 `config/runtime-profiles.json`（或
+`SHADOW_RUNTIME_PROFILE_PATH`）管理多个本地 Runtime，亦可继续使用
+`SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入单个通用 Adapter。Runtime
+Supervisor 只依赖通用 `shadow.agent-runtime` Port，不把 Hermes/Codex 私有对象或 Provider
+凭据写入 Canonical Repository。
 
 Runtime Management 现在也可从 `config/runtime-profiles.json` 读取多个本地 Adapter profile，
 通过 `/v1/runtime/instances/*` 受控启动、健康检查和选择。管理控制面不会执行任意 prompt；
 后续工作仍经过 Conversation/Admission。Codex profile 只调用已安装的 `codex` CLI，解析
 `codex exec --json` JSONL，不导入 Codex 内部对象。
+
+如需复现 Hermes + DeepSeek 联调，必须显式启用 Hermes profile、填写本机 Hermes 的
+`launch.command`/health 配置，并在 Hermes 进程侧配置 `deepseek-v4-flash`；这是一条可选
+的 Adapter 部署路径，不是 Shadow 对 DeepSeek 的直连。
 
 已完成的真实联调：
 

@@ -34,7 +34,7 @@
 - 全量 `pytest`、Ruff 和隔离 SQLite migration upgrade/downgrade。
 
 后续 source-dependent invalidation、SkillAsset、Integration、Portable Import/restore 和
-Physical erase 仍须分别经过设计闸门。
+Physical erase 已分别通过设计闸门并合并实现；各切片仍保持独立的生命周期边界。
 
 下一切片设计闸门：[Source-dependent Memory Invalidation](phase2-source-invalidation-design-gate.md)，
 第四切片状态：[Source Invalidation](phase2-source-invalidation-status.md) 已实现。

@@ -126,37 +126,33 @@ flowchart TB
 
 ### 3.1 当前可运行参考部署
 
-当前仓库的可运行参考路径是文本 Conversation：默认使用确定性 Adapter；部署通过
-通用 `SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入具体的
-`shadow.agent-runtime` Adapter。当前参考部署将该工厂指向 Hermes 适配器，连接本地
-Hermes API Server，再由 Hermes 使用已配置的在线模型提供者。当前联调使用 DeepSeek
-`deepseek-v4-flash`，不建立 Shadow 到 DeepSeek 的直连，也不把 Hermes 的内部 Agent
-Loop、Session 或 Memory 写入 Shadow Store。
+当前仓库的可运行参考路径是文本 Conversation：默认 profile 使用确定性 Adapter，
+Runtime Supervisor 也可以从 `config/runtime-profiles.json` 受控管理 Codex CLI 和 Hermes
+等外部 Adapter。单个进程部署仍可通过通用
+`SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入
+`shadow.agent-runtime` Adapter。Shadow 不直接连接模型 Provider，也不把任何外部 Runtime
+的内部 Agent Loop、Session 或 Memory 写入 Shadow Store。
 
 ```text
-HTTP Client / curl
-        │ REST
-        ▼
-FastAPI Shadow Server
-        │
-        ▼
-ConversationService / Application Services
-        ├──────────────► Admission + CommitAuthority ───► SQLite Canonical Store
-        │                         ▲
-        │                         │ Run / Attempt / Message / Event
-        ▼                         │
-External Agent Runtime Adapter ─────┘
-        │ HTTP (OpenAI-compatible)
-        ▼
-Hermes API Server
-        │ Agent Loop / Session / Planner（外部拥有）
-        ▼
-DeepSeek API（deepseek-v4-flash）
+浏览器 / CLI
+    │ REST
+    ▼
+FastAPI Shadow Server ───────────────► RuntimeSupervisor（本地控制面）
+    │                                      │ profile lifecycle / select / health
+    ▼                                      ▼
+ConversationService / Application ──► 通用 RuntimeAdapter Port
+    │                                      ├─ Deterministic Adapter
+    │                                      ├─ Codex CLI Adapter ──► codex exec --json
+    │                                      └─ Hermes Adapter ─────► Hermes API Server
+    │                                      │                         │
+    └─ Admission + CommitAuthority ──► SQLite Canonical Store       └─► 外部 Model Provider
+       Run / Attempt / Message / Event
 ```
 
-首版单用户 Web UI 已实现并由 FastAPI 在 `/ui/` 提供；Hermes 联调 profile 的工具集
-全部关闭。细粒度 SSE、Session resume 和经过 Shadow Capability/Action 治理的工具
-桥接属于后续切片。
+首版单用户 Web UI 已实现并由 FastAPI 在 `/ui/` 提供，项目管理页可查看并切换
+Runtime profile。实际工作仍必须经过 Conversation、Admission、Run/Attempt 和 Commit；
+管理控制面没有任意 prompt 执行入口。Hermes 联调 profile 的工具集全部关闭，细粒度 SSE、
+Session resume 和经过 Shadow Capability/Action 治理的工具桥接属于后续切片。
 
 ## 4. Canonical Record 与 Profile
 

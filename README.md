@@ -186,7 +186,10 @@ OpenShadow 自行实现的范围收紧为：
 - [架构决策记录](docs/adr/README.md)
 - [Web UI 设计闸门](docs/web-ui-design-gate.md)
 - [Web UI 实现状态](docs/web-ui-status.md)
+- [Runtime 集成状态](docs/runtime-integration-status.md)
+- [Runtime Management 实现状态](docs/runtime-management-status.md)
+- [Phase 5 Core Slice 状态](docs/phase5-status.md)
 
 ## 当前状态
 
-Stage 0–3 已形成需求、责任、用例和领域基线，Stage 4 的 Action 等能力也已按切片完成设计与实现。当前仓库已具备 Phase 0–4 的核心基线，以及可选的外部 Agent Runtime Adapter：默认运行确定性 Adapter；部署通过通用 `SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>` 注入具体适配器，当前参考配置使用 Hermes 适配器通过在线 DeepSeek `deepseek-v4-flash` 完成文本对话。FastAPI、Application、Kernel 和 Web UI 不包含任何厂商分支。首版 Web UI 已完成，可通过 FastAPI `/ui/` 使用；Shadow 没有自研 Agent Loop，也不直接连接模型 Provider。细粒度 Runtime SSE/Session resume 和受治理的工具桥接仍未完成。
+Stage 0–3 已形成需求、责任、用例和领域基线，Stage 4 的 Action 等能力也已按切片完成设计与实现。当前仓库已具备 Phase 0–4 的核心基线和 Phase 5 Core Slice，以及可选的外部 Agent Runtime Adapter：默认配置使用确定性 Adapter，Codex CLI profile 可由项目管理页启停和切换，Hermes profile 默认关闭并需按本机部署配置启用。FastAPI、Application、Kernel 和 Web UI 不包含任何厂商分支。首版 Web UI 已完成，可通过 FastAPI `/ui/` 使用；Shadow 没有自研 Agent Loop，也不直接连接模型 Provider。Hermes + DeepSeek `deepseek-v4-flash` 仍是已验证的可选联调路径；细粒度 Runtime SSE/Session resume 和受治理的工具桥接仍未完成。

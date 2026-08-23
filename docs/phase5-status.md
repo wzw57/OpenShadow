@@ -2,6 +2,8 @@
 
 状态：**已实现 / Core Slice 已完成**
 
+更新时间：2026-08-23
+
 ## 本切片
 
 - Endpoint pairing / revoke；
@@ -18,7 +20,7 @@
 - Endpoint pair/revoke、Space 创建/查询、邀请接受/撤销、owner/editor/viewer ACL 和
   local-dev compatibility 有 API 测试；
 - Web UI 已提供 Space/Endpoint context、pair、Space 创建、邀请、接受和成员撤销入口；
-- `pytest -q`：241 passed；Ruff、OpenAPI YAML、offline fixtures、Alembic upgrade/downgrade
+- `pytest -q`：247 passed；Ruff、OpenAPI YAML、offline fixtures、Alembic upgrade/downgrade
   和 Chromium smoke 均通过。
 
 ## 仅 Contract-only
