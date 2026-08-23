@@ -275,6 +275,14 @@ ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 
     [ADR-0027](0027-production-auth-and-security.md) 和
     [Production Auth 设计闸门](../production-auth-design-gate.md)。
 
+## ADR-0028：Production Store、Backup 与 Portable Sync
+
+- [ADR-0028](0028-production-store-backup-and-sync.md)
+- [Production Store / Backup / Sync 设计闸门](../production-store-backup-design-gate.md)
+
+冻结 SQLite local-dev、PostgreSQL production profile、Portable restore all-or-nothing 和
+Backup Metadata 边界；后台同步与真实云备份仍需后续 Adapter 闸门。
+
 ## 核心原则
 
 > **External intelligence proposes; Shadow authority commits.**
