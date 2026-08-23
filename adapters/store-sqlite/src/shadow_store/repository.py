@@ -9,6 +9,7 @@ from shadow_kernel.errors import RepositoryUnavailable, ShadowError
 from shadow_kernel.ids import new_id, sha256_digest, utc_timestamp
 from shadow_kernel.models import CanonicalEnvelope, CommitBatchResult, CommitPlan, OperationResult
 from sqlalchemy import DateTime, Integer, String, Text, create_engine, delete, event, func, select
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -433,3 +434,23 @@ class SqliteCanonicalRepository:
             }
             for row in rows
         ]
+
+
+class PostgresCanonicalRepository(SqliteCanonicalRepository):
+    """Production SQL profile sharing the Canonical/CAS implementation."""
+
+    def __init__(self, database_url: str) -> None:
+        if make_url(database_url).get_backend_name() != "postgresql":
+            raise ValueError("PostgresCanonicalRepository requires a postgresql:// database URL")
+        super().__init__(database_url)
+
+
+def create_canonical_repository(database_url: str | Path) -> SqliteCanonicalRepository:
+    """Create a supported Store profile without silently falling back across backends."""
+    url = f"sqlite:///{database_url.resolve().as_posix()}" if isinstance(database_url, Path) else database_url
+    backend = make_url(url).get_backend_name()
+    if backend == "sqlite":
+        return SqliteCanonicalRepository(url)
+    if backend == "postgresql":
+        return PostgresCanonicalRepository(url)
+    raise ValueError(f"Unsupported SHADOW_DATABASE_URL backend: {backend}")

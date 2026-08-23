@@ -1,0 +1,9 @@
+{
+  "runtime_id": "unsafe",
+  "display_name": "Unsafe",
+  "adapter_factory": "shadow_adapters:create_runtime_adapter",
+  "target_kind": "shadow.deterministic-runner",
+  "enabled": true,
+  "auto_start": false,
+  "launch": {"command": ["cmd", "/c", "echo unsafe"], "shell": true}
+}

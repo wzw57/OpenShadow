@@ -12,6 +12,24 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | 当前交付状态 | `docs/phase*-status.md`、`docs/roadmap.md` | PR description、CI evidence；不得保留已合并分支作为当前状态 |
 | Fixture coverage | JSON Schema 与 fixture map | `tests/test_declared_contract_fixtures.py`、对应 Contract test |
 | 未授权范围 | Accepted design gate / ADR | 状态文档和 PR body；未获闸门不得实现 |
+| Web UI 参考客户端范围 | `docs/web-ui-design-gate.md`、ADR-0022 | `apps/shadow-web`、`/ui` 静态托管、Web UI 状态文档和浏览器验收 |
+| Runtime Reliability / durable dispatch | `docs/runtime-reliability-design-gate.md`、ADR-0023 | Run/Attempt Service、Hermes Adapter、OpenAPI/错误体、恢复测试和 runtime 状态文档 |
+| Phase 5 identity / endpoint / Space ACL | `docs/phase5-design-gate.md`、ADR-0024 | Identity Schema、fixtures、FastAPI routes、ACL tests、Web context 和 `phase5-status.md` |
+| Runtime Management / Hermes launcher / Codex Adapter | `docs/runtime-management-design-gate.md`、ADR-0025、`docs/runtime-management-status.md` | Runtime profile schema、Supervisor/API、Adapter tests、Management UI、启动脚本和 runtime 状态文档 |
+| Production Readiness / Release boundary | `docs/production-readiness-design-gate.md`、ADR-0026 | Auth/Secret/Store/Runtime/Backup/Operations slices、状态文档、release/restore/security evidence |
+| Production Auth / Session / Secret boundary | `docs/production-auth-design-gate.md`、ADR-0027 | AuthContext/Verifier、SessionStore、auth OpenAPI、redaction/CSRF tests、`production-auth-status.md` |
+| Production Store / Backup / Portable Sync | `docs/production-store-backup-design-gate.md`、ADR-0028 | Repository profile/configuration、Portable Import/Export、Backup Metadata、restore/outage tests、`production-store-status.md` |
+| Production Voice / Device / Integration | `docs/production-device-integration-design-gate.md`、ADR-0029 | Generic Adapter Port、capability/consent checks、deterministic fixtures、unknown/reconcile tests、`production-device-integration-status.md` |
+| Production Operations / Release | `docs/production-operations-design-gate.md`、ADR-0030 | correlation/redaction middleware、metrics/health、config validation、deployment scripts、release evidence、`production-operations-status.md` |
+
+## Vendor isolation rule
+
+除具体 `adapters/<vendor>` 实现、该模块测试和部署配置值外，任何源代码层不得耦合
+Vendor/Runtime 名称或私有语义。Server 组合根只能解析通用
+`SHADOW_RUNTIME_ADAPTER_FACTORY=<module>:<factory>`，不得导入或判断 Vendor。新增
+Vendor 时必须通过 Vendor-neutral Adapter Contract；不得在 Kernel、Application、
+Profile/Schema、OpenAPI、Reliability 或 Web UI 增加 Vendor 分支。Documentation Sync
+检查必须包含公共源代码扫描证据，防止新的 Vendor 条件泄漏到公共层。
 
 ## Change protocol
 
@@ -67,3 +85,30 @@ Phase 4 Erasure/Backup 必须同步 `phase4-erasure-backup-design-gate.md`、ADR
 ErasureRequest/BackupMetadata fixtures 和 `phase4-erasure-backup-status.md`。设计接受前禁止实现
 跨组件 Erasure、Backup Service、真实 Adapter、密钥/备份内容或公开路由；未确认组件不得报告
 completed。
+
+Phase 5 Core Slice 必须同步 `phase5-design-gate.md`、ADR-0024、Identity Schema、Endpoint/Space/
+Membership/Invitation fixtures、OpenAPI、ACL service surface、Web context 和 `phase5-status.md`。
+真实 OAuth/OIDC、Voice、远程 Store 与设备同步必须另建 Adapter 闸门，不能以本地 membership
+实现替代。
+
+Production Readiness 必须先同步 `production-readiness-design-gate.md`、ADR-0026 和对应 Slice
+状态文档；认证、Secret、远程 Store、Runtime reliability、Voice/Device 和发布运维不得在
+总体闸门接受前直接进入业务代码。每个 Slice PR 必须附 migration/restore、故障、安全和
+documentation-drift 证据。
+
+Production Auth Slice 必须同步 `production-auth-design-gate.md`、ADR-0027、AuthContext/Verifier
+contract、Session/Secret fixtures、OpenAPI、FastAPI context wiring、redaction/CSRF/revoke/restart
+测试和安全状态文档；真实 OIDC Vendor 只能在独立 Adapter 中出现。
+
+Production Store/Backup Slice 必须先同步 `production-store-backup-design-gate.md`、ADR-0028、
+Repository profile/configuration、Portable restore/backup fixtures、outage/restore tests 和
+状态文档；未完成设计接受前禁止添加 PostgreSQL/云备份业务代码。
+
+Production Voice/Device/Integration Slice 必须先同步 `production-device-integration-design-gate.md`、
+ADR-0029、generic Adapter contract、consent/capability fixtures、redaction/unknown tests 和
+状态文档；Vendor SDK 只能出现在具体 `adapters/<vendor>` 中，不能进入 Core、Application、
+OpenAPI 或 Web UI。
+
+Production Operations/Release Slice 必须同步 `production-operations-design-gate.md`、ADR-0030、
+telemetry/config/deployment 工件、redaction/health/metrics 测试和状态文档；不得把用户内容、
+Session token、Secret 或 Provider 私有 payload 写入日志/metrics。

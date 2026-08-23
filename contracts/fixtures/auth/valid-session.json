@@ -1,0 +1,12 @@
+{
+  "session_ref": "auth-session-0123456789abcdef0123456789abcdef",
+  "principal_ref": "principal-0123456789abcdef0123456789abcdef",
+  "issuer": "https://issuer.example.test",
+  "audience": "openshadow",
+  "token_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "claims_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "issued_at": "2026-08-23T00:00:00Z",
+  "expires_at": "2026-08-23T01:00:00Z",
+  "lifecycle": "active",
+  "auth_method": "oidc"
+}

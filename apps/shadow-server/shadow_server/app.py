@@ -1,18 +1,32 @@
 from __future__ import annotations
 
+import importlib
 import json
+import logging
+import os
+import time
+import uuid
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from shadow_application import (
     ActionService,
+    AuthContext,
     ConversationService,
+    DeterministicAuthVerifier,
+    EnvironmentSecretResolver,
+    IdentityService,
     MemoryService,
+    OidcAuthVerifier,
     OutboxService,
+    RuntimeSupervisor,
+    SessionService,
     StateService,
+    StaticSecretResolver,
     TaskService,
 )
 from shadow_kernel.admission import AdmissionService
@@ -21,7 +35,8 @@ from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest
 from shadow_kernel.registry import ContractRegistry
 from shadow_kernel.repository import CanonicalRepository
-from shadow_store import SqliteCanonicalRepository
+from shadow_kernel.runtime import RuntimeAdapter
+from shadow_store import create_canonical_repository
 
 
 class CreateConversationCommand(BaseModel):
@@ -131,6 +146,40 @@ class ActionApprovalProposalCommand(BaseModel):
     proposal_reason: str | None = None
 
 
+class EndpointPairCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    endpoint_ref: str = Field(min_length=1, max_length=255)
+    endpoint_kind: str = Field(default="shadow.endpoint.web", min_length=1, max_length=255)
+    label: str | None = Field(default=None, max_length=200)
+    capabilities: list[str] = Field(default_factory=list, max_length=100)
+
+
+class SpaceCreateCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    space_id: str = Field(min_length=1, max_length=255)
+    display_name: str = Field(min_length=1, max_length=200)
+
+
+class InvitationCreateCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    invitee_ref: str = Field(min_length=1, max_length=255)
+    role: str = Field(pattern="^(editor|viewer)$")
+    expires_at: str
+
+
+class InvitationAcceptCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    invitation_token: str = Field(min_length=1, max_length=255)
+
+
+class AuthSessionCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    credential: str = Field(min_length=1, max_length=20_000)
+    endpoint_ref: str | None = Field(default=None, max_length=255)
+    ttl_seconds: int = Field(default=3600, ge=60, le=86_400)
+    use_cookie: bool = True
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
@@ -149,6 +198,15 @@ def _error_response(error: ShadowDomainError) -> JSONResponse:
         "unauthorized": 403,
         "incompatible": 409,
     }.get(code, 500)
+    if error.error.code in {
+        "shadow.auth.unauthenticated",
+        "shadow.auth.invalid-credential",
+        "shadow.auth.session-expired",
+        "shadow.auth.session-revoked",
+    }:
+        status_code = 401
+    elif error.error.code in {"shadow.auth.context-mismatch", "shadow.auth.csrf-failed"}:
+        status_code = 403
     return JSONResponse(
         status_code=status_code,
         content=error.error.as_dict(),
@@ -156,21 +214,97 @@ def _error_response(error: ShadowDomainError) -> JSONResponse:
     )
 
 
-def create_app(database_url: str | None = None) -> FastAPI:
+def _runtime_from_environment() -> RuntimeAdapter | None:
+    factory_ref = os.getenv("SHADOW_RUNTIME_ADAPTER_FACTORY", "").strip()
+    runtime_kind = os.getenv("SHADOW_RUNTIME_KIND", "deterministic").strip().lower()
+    if not factory_ref and runtime_kind == "deterministic":
+        return None
+    if not factory_ref:
+        raise ValueError(
+            "SHADOW_RUNTIME_ADAPTER_FACTORY is required for a non-deterministic runtime"
+        )
+    if ":" not in factory_ref:
+        raise ValueError(
+            "SHADOW_RUNTIME_ADAPTER_FACTORY must use '<module>:<factory>' format"
+        )
+    module_name, factory_name = factory_ref.split(":", 1)
+    if not module_name or not factory_name:
+        raise ValueError(
+            "SHADOW_RUNTIME_ADAPTER_FACTORY must use '<module>:<factory>' format"
+        )
+    factory: Any = importlib.import_module(module_name)
+    for attribute in factory_name.split("."):
+        factory = getattr(factory, attribute, None)
+        if factory is None:
+            raise ValueError(f"Runtime adapter factory not found: {factory_ref}")
+    if not callable(factory):
+        raise ValueError(f"Runtime adapter factory is not callable: {factory_ref}")
+    adapter = factory()
+    required_methods = ("describe", "execute", "events")
+    if not all(callable(getattr(adapter, method, None)) for method in required_methods):
+        raise ValueError(
+            "Runtime adapter factory must return an object implementing the RuntimeAdapter port"
+        )
+    return adapter
+
+
+def create_app(
+    database_url: str | None = None, runtime_adapter: RuntimeAdapter | None = None
+) -> FastAPI:
     root = _repo_root()
     registry = ContractRegistry(root)
     if database_url is None:
-        database_path = root / ".shadow" / "shadow.db"
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-        database_url = f"sqlite:///{database_path.as_posix()}"
-    repository = SqliteCanonicalRepository(database_url)
+        configured_url = os.getenv("SHADOW_DATABASE_URL", "").strip()
+        if configured_url:
+            database_url = configured_url
+        else:
+            database_path = root / ".shadow" / "shadow.db"
+            database_path.parent.mkdir(parents=True, exist_ok=True)
+            database_url = f"sqlite:///{database_path.as_posix()}"
+    repository = create_canonical_repository(database_url)
     authority = CommitAuthority(repository, registry)
     admission = AdmissionService(repository, authority)
-    conversations = ConversationService(repository, authority)
+    auth_mode = os.getenv("SHADOW_AUTH_MODE", "local-dev").strip().lower()
+    if auth_mode not in {"local-dev", "oidc", "signed-session"}:
+        raise ValueError("SHADOW_AUTH_MODE must be local-dev, oidc or signed-session")
+    if auth_mode == "local-dev" and not os.getenv("SHADOW_AUTH_SESSION_SECRET"):
+        secret_resolver = StaticSecretResolver(f"local-dev:{root.resolve()}")
+        secret_ref = "memory:local-dev"
+    else:
+        secret_resolver = EnvironmentSecretResolver()
+        secret_ref = "env:SHADOW_AUTH_SESSION_SECRET"
+        if not os.getenv("SHADOW_AUTH_SESSION_SECRET"):
+            raise ValueError("SHADOW_AUTH_SESSION_SECRET is required outside local-dev auth mode")
+    if auth_mode == "oidc":
+        required_oidc = {
+            "SHADOW_OIDC_ISSUER": os.getenv("SHADOW_OIDC_ISSUER", "").strip(),
+            "SHADOW_OIDC_AUDIENCE": os.getenv("SHADOW_OIDC_AUDIENCE", "").strip(),
+            "SHADOW_OIDC_JWKS_URL": os.getenv("SHADOW_OIDC_JWKS_URL", "").strip(),
+        }
+        if any(not value for value in required_oidc.values()):
+            raise ValueError("OIDC auth mode requires SHADOW_OIDC_ISSUER, SHADOW_OIDC_AUDIENCE and SHADOW_OIDC_JWKS_URL")
+        auth_verifier = OidcAuthVerifier(
+            issuer=os.getenv("SHADOW_OIDC_ISSUER", ""),
+            audience=os.getenv("SHADOW_OIDC_AUDIENCE", ""),
+            jwks_url=os.getenv("SHADOW_OIDC_JWKS_URL", ""),
+            algorithms=[item.strip() for item in os.getenv("SHADOW_OIDC_ALGORITHMS", "RS256").split(",") if item.strip()],
+        )
+    else:
+        auth_verifier = DeterministicAuthVerifier()
+    sessions = SessionService(repository, authority, registry, secret_resolver, secret_ref=secret_ref)
+    selected_runtime = runtime_adapter if runtime_adapter is not None else _runtime_from_environment()
+    profile_path = Path(os.getenv("SHADOW_RUNTIME_PROFILE_PATH", str(root / "config" / "runtime-profiles.json")))
+    supervisor = RuntimeSupervisor.from_file(profile_path) if profile_path.is_file() else RuntimeSupervisor.default()
+    if selected_runtime is not None:
+        supervisor.register_adapter("environment", selected_runtime, display_name="Environment Runtime")
+    else:
+        selected_runtime = supervisor.adapter_for()
+    conversations = ConversationService(repository, authority, runtime_adapter=selected_runtime)
     memories = MemoryService(repository, authority, registry)
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
     actions = ActionService(repository, authority, registry)
+    identity = IdentityService(repository, authority, registry)
     outbox = OutboxService(repository, authority, registry)
     app = FastAPI(title="OpenShadow Phase 0-1", version="0.1.0")
     app.state.repository = repository
@@ -180,7 +314,74 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.state.tasks = tasks
     app.state.admission = admission
     app.state.actions = actions
+    app.state.identity = identity
     app.state.outbox = outbox
+    app.state.auth_mode = auth_mode
+    app.state.auth_verifier = auth_verifier
+    app.state.sessions = sessions
+    app.state.runtime_adapter = conversations.runtime_adapter
+    app.state.runtime_supervisor = supervisor
+    app.state.telemetry = {"requests_total": 0, "errors_total": 0, "request_duration_seconds_sum": 0.0}
+    telemetry_logger = logging.getLogger("shadow.http")
+
+    def _runtime_selection_guard() -> bool:
+        try:
+            runs = repository.query(record_types={"shadow.kernel.run"}, record_states={"active"}, limit=1_000)
+        except Exception:
+            return True
+        return any(row.get("typed_payload", {}).get("lifecycle") in {"created", "queued", "running", "waiting", "paused", "cancelling"} for row in runs)
+
+    supervisor.set_selection_guard(_runtime_selection_guard)
+
+    @app.middleware("http")
+    async def authenticate_request(request: Request, call_next: Any) -> JSONResponse | Any:
+        path = request.url.path
+        auth_exchange = path == "/v1/auth/session" and request.method == "POST"
+        auth_config = path == "/v1/auth/config" and request.method == "GET"
+        if path.startswith("/v1") and not auth_exchange and not auth_config:
+            authorization = request.headers.get("Authorization", "")
+            token = authorization.removeprefix("Bearer ").strip() if authorization else request.cookies.get("shadow_session")
+            context: AuthContext | None = None
+            if token:
+                try:
+                    context = sessions.verify_session(token)
+                except ShadowDomainError as exc:
+                    return _error_response(exc)
+            elif auth_mode != "local-dev":
+                return _error_response(ShadowDomainError(ShadowError(code="shadow.auth.unauthenticated", category="unauthorized", message="Authentication is required.")))
+            if context is not None:
+                request.state.auth_context = context
+                # Production routes still declare the legacy header for API compatibility. Replace
+                # any client-supplied value so it cannot override the verified principal.
+                headers = [(key, value) for key, value in request.scope["headers"] if key.lower() != b"x-principal-ref"]
+                headers.append((b"x-principal-ref", context.principal_ref.encode("utf-8")))
+                request.scope["headers"] = headers
+        return await call_next(request)
+
+    @app.middleware("http")
+    async def request_telemetry(request: Request, call_next: Any) -> JSONResponse | Any:
+        correlation_id = request.headers.get("X-Correlation-Id") or f"correlation-{uuid.uuid4().hex}"
+        request.state.correlation_id = correlation_id
+        started = time.perf_counter()
+        response = await call_next(request)
+        elapsed = time.perf_counter() - started
+        metrics = app.state.telemetry
+        metrics["requests_total"] += 1
+        metrics["request_duration_seconds_sum"] += elapsed
+        if response.status_code >= 400:
+            metrics["errors_total"] += 1
+        response.headers["X-Correlation-Id"] = correlation_id
+        telemetry_logger.info(
+            "http_request",
+            extra={"route": request.url.path, "method": request.method, "status": response.status_code, "correlation_id": correlation_id, "duration_ms": round(elapsed * 1000, 3)},
+        )
+        return response
+
+    def _context(principal_ref: str, space_id: str, *, endpoint_ref: str | None = None, write: bool = False):
+        return identity.require(principal_ref, space_id, endpoint_ref=endpoint_ref, write=write)
+
+    def _owner_filter(context: Any) -> str | None:
+        return context.principal_ref if identity._space(context.space_id) is None else None
 
     @app.exception_handler(ShadowDomainError)
     async def domain_error_handler(_request: Request, exc: ShadowDomainError) -> JSONResponse:
@@ -201,16 +402,278 @@ def create_app(database_url: str | None = None) -> FastAPI:
         }
         return JSONResponse(status_code=200 if repository.available else 503, content=body)
 
+    @app.get("/metrics", include_in_schema=False)
+    async def metrics() -> Response:
+        values = app.state.telemetry
+        body = "\n".join(
+            (
+                "# TYPE shadow_http_requests_total counter",
+                f"shadow_http_requests_total {values['requests_total']}",
+                "# TYPE shadow_http_errors_total counter",
+                f"shadow_http_errors_total {values['errors_total']}",
+                "# TYPE shadow_http_request_duration_seconds_sum counter",
+                f"shadow_http_request_duration_seconds_sum {values['request_duration_seconds_sum']}",
+                "# TYPE shadow_store_ready gauge",
+                f"shadow_store_ready {1 if repository.available else 0}",
+            )
+        ) + "\n"
+        return Response(content=body, media_type="text/plain; version=0.0.4")
+
+    @app.get("/v1/auth/config")
+    async def auth_config() -> dict[str, Any]:
+        return {
+            "mode": auth_mode,
+            "local_dev": auth_mode == "local-dev",
+            "methods": ["deterministic"] if auth_mode == "local-dev" else ["oidc", "signed-session"],
+            "session_cookie": "shadow_session",
+        }
+
+    @app.get("/v1/auth/session")
+    async def auth_session(request: Request) -> dict[str, Any]:
+        context = getattr(request.state, "auth_context", None)
+        if context is None:
+            raise ShadowDomainError(ShadowError(code="shadow.auth.unauthenticated", category="unauthorized", message="Authentication is required."))
+        return {"context": context.as_dict()}
+
+    @app.post("/v1/auth/session", status_code=status.HTTP_201_CREATED)
+    async def create_auth_session(
+        command: AuthSessionCommand,
+        response: Response,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        if auth_mode == "signed-session":
+            raise ShadowDomainError(ShadowError(code="shadow.auth.exchange-unsupported", category="unsupported", message="Signed-session mode verifies existing tokens and does not exchange credentials."))
+        identity = auth_verifier.verify(command.credential)
+        result = sessions.create_session(identity, idempotency_key=idempotency_key, ttl_seconds=command.ttl_seconds, endpoint_ref=command.endpoint_ref)
+        # The token is returned only at exchange time; the canonical session stores its digest.
+        if command.use_cookie:
+            response.set_cookie("shadow_session", result["token"], httponly=True, secure=auth_mode != "local-dev", samesite="lax", max_age=command.ttl_seconds)
+        return {
+            "session": result["session"],
+            "context": result["context"].as_dict(),
+            "token": result["token"],
+            "replayed": result["replayed"],
+        }
+
+    @app.post("/v1/auth/logout", status_code=status.HTTP_202_ACCEPTED)
+    async def logout_auth_session(
+        request: Request,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> JSONResponse:
+        context = getattr(request.state, "auth_context", None)
+        if context is None:
+            raise ShadowDomainError(ShadowError(code="shadow.auth.unauthenticated", category="unauthorized", message="Authentication is required."))
+        result = sessions.revoke(context, idempotency_key=idempotency_key)
+        body = {"session": result["session"], "replayed": result["replayed"]}
+        output = JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=body)
+        output.delete_cookie("shadow_session")
+        return output
+
+    @app.get("/v1/runtime")
+    async def runtime_status() -> dict[str, Any]:
+        """Expose the active non-secret Runtime descriptor for local clients."""
+        active = supervisor.instances()
+        active_instance = next(item for item in active if item["active"])
+        return {
+            "runtime": {
+                "status": active_instance["state"]["health"] if active_instance["state"]["health"] != "unknown" else "configured",
+                "target_kind": conversations.runtime_target_kind,
+                "descriptor": active_instance["descriptor"] or conversations.runtime_descriptor.model_dump(mode="json", exclude_none=True),
+                "health": active_instance["state"],
+            }
+        }
+
+    @app.get("/v1/management/overview")
+    async def management_overview() -> dict[str, Any]:
+        return supervisor.overview(store_available=repository.available, web_ui_available=(root / "apps" / "shadow-web" / "dist").is_dir())
+
+    @app.get("/v1/runtime/instances")
+    async def runtime_instances() -> dict[str, Any]:
+        return {"records": supervisor.instances()}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/start", status_code=status.HTTP_202_ACCEPTED)
+    async def start_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"runtime": supervisor.start(runtime_id, idempotency_key)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/stop", status_code=status.HTTP_202_ACCEPTED)
+    async def stop_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"runtime": supervisor.stop(runtime_id, idempotency_key)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/restart", status_code=status.HTTP_202_ACCEPTED)
+    async def restart_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"runtime": supervisor.restart(runtime_id, idempotency_key)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/select", status_code=status.HTTP_200_OK)
+    async def select_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        selected = supervisor.select(runtime_id, idempotency_key)
+        descriptor = conversations.install_runtime_adapter(supervisor.adapter_for(runtime_id))
+        app.state.runtime_adapter = conversations.runtime_adapter
+        selected["descriptor"] = descriptor.model_dump(mode="json", exclude_none=True)
+        return {"runtime": selected}
+
+    @app.get("/v1/runtime/instances/{runtime_id}/health")
+    async def runtime_health(runtime_id: str) -> dict[str, Any]:
+        return {"runtime": supervisor.health(runtime_id)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/probe")
+    async def runtime_probe(runtime_id: str) -> dict[str, Any]:
+        return {"runtime": supervisor.probe(runtime_id)}
+
+    @app.post("/v1/endpoints/pair", status_code=status.HTTP_201_CREATED)
+    async def pair_endpoint(
+        command: EndpointPairCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.pair_endpoint(
+            principal_ref=x_principal_ref,
+            space_id=x_space_id,
+            endpoint_ref=command.endpoint_ref,
+            endpoint_kind=command.endpoint_kind,
+            label=command.label,
+            capabilities=command.capabilities,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.get("/v1/endpoints")
+    async def list_endpoints(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        records = [
+            row for row in identity._records("shadow.profile.endpoint")
+            if row["typed_payload"].get("principal_ref") == x_principal_ref
+        ]
+        return {"records": records}
+
+    @app.post("/v1/endpoints/{endpoint_id}/revoke", status_code=status.HTTP_202_ACCEPTED)
+    async def revoke_endpoint(
+        endpoint_id: str,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.revoke_endpoint(
+            principal_ref=x_principal_ref,
+            endpoint_ref=endpoint_id,
+            expected_version=expected_version,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.post("/v1/spaces", status_code=status.HTTP_201_CREATED)
+    async def create_space(
+        command: SpaceCreateCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.create_space(
+            principal_ref=x_principal_ref,
+            space_id=command.space_id,
+            display_name=command.display_name,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.get("/v1/spaces")
+    async def list_spaces(
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"records": identity.list_spaces(x_principal_ref)}
+
+    @app.get("/v1/spaces/{space_id}")
+    async def get_space(
+        space_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        identity.require(x_principal_ref, space_id)
+        record = identity._space(space_id)
+        if record is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.space.not-found",
+                    category="validation",
+                    message="Space was not found.",
+                )
+            )
+        return {"record": record}
+
+    @app.get("/v1/spaces/{space_id}/members")
+    async def list_space_members(
+        space_id: str,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"records": identity.list_members(principal_ref=x_principal_ref, space_id=space_id)}
+
+    @app.post("/v1/spaces/{space_id}/invitations", status_code=status.HTTP_202_ACCEPTED)
+    async def create_invitation(
+        space_id: str,
+        command: InvitationCreateCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.invite(
+            principal_ref=x_principal_ref,
+            space_id=space_id,
+            invitee_ref=command.invitee_ref,
+            role=command.role,  # type: ignore[arg-type]
+            expires_at=command.expires_at,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.post("/v1/invitations/{invitation_id}/accept", status_code=status.HTTP_202_ACCEPTED)
+    async def accept_invitation(
+        invitation_id: str,
+        command: InvitationAcceptCommand,
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.accept_invitation(
+            principal_ref=x_principal_ref,
+            invitation_id=invitation_id,
+            invitation_token=command.invitation_token,
+            idempotency_key=idempotency_key,
+        )
+
+    @app.delete("/v1/spaces/{space_id}/members/{principal_ref}", status_code=status.HTTP_202_ACCEPTED)
+    async def revoke_space_member(
+        space_id: str,
+        principal_ref: str,
+        expected_version: Annotated[int, Header(alias="Expected-Version", ge=1)],
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+        x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
+    ) -> dict[str, Any]:
+        return identity.revoke_member(
+            principal_ref=x_principal_ref,
+            space_id=space_id,
+            target_principal=principal_ref,
+            expected_version=expected_version,
+            idempotency_key=idempotency_key,
+        )
+
     @app.post("/v1/conversations", status_code=status.HTTP_201_CREATED)
     async def create_conversation(
         command: CreateConversationCommand,
         x_principal_ref: Annotated[str | None, Header()] = None,
         x_space_id: Annotated[str, Header()] = "space-personal",
+        x_endpoint_ref: Annotated[str | None, Header(alias="X-Endpoint-Ref")] = None,
         idempotency_key: Annotated[str | None, Header()] = None,
     ) -> dict[str, Any]:
+        principal_ref = _principal(x_principal_ref)
+        identity.require(principal_ref, x_space_id, endpoint_ref=x_endpoint_ref, write=True)
         return {
             "record": conversations.create_conversation(
-                owner_ref=_principal(x_principal_ref),
+                owner_ref=principal_ref,
                 space_id=x_space_id,
                 title=command.title,
                 idempotency_key=idempotency_key or command.title or "default",
@@ -220,11 +683,12 @@ def create_app(database_url: str | None = None) -> FastAPI:
     @app.get("/v1/memories")
     async def list_memories(
         x_principal_ref: Annotated[str | None, Header()] = None,
-        x_space_id: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
     ) -> dict[str, Any]:
+        context = _context(_principal(x_principal_ref), x_space_id)
         return {
             "records": memories.list_memories(
-                owner_ref=_principal(x_principal_ref), space_id=x_space_id
+                owner_ref=_owner_filter(context), space_id=x_space_id
             )
         }
 
@@ -236,6 +700,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         idempotency_key: Annotated[str | None, Header()] = None,
     ) -> dict[str, Any]:
         principal_ref = _principal(x_principal_ref)
+        _context(principal_ref, x_space_id, write=True)
         key = idempotency_key or sha256_digest(command.model_dump(mode="json"))
         candidate = memories.propose_create(
             submitted_by=principal_ref,
@@ -251,10 +716,23 @@ def create_app(database_url: str | None = None) -> FastAPI:
         return {"record": memories.commit_candidate(candidate, idempotency_key=key)}
 
     @app.get("/v1/memories/{memory_id}")
-    async def get_memory(memory_id: str) -> dict[str, Any]:
+    async def get_memory(
+        memory_id: str,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
+    ) -> dict[str, Any]:
         record = memories.get_memory(memory_id)
         if record is None:
             raise HTTPException(404, detail="Memory not found")
+        context = _context(_principal(x_principal_ref), x_space_id)
+        if record["space_id"] != context.space_id:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.space.membership-denied",
+                    category="unauthorized",
+                    message="Memory is not in the requested Space.",
+                )
+            )
         return {"record": record}
 
     @app.delete("/v1/memories/{memory_id}", status_code=status.HTTP_202_ACCEPTED)
@@ -266,6 +744,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
         principal_ref = x_principal_ref
+        _context(principal_ref, x_space_id, write=True)
         return {
             "record": memories.logical_delete(
                 memory_id=memory_id,
@@ -287,6 +766,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
         principal_ref = x_principal_ref
+        _context(principal_ref, x_space_id, write=True)
         candidate = memories.propose_correction(
             submitted_by=principal_ref,
             owner_ref=principal_ref,
@@ -309,9 +789,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
         state_key: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
+        context = _context(x_principal_ref, x_space_id)
         return {
             "records": states.list_states(
-                owner_ref=x_principal_ref, space_id=x_space_id, state_key=state_key, limit=limit
+                owner_ref=_owner_filter(context), space_id=x_space_id, state_key=state_key, limit=limit
             )
         }
 
@@ -321,8 +802,9 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
+        context = _context(x_principal_ref, x_space_id)
         record = states.get_state(
-            state_id, principal_ref=x_principal_ref, space_id=x_space_id
+            state_id, principal_ref=x_principal_ref, space_id=x_space_id, enforce_owner=identity._space(context.space_id) is None
         )
         if record is None:
             raise HTTPException(404, detail="State not found")
@@ -335,6 +817,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
     ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id, write=True)
         if isinstance(command, TaskProposalCommand):
             target_task_id = command.target_ref.get("record_id") if command.target_ref else None
             candidate = tasks.propose(
@@ -429,6 +912,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         proposal = repository.get(proposal_id)
         if proposal is None:
             raise HTTPException(404, detail="Proposal not found")
+        _context(x_principal_ref, x_space_id, write=True)
         proposal_type = proposal.get("typed_payload", {}).get("proposal_type")
         if proposal_type == "shadow.durable-task-proposal":
             return tasks.accept_proposal(
@@ -460,7 +944,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         limit: int = 50,
     ) -> dict[str, Any]:
-        return {"records": actions.list_actions(owner_ref=x_principal_ref, space_id=x_space_id, limit=limit)}
+        context = _context(x_principal_ref, x_space_id)
+        return {"records": actions.list_actions(owner_ref=_owner_filter(context), space_id=x_space_id, limit=limit)}
 
     @app.get("/v1/actions/{action_id}")
     async def get_action(
@@ -468,7 +953,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
-        record = actions.get_action(action_id, x_principal_ref, x_space_id)
+        context = _context(x_principal_ref, x_space_id)
+        record = actions.get_action(action_id, x_principal_ref, x_space_id, enforce_owner=identity._space(context.space_id) is None)
         if record is None:
             raise HTTPException(404, detail="Action not found")
         return {"record": record}
@@ -479,7 +965,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
         limit: int = 50,
     ) -> dict[str, Any]:
-        return {"records": tasks.list_tasks(owner_ref=x_principal_ref, space_id=x_space_id, limit=limit)}
+        context = _context(x_principal_ref, x_space_id)
+        return {"records": tasks.list_tasks(owner_ref=_owner_filter(context), space_id=x_space_id, limit=limit)}
 
     @app.get("/v1/tasks/{task_id}")
     async def get_task(
@@ -487,7 +974,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
-        record = tasks.get_task(task_id, x_principal_ref, x_space_id)
+        context = _context(x_principal_ref, x_space_id)
+        record = tasks.get_task(task_id, x_principal_ref, x_space_id, enforce_owner=identity._space(context.space_id) is None)
         if record is None:
             raise HTTPException(404, detail="Task not found")
         return {"record": record}
@@ -501,6 +989,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id, write=True)
         return tasks.create_checkpoint(
             task_id=task_id,
             expected_task_version=expected_version,
@@ -524,6 +1013,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_principal_ref: Annotated[str, Header(alias="X-Principal-Ref", min_length=1)],
         x_space_id: Annotated[str, Header(alias="X-Space-Id", min_length=1)],
     ) -> dict[str, Any]:
+        _context(x_principal_ref, x_space_id, write=True)
         current = tasks.get_task(task_id, x_principal_ref, x_space_id)
         if current is None:
             raise HTTPException(404, detail="Task not found")
@@ -551,22 +1041,38 @@ def create_app(database_url: str | None = None) -> FastAPI:
     @app.get("/v1/conversations")
     async def list_conversations(
         x_principal_ref: Annotated[str | None, Header()] = None,
-        x_space_id: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
     ) -> dict[str, Any]:
+        context = _context(_principal(x_principal_ref), x_space_id)
         return {
-            "records": conversations.list_conversations(_principal(x_principal_ref), x_space_id)
+            "records": conversations.list_conversations(_owner_filter(context), x_space_id)
         }
 
     @app.get("/v1/conversations/{conversation_id}")
-    async def get_conversation(conversation_id: str) -> dict[str, Any]:
+    async def get_conversation(
+        conversation_id: str,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
+    ) -> dict[str, Any]:
         record = conversations.get_conversation(conversation_id)
         if record is None:
+            raise HTTPException(404, detail="Conversation not found")
+        _context(_principal(x_principal_ref), x_space_id)
+        if record["space_id"] != x_space_id:
             raise HTTPException(404, detail="Conversation not found")
         return {"record": record}
 
     @app.get("/v1/conversations/{conversation_id}/messages")
-    async def list_messages(conversation_id: str) -> dict[str, Any]:
-        if conversations.get_conversation(conversation_id) is None:
+    async def list_messages(
+        conversation_id: str,
+        x_principal_ref: Annotated[str | None, Header()] = None,
+        x_space_id: Annotated[str, Header()] = "space-personal",
+    ) -> dict[str, Any]:
+        conversation = conversations.get_conversation(conversation_id)
+        if conversation is None:
+            raise HTTPException(404, detail="Conversation not found")
+        _context(_principal(x_principal_ref), x_space_id)
+        if conversation["space_id"] != x_space_id:
             raise HTTPException(404, detail="Conversation not found")
         return {"records": conversations.list_messages(conversation_id)}
 
@@ -578,6 +1084,16 @@ def create_app(database_url: str | None = None) -> FastAPI:
         x_endpoint_ref: Annotated[str, Header()] = "endpoint-local-web",
         idempotency_key: Annotated[str | None, Header()] = None,
     ) -> JSONResponse:
+        conversation = conversations.get_conversation(conversation_id)
+        if conversation is None:
+            raise HTTPException(404, detail="Conversation not found")
+        principal_ref = _principal(x_principal_ref)
+        identity.require(
+            principal_ref,
+            conversation["space_id"],
+            endpoint_ref=x_endpoint_ref,
+            write=True,
+        )
         block = submission.content_blocks[0]
         text = (
             block.typed_content.get("text")
@@ -588,7 +1104,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
             raise HTTPException(422, detail="Phase 1 text adapter requires a text content block")
         result = conversations.submit_turn(
             conversation_id=conversation_id,
-            principal_ref=_principal(x_principal_ref),
+            principal_ref=principal_ref,
             endpoint_ref=x_endpoint_ref,
             text=text,
             idempotency_key=idempotency_key or submission.submission_id,
@@ -695,6 +1211,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
                 )
             )
         )
+
+    web_dist = root / "apps" / "shadow-web" / "dist"
+    if web_dist.is_dir():
+        app.mount("/ui", StaticFiles(directory=web_dist, html=True), name="web-ui")
 
     return app
 

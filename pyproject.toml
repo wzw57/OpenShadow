@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115,<1",
   "jsonschema>=4.23,<5",
+  "PyJWT>=2.9,<3",
   "alembic>=1.13,<2",
   "pydantic>=2.8,<3",
   "sqlalchemy>=2.0,<3",
@@ -23,6 +24,9 @@ dev = [
   "pytest-asyncio>=0.24,<1",
   "ruff>=0.8,<1",
 ]
+postgres = [
+  "psycopg[binary]>=3.2,<4",
+]
 
 [tool.setuptools.packages.find]
 where = [
@@ -31,8 +35,10 @@ where = [
   "adapters/test-deterministic/src",
   "adapters/store-sqlite/src",
   "apps/shadow-server",
+  "adapters/hermes-agent/src",
+  "adapters/codex-agent/src",
 ]
-include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_store*", "shadow_server*"]
+include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_store*", "shadow_server*", "shadow_hermes*", "shadow_codex*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -42,6 +48,8 @@ pythonpath = [
   "adapters/test-deterministic/src",
   "adapters/store-sqlite/src",
   "apps/shadow-server",
+  "adapters/hermes-agent/src",
+  "adapters/codex-agent/src",
 ]
 addopts = "-ra"
 

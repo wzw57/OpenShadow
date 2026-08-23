@@ -1,0 +1,9 @@
+{
+  "space_id": "space-shared",
+  "invitation_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "invitee_ref": "principal-viewer",
+  "role": "viewer",
+  "status": "pending",
+  "expires_at": "2026-08-24T00:00:00Z",
+  "invited_by": "principal-owner"
+}

@@ -14,6 +14,9 @@ OpenShadow 计划长期运行，而 Runtime、Memory Intelligence、数据库、
 - [ADR-0010：Phase 2 Integration Profile 注册边界](0010-phase2-integration-profile.md)
 - [ADR-0011：Phase 2 Portable Import / restore snapshot 边界](0011-phase2-portable-import-restore.md)
 - [ADR-0012：Phase 2 Physical erase 与 Tombstone 边界](0012-phase2-physical-erase-tombstone.md)
+- [ADR-0021：Hermes Agent Runtime Adapter](0021-hermes-agent-runtime-adapter.md)
+- [ADR-0022：Web UI 作为 Shadow API 参考客户端](0022-web-ui-reference-client.md)
+- [ADR-0023：Runtime Reliability 与 Durable Dispatch](0023-runtime-reliability-and-durable-dispatch.md)
 
 ## 待接受 ADR
 
@@ -219,6 +222,25 @@ ADR-0019：Phase 4 跨组件 Erasure 与 Backup Metadata 边界。
 89. Backup 只冻结加密 Export metadata、digest、manifest、opaque key ref、retention 和
     erase schedule；不保存 Secret、Provider 私有状态或不可重建索引。
 
+### Phase 5 Identity / Endpoint / Space ACL
+
+ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 边界。
+
+90. Endpoint、Space、Membership、Invitation 使用 typed Profile 和现有 Canonical version rows；
+    不新增认证平台、SQL 表或通用 Queue。
+91. Space membership 的 owner/editor/viewer 是共享读写授权唯一权威，默认 deny；邀请只保存
+    一次性 token digest、expiry、revocation 和 accepted 状态，不保存明文 token。
+92. local-dev headers 只能兼容单用户 bootstrap；启用 session verifier 后服务端认证 context
+    覆盖客户端主体声明。真实 OAuth/OIDC、Voice、远程同步另立 Adapter ADR。
+
+## ADR-0025：Runtime Management 与 Codex CLI Adapter
+
+93. Runtime Manager 只属于本地部署控制平面；它可以受控启动、停止、健康检查和选择
+    Runtime，但不能绕过 Conversation/Admission/Run/Attempt 直接执行用户 prompt。
+94. Hermes 与 Codex 必须通过独立 Adapter；Codex 使用官方 CLI 的 `codex exec --json`
+    进程/JSONL 边界，不把 Codex 内部对象或 Agent Loop 引入 Shadow Core。详见
+    [ADR-0025](0025-runtime-management-and-codex-adapter.md)。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；
@@ -236,6 +258,38 @@ ADR-0019：Phase 4 跨组件 Erasure 与 Backup Metadata 边界。
 - 引入 Event Sourcing、通用 Workflow、Plugin OS、Policy Language 或 Job Platform；
 - 引入不可重建的外部私有状态；
 - 改变参考实现且影响 Stable Contract。
+- 引入 Runtime Supervisor、Runtime selection、外部 Runtime process lifecycle 或 Codex
+    CLI integration。
+
+## ADR-0026：Production Readiness 与 Release Boundary
+
+95. 生产化按 Auth/Security、Runtime Reliability、Store/Backup/Sync、Voice/Device/Integration、
+    Operations/Release 切片推进；每个切片先经过独立设计闸门和退出验收，不把未来能力一次性
+    写入 Kernel。详见 [ADR-0026](0026-production-readiness-and-release-boundary.md) 和
+    [Production Readiness 设计闸门](../production-readiness-design-gate.md)。
+
+## ADR-0027：Production Auth & Security Boundary
+
+96. 生产请求必须由通用 AuthVerifier 产生 AuthContext；local-dev headers 只能显式 bootstrap，
+    Session/Secret/审计不得泄露 token 或 Provider 私有语义。详见
+    [ADR-0027](0027-production-auth-and-security.md) 和
+    [Production Auth 设计闸门](../production-auth-design-gate.md)。
+
+## ADR-0028：Production Store、Backup 与 Portable Sync
+
+- [ADR-0028](0028-production-store-backup-and-sync.md)
+- [Production Store / Backup / Sync 设计闸门](../production-store-backup-design-gate.md)
+
+冻结 SQLite local-dev、PostgreSQL production profile、Portable restore all-or-nothing 和
+Backup Metadata 边界；后台同步与真实云备份仍需后续 Adapter 闸门。
+
+## ADR-0029：Production Voice、Device 与 Integration
+
+- [ADR-0029](0029-production-device-voice-integration.md)
+- [Production Voice / Device / Integration 设计闸门](../production-device-integration-design-gate.md)
+
+冻结 Vendor-neutral Adapter、Consent/Capability/Scope/Expiry 和 unknown 语义；真实硬件、
+语音 Provider、OAuth 与 webhook 仍不在首片连接。
 
 ## 核心原则
 
@@ -248,3 +302,10 @@ ADR-0019：Phase 4 跨组件 Erasure 与 Backup Metadata 边界。
 > **Replaceable components own intelligence, execution, protocols, and infrastructure.**
 
 > **Users retain portable data and capability assets across component generations.**
+## ADR-0030：Production Operations 与 Release Candidate
+
+- [ADR-0030](0030-production-operations-and-release.md)
+- [Production Operations / Release 设计闸门](../production-operations-design-gate.md)
+
+冻结 correlation、敏感字段 redaction、低基数 metrics、配置快速失败、参考部署和 Release
+Candidate 本地验收，不把监控平台或编排系统引入 Core。

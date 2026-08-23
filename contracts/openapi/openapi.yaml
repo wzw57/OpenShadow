@@ -32,6 +32,216 @@ paths:
                 $ref: "#/components/schemas/HealthResponse"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /metrics:
+    get:
+      operationId: metrics
+      security: []
+      description: Low-cardinality Prometheus text metrics; no user or secret fields.
+      responses:
+        "200":
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+  /v1/auth/config:
+    get:
+      operationId: authConfig
+      security: []
+      description: Non-secret authentication mode and enabled methods.
+      responses:
+        "200":
+          description: Authentication configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthConfigResponse"
+  /v1/auth/session:
+    get:
+      operationId: getAuthSession
+      responses:
+        "200":
+          description: Verified session context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionContextResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createAuthSession
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthSessionCommand"
+      responses:
+        "201":
+          description: Session created; token is returned only at exchange time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/auth/logout:
+    post:
+      operationId: logoutAuthSession
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Session revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthLogoutResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/runtime:
+    get:
+      operationId: runtimeStatus
+      description: Non-secret runtime descriptor and optional provider health for local clients.
+      responses:
+        "200":
+          description: Runtime status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runtime]
+                properties:
+                  runtime:
+                    type: object
+                    required: [status, target_kind, descriptor]
+                    properties:
+                      status:
+                        type: string
+                        enum: [configured, healthy, unavailable]
+                      target_kind:
+                        type: string
+                      descriptor:
+                        type: object
+                        additionalProperties: true
+                      health:
+                        type: object
+                        nullable: true
+                        additionalProperties: true
+  /v1/management/overview:
+    get:
+      operationId: managementOverview
+      description: Non-secret project and Runtime management overview.
+      responses:
+        "200":
+          description: Management overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagementOverviewResponse"
+  /v1/runtime/instances:
+    get:
+      operationId: listRuntimeInstances
+      responses:
+        "200":
+          description: Runtime instances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeInstancesResponse"
+  /v1/runtime/instances/{runtime_id}/start:
+    post:
+      operationId: startRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Runtime start accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/runtime/instances/{runtime_id}/stop:
+    post:
+      operationId: stopRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Runtime stop accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+  /v1/runtime/instances/{runtime_id}/restart:
+    post:
+      operationId: restartRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Runtime restart accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+  /v1/runtime/instances/{runtime_id}/select:
+    post:
+      operationId: selectRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Runtime selected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/runtime/instances/{runtime_id}/health:
+    get:
+      operationId: runtimeHealth
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+      responses:
+        "200":
+          description: Runtime health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/runtime/instances/{runtime_id}/probe:
+    post:
+      operationId: runtimeProbe
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+      responses:
+        "200":
+          description: Runtime probe result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
   /v1/conversations:
     post:
       operationId: createConversation
@@ -621,6 +831,141 @@ paths:
                 $ref: "#/components/schemas/ProposalDecisionResponse"
         "409":
           $ref: "#/components/responses/Conflict"
+  /v1/endpoints/pair:
+    post:
+      operationId: pairEndpoint
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/SpaceId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndpointPairCommand"
+      responses:
+        "201": { description: Endpoint paired }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/endpoints:
+    get:
+      operationId: listEndpoints
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/RecordPage" }
+  /v1/endpoints/{endpoint_id}/revoke:
+    post:
+      operationId: revokeEndpoint
+      parameters:
+        - name: endpoint_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202": { description: Endpoint revoked }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/spaces:
+    get:
+      operationId: listSpaces
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/RecordPage" }
+    post:
+      operationId: createSpace
+      parameters:
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpaceCreateCommand"
+      responses:
+        "201": { description: Space created }
+  /v1/spaces/{space_id}:
+    get:
+      operationId: getSpace
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/CanonicalRecord" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/spaces/{space_id}/members:
+    get:
+      operationId: listSpaceMembers
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+      responses:
+        "200": { $ref: "#/components/responses/RecordPage" }
+  /v1/spaces/{space_id}/invitations:
+    post:
+      operationId: createSpaceInvitation
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationCreateCommand"
+      responses:
+        "202": { description: Invitation created }
+  /v1/invitations/{invitation_id}/accept:
+    post:
+      operationId: acceptInvitation
+      parameters:
+        - name: invitation_id
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationAcceptCommand"
+      responses:
+        "202": { description: Invitation accepted }
+  /v1/spaces/{space_id}/members/{principal_ref}:
+    delete:
+      operationId: revokeSpaceMember
+      parameters:
+        - name: space_id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: principal_ref
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/PrincipalRef"
+        - $ref: "#/components/parameters/ExpectedVersion"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202": { description: Membership revoked }
+        "403": { $ref: "#/components/responses/Forbidden" }
 components:
   securitySchemes:
     bearerAuth:
@@ -651,6 +996,14 @@ components:
         type: string
         minLength: 1
         maxLength: 255
+    RuntimeId:
+      name: runtime_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        pattern: '^[A-Za-z0-9._:-]+$'
     SpaceId:
       name: X-Space-Id
       in: header
@@ -730,6 +1083,39 @@ components:
       schema:
         $ref: "#/components/schemas/StableId"
   schemas:
+    EndpointPairCommand:
+      type: object
+      required: [endpoint_ref]
+      properties:
+        endpoint_ref: { type: string, minLength: 1, maxLength: 255 }
+        endpoint_kind: { type: string, minLength: 1, maxLength: 255, default: shadow.endpoint.web }
+        label: { type: string, maxLength: 200 }
+        capabilities:
+          type: array
+          items: { type: string, minLength: 1 }
+          uniqueItems: true
+      unevaluatedProperties: false
+    SpaceCreateCommand:
+      type: object
+      required: [space_id, display_name]
+      properties:
+        space_id: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 200 }
+      unevaluatedProperties: false
+    InvitationCreateCommand:
+      type: object
+      required: [invitee_ref, role, expires_at]
+      properties:
+        invitee_ref: { type: string, minLength: 1, maxLength: 255 }
+        role: { enum: [editor, viewer] }
+        expires_at: { type: string, format: date-time }
+      unevaluatedProperties: false
+    InvitationAcceptCommand:
+      type: object
+      required: [invitation_token]
+      properties:
+        invitation_token: { type: string, minLength: 1, maxLength: 255 }
+      unevaluatedProperties: false
     StableId:
       $ref: "../schemas/common/1.0.0/schema.json#/$defs/StableId"
     StableRecordRef:
@@ -748,6 +1134,78 @@ components:
           enum: [healthy, degraded, unavailable]
         durable:
           type: boolean
+      unevaluatedProperties: false
+    RuntimeProfile:
+      type: object
+      required: [runtime_id, display_name, adapter_factory, target_kind, enabled, auto_start, launch, health, workspace_configured]
+      properties:
+        runtime_id: { type: string }
+        display_name: { type: string }
+        adapter_factory: { type: string }
+        target_kind: { type: string }
+        enabled: { type: boolean }
+        auto_start: { type: boolean }
+        launch:
+          type: object
+          required: [configured, cwd_configured]
+          properties:
+            configured: { type: boolean }
+            cwd_configured: { type: boolean }
+        health:
+          type: object
+          required: [url_configured]
+          properties:
+            url_configured: { type: boolean }
+        workspace_configured: { type: boolean }
+      unevaluatedProperties: false
+    RuntimeState:
+      type: object
+      required: [lifecycle, health, updated_at]
+      properties:
+        lifecycle: { enum: [stopped, starting, healthy, stopping, failed, unknown] }
+        health: { enum: [unknown, healthy, unavailable] }
+        pid: { type: integer, nullable: true }
+        external_ref: { type: string, nullable: true }
+        last_error: { type: object, nullable: true, additionalProperties: true }
+        updated_at: { type: string, format: date-time }
+      unevaluatedProperties: false
+    RuntimeInstance:
+      type: object
+      required: [runtime_id, active, profile, state, replayed]
+      properties:
+        runtime_id: { type: string }
+        active: { type: boolean }
+        profile: { $ref: "#/components/schemas/RuntimeProfile" }
+        descriptor: { type: object, nullable: true, additionalProperties: true }
+        state: { $ref: "#/components/schemas/RuntimeState" }
+        replayed: { type: boolean }
+      unevaluatedProperties: false
+    RuntimeInstancesResponse:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/RuntimeInstance" }
+      unevaluatedProperties: false
+    RuntimeMutationResponse:
+      type: object
+      required: [runtime]
+      properties:
+        runtime: { $ref: "#/components/schemas/RuntimeInstance" }
+      unevaluatedProperties: false
+    ManagementOverviewResponse:
+      type: object
+      required: [api, store, web_ui, active_runtime_id, runtimes, generated_at]
+      properties:
+        api: { type: object, additionalProperties: true }
+        store: { type: object, additionalProperties: true }
+        web_ui: { type: object, additionalProperties: true }
+        active_runtime_id: { type: string }
+        runtimes:
+          type: array
+          items: { $ref: "#/components/schemas/RuntimeInstance" }
+        generated_at: { type: string, format: date-time }
       unevaluatedProperties: false
     CreateConversationCommand:
       type: object
@@ -1037,7 +1495,73 @@ components:
           items:
             $ref: "#/components/schemas/RecordVersionRef"
       unevaluatedProperties: false
+    AuthSessionCommand:
+      type: object
+      required: [credential]
+      properties:
+        credential: { type: string, minLength: 1, maxLength: 20000 }
+        endpoint_ref: { type: string, nullable: true, maxLength: 255 }
+        ttl_seconds: { type: integer, minimum: 60, maximum: 86400, default: 3600 }
+        use_cookie: { type: boolean, default: true }
+      unevaluatedProperties: false
+    AuthContext:
+      type: object
+      required: [principal_ref, issuer, audience, auth_method, authenticated_at, expires_at, session_ref]
+      properties:
+        principal_ref: { type: string }
+        issuer: { type: string }
+        audience: { type: string }
+        auth_method: { enum: [deterministic, oidc, signed-session] }
+        authenticated_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+        session_ref: { type: string }
+        endpoint_ref: { type: string, nullable: true }
+        claims_digest: { type: string, nullable: true, pattern: "^sha256:[0-9a-f]{64}$" }
+      unevaluatedProperties: false
+    AuthConfigResponse:
+      type: object
+      required: [mode, local_dev, methods, session_cookie]
+      properties:
+        mode: { enum: [local-dev, oidc, signed-session] }
+        local_dev: { type: boolean }
+        methods: { type: array, items: { type: string } }
+        session_cookie: { type: string }
+      unevaluatedProperties: false
+    AuthSessionContextResponse:
+      type: object
+      required: [context]
+      properties:
+        context: { $ref: "#/components/schemas/AuthContext" }
+      unevaluatedProperties: false
+    AuthSessionResponse:
+      type: object
+      required: [session, context, token, replayed]
+      properties:
+        session: { $ref: "#/components/schemas/CanonicalEnvelope" }
+        context: { $ref: "#/components/schemas/AuthContext" }
+        token: { type: string }
+        replayed: { type: boolean }
+      unevaluatedProperties: false
+    AuthLogoutResponse:
+      type: object
+      required: [session, replayed]
+      properties:
+        session: { $ref: "#/components/schemas/CanonicalEnvelope" }
+        replayed: { type: boolean }
+      unevaluatedProperties: false
   responses:
+    RecordPage:
+      description: Canonical records visible in the caller context
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RecordPage"
+    CanonicalRecord:
+      description: Canonical record visible in the caller context
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CanonicalRecordResponse"
     ValidationError:
       description: Input or Profile validation failed
       content:
@@ -1052,6 +1576,12 @@ components:
             $ref: "#/components/schemas/ShadowError"
     Forbidden:
       description: Policy or authority denied the operation
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ShadowError"
+    Unauthorized:
+      description: Authentication is missing, invalid, expired or revoked
       content:
         application/problem+json:
           schema:

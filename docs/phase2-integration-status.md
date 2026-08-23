@@ -31,4 +31,5 @@
 - Integration logical delete/physical erase、Portable Import/restore、Backup 清理；
 - 新增 Integration HTTP API、数据库表、Proposal/Outbox/OperationJob 和完整 ACL。
 
-下一步必须先通过 Portable Import/restore 设计闸门；未获接受前继续只维护文档。
+Portable Import/restore 与 Physical erase 后续切片已分别通过设计闸门并合并；本切片仍不
+提供 Provider/OAuth 或 Secret vault 实现。

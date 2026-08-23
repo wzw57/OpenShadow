@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/identity/1.0.0",
+  "title": "OpenShadow Phase 5 Identity and Space Contracts",
+  "$defs": {
+    "Role": { "enum": ["owner", "editor", "viewer"] },
+    "EndpointPayload": {
+      "type": "object",
+      "required": ["endpoint_ref", "principal_ref", "trust", "lifecycle", "capabilities"],
+      "properties": {
+        "endpoint_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "label": { "type": "string", "maxLength": 200 },
+        "endpoint_kind": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "trust": { "enum": ["untrusted", "paired", "trusted", "revoked"] },
+        "lifecycle": { "enum": ["pending", "active", "revoked"] },
+        "capabilities": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "paired_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    },
+    "SpacePayload": {
+      "type": "object",
+      "required": ["space_id", "display_name", "space_kind", "owner_ref", "lifecycle"],
+      "properties": {
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "space_kind": { "enum": ["personal", "shared"] },
+        "owner_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "lifecycle": { "enum": ["active", "revoked"] }
+      },
+      "unevaluatedProperties": false
+    },
+    "MembershipPayload": {
+      "type": "object",
+      "required": ["space_id", "principal_ref", "role", "lifecycle", "granted_by"],
+      "properties": {
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "role": { "$ref": "#/$defs/Role" },
+        "lifecycle": { "enum": ["active", "revoked"] },
+        "granted_by": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "granted_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    },
+    "InvitationPayload": {
+      "type": "object",
+      "required": ["space_id", "invitation_digest", "invitee_ref", "role", "status", "expires_at", "invited_by"],
+      "properties": {
+        "space_id": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "invitation_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "invitee_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "role": { "enum": ["editor", "viewer"] },
+        "status": { "enum": ["pending", "accepted", "revoked", "expired"] },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "invited_by": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "accepted_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

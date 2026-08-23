@@ -1,0 +1,10 @@
+{
+  "endpoint_ref": "endpoint-local-web",
+  "principal_ref": "principal-local",
+  "label": "Local browser",
+  "endpoint_kind": "shadow.endpoint.web",
+  "trust": "paired",
+  "lifecycle": "active",
+  "capabilities": ["shadow.endpoint.text"] ,
+  "paired_at": "2026-08-23T00:00:00Z"
+}

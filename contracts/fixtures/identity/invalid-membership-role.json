@@ -1,0 +1,7 @@
+{
+  "space_id": "space-shared",
+  "principal_ref": "principal-viewer",
+  "role": "admin",
+  "lifecycle": "active",
+  "granted_by": "principal-owner"
+}

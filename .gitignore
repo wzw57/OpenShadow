@@ -10,3 +10,5 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+.playwright-cli/
+output/

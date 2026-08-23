@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/runtime-management/1.0.0",
+  "title": "Runtime Management Contract",
+  "type": "object",
+  "required": ["version", "active_runtime_id", "profiles"],
+  "properties": {
+    "version": {"const": "1.0.0"},
+    "active_runtime_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "profiles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/RuntimeProfile"}}
+  },
+  "$defs": {
+    "RuntimeProfile": {
+      "type": "object",
+      "required": ["runtime_id", "display_name", "adapter_factory", "target_kind", "enabled", "auto_start"],
+      "additionalProperties": false,
+      "properties": {
+        "runtime_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._:-]+$"},
+        "display_name": {"type": "string", "minLength": 1, "maxLength": 200},
+        "adapter_factory": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$"},
+        "target_kind": {"type": "string", "minLength": 1},
+        "enabled": {"type": "boolean"},
+        "auto_start": {"type": "boolean"},
+        "workspace_dir": {"type": ["string", "null"]},
+        "launch": {"$ref": "#/$defs/Launch"},
+        "health": {"$ref": "#/$defs/Health"}
+      }
+    },
+    "Launch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "command": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "cwd": {"type": ["string", "null"]}
+      }
+    },
+    "Health": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": ["string", "null"], "pattern": "^https?://"}
+      }
+    }
+  }
+}

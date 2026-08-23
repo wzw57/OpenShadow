@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/peripheral/1.0.0",
+  "title": "OpenShadow Voice, Device and Integration Adapter Contract",
+  "type": "object",
+  "$defs": {
+    "InteractionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "principal_ref", "space_id", "endpoint_ref", "capability_ref", "consent_ref", "data_classification", "expires_at", "idempotency_key", "typed_input"],
+      "properties": {
+        "operation": {"type": "string", "minLength": 1, "maxLength": 200},
+        "principal_ref": {"type": "string", "minLength": 1, "maxLength": 255},
+        "space_id": {"type": "string", "minLength": 1, "maxLength": 255},
+        "endpoint_ref": {"type": "string", "minLength": 1, "maxLength": 255},
+        "capability_ref": {"type": "string", "minLength": 1, "maxLength": 255},
+        "consent_ref": {"type": "string", "minLength": 1, "maxLength": 255},
+        "data_classification": {"enum": ["public", "personal", "sensitive", "restricted"]},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "idempotency_key": {"type": "string", "minLength": 1, "maxLength": 255},
+        "secret_ref": {"type": "string", "pattern": "^(env|vault|keychain|opaque):[^\\s]+$"},
+        "typed_input": {
+          "not": {
+            "type": "object",
+            "anyOf": [
+              {"required": ["api_key"]},
+              {"required": ["access_token"]},
+              {"required": ["authorization"]},
+              {"required": ["inline_secret"]}
+            ]
+          }
+        }
+      }
+    },
+    "AdapterResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "request_digest"],
+      "properties": {
+        "status": {"enum": ["succeeded", "failed", "unknown"]},
+        "request_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "external_ref": {"type": "string", "maxLength": 1000},
+        "result_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "reason": {"type": "string", "maxLength": 500},
+        "replayed": {"type": "boolean"}
+      }
+    }
+  }
+}

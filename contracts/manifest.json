@@ -75,6 +75,26 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/erasure/1.0.0",
       "path": "schemas/erasure/1.0.0/schema.json",
       "sha256": "94362fa2207fa934ff96a620f0b3a2d7d4cce643646c6c80f53ad5e9946424a4"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/identity/1.0.0",
+      "path": "schemas/identity/1.0.0/schema.json",
+      "sha256": "40893698eca915133d2b49725e3babdd211af0eee96dba01044489df53494b6f"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/runtime-management/1.0.0",
+      "path": "schemas/runtime-management/1.0.0/schema.json",
+      "sha256": "56b595dc1213c004c475b0037a2467c0fa5c4c28a45e0637fa55deb32f96d3f0"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/auth/1.0.0",
+      "path": "schemas/auth/1.0.0/schema.json",
+      "sha256": "c76b9143ff4587ac98f17aca6d983a7681ab940a78e6bfbe7d06b0a4770b9347"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/peripheral/1.0.0",
+      "path": "schemas/peripheral/1.0.0/schema.json",
+      "sha256": "cc334025262487becdc08d49ffefbae98bfdfc3cb9f383f3ab11c36074e75394"
     }
   ]
 }

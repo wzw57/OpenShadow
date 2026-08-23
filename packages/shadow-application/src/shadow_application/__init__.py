@@ -1,4 +1,16 @@
 from .action import ActionProposalCandidate, ActionProvider, ActionService
+from .auth import (
+    AuthContext,
+    AuthVerifier,
+    DeterministicAuthVerifier,
+    EnvironmentSecretResolver,
+    OidcAuthVerifier,
+    SecretLease,
+    SecretResolver,
+    SessionService,
+    StaticSecretResolver,
+    VerifiedIdentity,
+)
 from .continuity import (
     DeterministicClock,
     DeterministicMigrationAdapter,
@@ -20,6 +32,7 @@ from .erasure_backup import (
     ErasureRequestCandidate,
     ErasureService,
 )
+from .identity import AccessContext, IdentityService
 from .index import (
     MemoryIndexAdapter,
     MemoryIndexBuildArtifact,
@@ -42,6 +55,13 @@ from .invalidation import (
 )
 from .memory import MemoryCandidate, MemoryService
 from .outbox import OutboxDeliveryAdapter, OutboxIntentCandidate, OutboxService
+from .peripherals import (
+    AdapterResult,
+    DeterministicPeripheralAdapter,
+    InteractionRequest,
+    PeripheralAdapter,
+    validate_interaction,
+)
 from .portable_import import (
     PortableImportRecordResult,
     PortableImportRequest,
@@ -63,6 +83,7 @@ from .recall import (
     MemorySnapshot,
 )
 from .routing import BindingProposalResult, PolicyDecisionResult, RoutingPolicyService
+from .runtime_management import RuntimeProfile, RuntimeState, RuntimeSupervisor, load_factory
 from .skillasset import (
     SkillAssetRegistrationRequest,
     SkillAssetRegistrationResult,
@@ -81,6 +102,16 @@ __all__ = [
     "ActionProposalCandidate",
     "ActionProvider",
     "ActionService",
+    "AuthContext",
+    "AuthVerifier",
+    "DeterministicAuthVerifier",
+    "EnvironmentSecretResolver",
+    "OidcAuthVerifier",
+    "SecretLease",
+    "SecretResolver",
+    "SessionService",
+    "StaticSecretResolver",
+    "VerifiedIdentity",
     "DeterministicClock",
     "DeterministicMigrationAdapter",
     "DeterministicScheduleAdapter",
@@ -88,6 +119,12 @@ __all__ = [
     "IntegrationRegistrationRequest",
     "IntegrationRegistrationResult",
     "IntegrationService",
+    "AccessContext",
+    "IdentityService",
+    "RuntimeProfile",
+    "RuntimeState",
+    "RuntimeSupervisor",
+    "load_factory",
     "integration_result_digest",
     "MemoryCandidate",
     "MemoryIndexAdapter",
@@ -146,6 +183,11 @@ __all__ = [
     "StateConditionAdmission",
     "TaskProposalCandidate",
     "TaskService",
+    "AdapterResult",
+    "DeterministicPeripheralAdapter",
+    "InteractionRequest",
+    "PeripheralAdapter",
+    "validate_interaction",
     "IntegrityService",
     "TurnResult",
 ]

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.openshadow.dev/contracts/auth/1.0.0",
+  "title": "OpenShadow Production Auth Contracts",
+  "$defs": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "VerifiedIdentity": {
+      "type": "object",
+      "required": ["principal_ref", "issuer", "subject", "audience", "auth_method", "issued_at", "expires_at"],
+      "properties": {
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "issuer": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "audience": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "auth_method": { "enum": ["deterministic", "oidc", "signed-session"] },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "claims_digest": { "$ref": "#/$defs/Digest" }
+      },
+      "unevaluatedProperties": false
+    },
+    "AuthContext": {
+      "type": "object",
+      "required": ["principal_ref", "issuer", "audience", "auth_method", "authenticated_at", "expires_at", "session_ref"],
+      "properties": {
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "issuer": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "audience": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "auth_method": { "enum": ["deterministic", "oidc", "signed-session"] },
+        "authenticated_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "session_ref": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "endpoint_ref": { "type": ["string", "null"], "maxLength": 255 },
+        "claims_digest": { "$ref": "#/$defs/Digest" }
+      },
+      "unevaluatedProperties": false
+    },
+    "SessionPayload": {
+      "type": "object",
+      "required": ["session_ref", "principal_ref", "issuer", "audience", "token_digest", "issued_at", "expires_at", "lifecycle", "auth_method"],
+      "properties": {
+        "session_ref": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "principal_ref": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "issuer": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "audience": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "token_digest": { "$ref": "#/$defs/Digest" },
+        "claims_digest": { "$ref": "#/$defs/Digest" },
+        "issued_at": { "type": "string", "format": "date-time" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "lifecycle": { "enum": ["active", "revoked", "expired"] },
+        "auth_method": { "enum": ["deterministic", "oidc", "signed-session"] },
+        "endpoint_ref": { "type": ["string", "null"], "maxLength": 255 },
+        "revoked_at": { "type": "string", "format": "date-time" },
+        "revocation_reason": { "type": "string", "maxLength": 200 }
+      },
+      "unevaluatedProperties": false
+    },
+    "SecretReference": {
+      "type": "object",
+      "required": ["secret_ref", "purpose"],
+      "properties": {
+        "secret_ref": { "type": "string", "pattern": "^[a-z][a-z0-9+.-]*:[^\\s]+$", "maxLength": 500 },
+        "purpose": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "lease_expires_at": { "type": "string", "format": "date-time" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

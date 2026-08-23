@@ -279,6 +279,10 @@ Proposal/Commit、重启恢复和确定性 Adapter。真实外部 Integration �
 
 ## 10. Phase 5：Multi-endpoint 与 Multi-user
 
+当前状态：Phase 5 Core Slice 已实现 Endpoint pairing、Space membership/invitation、
+owner/editor/viewer 读 ACL 和 Web context；真实身份提供商、Voice、远程同步与分布式音频仍
+按下述边界保持 Contract-only。
+
 ### 实现候选
 
 - endpoint pairing；

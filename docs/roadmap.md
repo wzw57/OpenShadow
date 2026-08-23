@@ -148,35 +148,60 @@ Stage 5 不是重新设计完整架构，而是按[分阶段实现计划](implem
 5. Phase 4：Action & Proactivity；
 6. Phase 5：Multi-endpoint & Multi-user。
 
+Runtime Management 是跨 Phase 的部署控制切片：设计闸门已接受并完成首片实现，提供通用
+Runtime Supervisor、Hermes profile/进程启动边界、Codex CLI Adapter、Runtime 切换、项目
+管理 Web UI 和 Windows 启动脚本。Hermes Tool bridge、SSE/session resume 和远程 Supervisor
+仍保持独立闸门。
+
 首个开发目标是 Phase 0–1 纵向闭环，但代码结构服务完整目标架构，不把短期范围冻结为长期内核。
 
-当前交付状态：Phase 0–1 的 Python reference slice 已在
-`stage5/phase0-1-implementation` 分支实现并通过本地 Contract / Repository / API
-测试。已覆盖 Kernel Port、SQLite Store Adapter、Commit / Admission、Binding、
-Deterministic Adapter、Conversation / Message、Run / Attempt、SSE、幂等重放与 Store
-不可用路径，以及最小 Memory Candidate → Commit。未获单独闸门授权的 Phase 2–5 能力继续
-只维护已接受的 Contract 与退出条件，暂不实现未授权业务能力。Phase 2 首个 Memory 生命周期切片已获
-ADR-0005 接受并合并到 `main`，已交付 correction、merge（Service / Contract only）和
+当前交付状态：Phase 0–4 与 Phase 5 Core Slice 的 Python reference 实现已合并到当前
+`main` 基线，并通过本地 Contract / Repository / API 测试。已覆盖 Kernel Port、SQLite
+Store Adapter、Commit / Admission、Binding、Deterministic Adapter、Conversation / Message、
+Run / Attempt、SSE、幂等重放与 Store 不可用路径，以及最小 Memory Candidate → Commit。
+已获闸门授权的 Phase 2–4 切片均已交付；Phase 5 目前只交付 Core Slice，其余能力继续只维护
+Contract 与退出条件，暂不实现未授权业务能力。Phase 2 首个 Memory 生命周期切片已获 ADR-0005
+接受并合并到 `main`，已交付 correction、merge（Service / Contract only）和
 logical delete；详见 [Phase 2 状态](phase2-memory-lifecycle-status.md)。
 Phase 2 第二切片已按 ADR-0006 合并 Recall / Maintenance Adapter；派生 Index rebuild
 已按 ADR-0007 获准并合并第三切片实现，详见
-[第三切片状态](phase2-derived-index-status.md)。下一切片 source-dependent invalidation
-已按 ADR-0008 完成设计并进入实现，详见
+[第三切片状态](phase2-derived-index-status.md)。Source-dependent invalidation
+已按 ADR-0008 完成设计并合并实现，详见
 [第四切片状态](phase2-source-invalidation-status.md)。SkillAsset sidecar 第五切片已按
-ADR-0009 接受并合并实现，详见 [第五切片状态](phase2-skillasset-status.md)；Integration、
-Portable Import/restore 和 Physical erase 仍须分别完成设计接受后实现。
+ADR-0009 接受并合并实现，详见 [第五切片状态](phase2-skillasset-status.md)。
 Integration 第六切片已完成并合并，详见 [第六切片状态](phase2-integration-status.md)。
 Portable Import/restore 第七切片已按 ADR-0011 接受并合并实现，详见
 [第七切片状态](phase2-portable-import-status.md)。Physical erase 第八切片已按 ADR-0012
 接受并合并实现，详见 [第八切片状态](phase2-physical-erase-status.md)。
 Phase 3 首个 State Profile 切片已按 ADR-0013 完成设计闸门接受并实现，详见
-[Phase 3 State Profile 状态](phase3-state-profile-status.md)。Durable Task、Checkpoint/Handoff
-和其他 Phase 3 能力仍未授权实现。
+[Phase 3 State Profile 状态](phase3-state-profile-status.md)。Durable Task、Checkpoint/Handoff、
+Schedule/Clock 和 Migration/Integrity 已按 ADR-0014 完成并合并。
 Phase 3 完成闸门已按 ADR-0014 接受，连续性、Schedule/Clock 和 Migration/Integrity
 切片已实现并合并，详见 [Phase 3 完成状态](phase3-completion-status.md)。
 Phase 4 已按 ADR-0015 完成并合并 Action 生命周期首片，Durable Outbox 也已按 ADR-0016
-实现并合并，Router/Policy 已按 ADR-0017 实现并合并，Semantic Pulse 也已按 ADR-0018 实现并合并，跨组件 Erasure/Backup Metadata 已按 ADR-0019 实现并合并；Phase 4 已完成，详见 [Phase 4 完成状态](phase4-completion-status.md)。
-[Phase 4 Action 状态](phase4-action-status.md)。
+实现并合并，Router/Policy 已按 ADR-0017 实现并合并，Semantic Pulse 也已按 ADR-0018 实现并合并，跨组件 Erasure/Backup Metadata 已按 ADR-0019 实现并合并；Phase 4 已完成，详见 [Phase 4 完成状态](phase4-completion-status.md) 和 [Phase 4 Action 状态](phase4-action-status.md)。
+Phase 5 Core Slice 已按 ADR-0024 接受设计闸门并完成 Endpoint pairing、Space membership、
+Invitation、读 ACL 与 Web context；真实 OAuth/OIDC、Voice、远程 Store 和设备同步仍为
+Contract-only，详见 [Phase 5 状态](phase5-status.md)。
+
+生产化路线已建立总体设计闸门 [Production Readiness](production-readiness-design-gate.md)
+和 ADR-0026。Slice A Auth/Security 已按 ADR-0027 实现并通过本地验收；Slice B Runtime
+Reliability 已完成基础 durable dispatch/unknown outcome 实现，真实 Hermes resume 和
+远程 Provider 故障演练仍未完成。Slice C–E 继续保持 Contract-only，详见
+[Production Auth 状态](production-auth-status.md) 和 [Runtime Reliability 状态](runtime-reliability-status.md)。
+Store/Backup/Portable Sync 已按 ADR-0028 完成设计闸门接受，下一步仅实现 Store profile
+选择与可重复 restore/outage 证据，不引入后台同步或云备份业务。
+Store profile 选择、显式 PostgreSQL Adapter boundary 和 readiness unavailable 语义已实现；
+真实 PostgreSQL 连接、云备份和跨设备同步仍保持 Contract-only，详见
+[Production Store 状态](production-store-status.md)。
+Voice/Device/Integration 已按 ADR-0029 完成 Adapter 设计闸门接受。通用 Peripheral
+Contract、确定性 Adapter 和 Secret/consent/expiry 边界测试已实现；真实
+硬件、语音、OAuth/webhook 仍为 Contract-only，详见
+[Production Device/Integration 状态](production-device-integration-status.md)。
+Operations/Release 已按 ADR-0030 完成设计闸门接受。轻量 telemetry、metrics、配置快速
+失败、Docker/Compose 和 release-check 已实现；外部
+压力/混沌/依赖扫描仍是部署环境的发布前置，详见
+[Production Operations 状态](production-operations-status.md)。
 
 ## 延后实现与重新评估
 

@@ -9,12 +9,18 @@ from .pulse import DeterministicSemanticPulseAdapter
 from .routing import DeterministicPolicyEngine, DeterministicRouterAdapter
 from .state import DeterministicStateSourceAdapter
 
+
+def create_runtime_adapter() -> DeterministicTestAdapter:
+    """Return the default RuntimeAdapter for the local management profile."""
+    return DeterministicTestAdapter()
+
 __all__ = [
     "DeterministicMemoryMaintenanceAdapter",
     "DeterministicMemoryIndexAdapter",
     "DeterministicMemoryRecallAdapter",
     "DeterministicErasureAdapter",
     "DeterministicTestAdapter",
+    "create_runtime_adapter",
     "ExecutionResult",
     "DeterministicStateSourceAdapter",
     "DeterministicActionProvider",
