@@ -8,6 +8,108 @@ OpenShadow 是一个本地优先、实现无关的个人 AI 资产与能力平�
 
 Shadow 不重新实现所有 AI 基础设施。它用一个小而稳定的主权内核，组合外部优秀项目，同时保证用户长期积累的身份、资料索引、记忆、任务、能力和治理记录不会随某个组件被替换而消失。
 
+## 快速开始（Windows）
+
+当前参考部署是单机、单用户、SQLite 和本地 Web UI。Python 要求 `>=3.12`；构建 Web UI
+需要 Node.js/npm。Codex CLI 和 Hermes 都是可选的外部 Runtime，不是安装 OpenShadow 的前置条件。
+
+```powershell
+git clone https://github.com/wzw57/OpenShadow.git
+Set-Location OpenShadow
+
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+
+# 初始化/校验本地 SQLite 迁移
+New-Item -ItemType Directory -Force .shadow | Out-Null
+alembic upgrade head
+
+# 构建 Web UI、启动 FastAPI，并打开项目管理页
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\start-shadow-management.ps1 -Build -OpenBrowser
+```
+
+启动后访问：
+
+- Web UI：<http://127.0.0.1:8765/ui/>；
+- FastAPI 文档：<http://127.0.0.1:8765/docs>；
+- 存活检查：<http://127.0.0.1:8765/healthz>；
+- 可服务检查：<http://127.0.0.1:8765/readyz>；
+- OpenAPI：<http://127.0.0.1:8765/openapi.json>。
+
+默认数据文件是 `.shadow/shadow.db`，属于本地运行产物，不提交到 Git。按 `Ctrl+C` 可停止
+由启动脚本拉起的 Shadow 进程。
+
+### 启动脚本参数
+
+| 参数 | 作用 |
+| --- | --- |
+| `-Port 8765` | 修改 FastAPI 监听端口 |
+| `-Build` | 执行 `npm install`（首次需要时）和 `npm run build` |
+| `-OpenBrowser` | 服务就绪后打开 `/ui/` |
+| `-RuntimeId codex` | 启动时选择指定 Runtime profile |
+| `-AutoStartRuntime` | 与 `-RuntimeId` 一起使用，先启动该 Runtime |
+
+例如，使用已安装的 Codex CLI：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\start-shadow-management.ps1 `
+  -Build -RuntimeId codex -AutoStartRuntime -OpenBrowser
+```
+
+不使用管理脚本时，也可以在仓库根目录直接启动服务（Web UI 必须先构建）：
+
+```powershell
+python -m uvicorn shadow_server.app:app --host 127.0.0.1 --port 8765 --reload
+```
+
+如果 PowerShell 阻止虚拟环境脚本，只对当前进程放宽策略即可：
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+```
+
+## 当前架构
+
+OpenShadow 是模块化单体加进程外 Adapter，不是微服务集合。长期用户资产只写入
+Canonical Store；外部智能和 Provider 只能通过通用 Port 返回结果或 Proposal，不能绕过
+Admission、CommitAuthority、CAS 和版本生命周期。
+
+```text
+浏览器 / CLI
+    │ REST
+    ▼
+FastAPI Shadow Server ───────────────► RuntimeSupervisor（本地控制面）
+    │                                      │ profile lifecycle / select / health
+    ▼                                      ▼
+Application Services ───────────────► RuntimeAdapter Port
+    │                                      ├─ Deterministic Adapter
+    │                                      ├─ Codex CLI Adapter ──► codex exec --json
+    │                                      └─ Hermes Adapter ─────► Hermes API Server
+    │                                                                    │
+    └─ Admission + CommitAuthority ──► SQLite Canonical Store              └─► Model Provider
+       Run / Attempt / Message / Event
+```
+
+一次 Conversation turn 的主路径是：
+
+```text
+HTTP request
+  → Admission
+  → ConversationService
+  → selected RuntimeAdapter
+  → Run / Attempt / Message / Event
+  → CommitAuthority + CAS
+  → SQLite Canonical Store
+```
+
+管理页面的 Runtime 操作（start、stop、restart、health、probe、select）只改变后续请求的
+Adapter binding。它不提供任意 prompt 或 shell 执行入口；正在执行的 Run/Attempt 会阻止
+切换，实际工作仍走 Conversation/Admission/Run/Attempt 路径。
+
 ## 产品结构
 
 ~~~text
@@ -140,6 +242,102 @@ health
 Runtime 基础 Port 只要求 `describe`、`execute` 和 `events`；cancel、checkpoint、native resume、semantic handoff、progress、usage 与 reconciliation 通过 Capability Negotiation 声明。Adapter 不得伪造不支持的能力。
 
 Shadow 也不抽象整套数据库。Store Family 分成 Canonical Repository、Migration、Portable Export / Import、Backup、Outbox 和 Integrity Capability。只有 Canonical 语义和标准可移植导出需要跨 Store 一致；物理 Schema、复制、备份和队列实现属于外部基础设施。
+
+### Runtime 配置与替换
+
+本地 Runtime profile 位于 [`config/runtime-profiles.json`](config/runtime-profiles.json)。当前
+默认值是：
+
+| Runtime | 默认状态 | 说明 |
+| --- | --- | --- |
+| `deterministic` | active / auto-start | 无外部模型、无副作用，用于稳定开发和验收 |
+| `codex` | enabled / 按需启动 | 通过已安装的 `codex exec --json` CLI 调用；Provider/登录由 Codex 自己管理 |
+| `hermes` | disabled | 需填写实际 `launch.command`、health URL 和 Hermes 侧 Provider 配置 |
+
+Runtime Management 只读取经过 Schema 校验的 profile，不保存 API key、Secret 原文、Hermes
+私有 Session 或 Codex 内部 State。也可以使用兼容旧部署的环境变量注入单个 Adapter：
+
+```powershell
+$env:SHADOW_RUNTIME_ADAPTER_FACTORY = "shadow_hermes:create_runtime_adapter"
+$env:SHADOW_RUNTIME_KIND = "hermes"
+python -m uvicorn shadow_server.app:app --host 127.0.0.1 --port 8765
+```
+
+在配置 Hermes 前不要猜测其启动命令；将真实安装方式写入本地 profile，并保持 Hermes
+工具默认关闭。DeepSeek `deepseek-v4-flash` 是 Hermes 下游的 Model Provider，不是
+Shadow 的直连 Runtime，也不会被 Web UI 直接调用。
+
+### 公开 API 入口
+
+API 的完整契约以 [`contracts/openapi/openapi.yaml`](contracts/openapi/openapi.yaml) 和运行时
+`/openapi.json` 为准。常用入口如下：
+
+| 类别 | 入口 |
+| --- | --- |
+| 状态 | `GET /healthz`、`GET /readyz`、`GET /v1/runtime` |
+| Conversation | `GET/POST /v1/conversations`、`POST /v1/conversations/{id}/turns` |
+| Run | `GET /v1/runs/{id}`、`GET /v1/runs/{id}/events`、`POST /v1/runs/{id}/retry` |
+| Profile 查询 | `GET /v1/memories`、`GET /v1/states`、`GET /v1/tasks`、`GET /v1/actions` |
+| Proposal | `POST /v1/proposals`、`POST /v1/proposals/{id}/accept` |
+| Runtime 管理 | `GET /v1/management/overview`、`GET /v1/runtime/instances` |
+| Runtime 生命周期 | `POST /v1/runtime/instances/{id}/start`, `.../stop`, `.../restart`, `.../select`；`GET .../{id}/health`；`POST .../{id}/probe` |
+
+Runtime 的 start/stop/restart/select 写操作要求 `Idempotency-Key`。需要身份或 Space
+边界的写入使用 `X-Principal-Ref`、`X-Space-Id` 等契约 Header；当前默认是单用户本地上下文，
+完整生产认证和多用户发行仍是后续能力。
+
+## 本地开发与验收
+
+代码、Schema、fixtures、API 和文档必须在同一变更中保持同步。常用检查命令：
+
+```powershell
+# Python 依赖（已安装可跳过）
+python -m pip install -e ".[dev]"
+
+# 后端质量与全量测试
+ruff check packages/shadow-kernel/src packages/shadow-application/src `
+  adapters/test-deterministic/src adapters/store-sqlite/src `
+  adapters/hermes-agent/src adapters/codex-agent/src `
+  apps/shadow-server migrations tests
+pytest -q
+
+# SQLite 迁移回滚（隔离数据库）
+New-Item -ItemType Directory -Force .shadow | Out-Null
+$env:SHADOW_DATABASE_URL = "sqlite://"
+alembic upgrade head
+alembic downgrade base
+Remove-Item Env:SHADOW_DATABASE_URL
+
+# Web UI 类型检查与生产构建
+Push-Location apps/shadow-web
+npm install
+npm run build
+Pop-Location
+
+git diff --check
+```
+
+当前基线验收包括 Contract/Repository/API、幂等重放、Store unavailable、重启恢复、Runtime
+生命周期、Web UI Chromium smoke 和 Alembic upgrade/downgrade。测试用 SQLite 内存库或隔离
+文件库；真实 Hermes Provider 和 Codex 模型请求属于部署联调，不是默认测试前置条件。
+
+## 代码目录
+
+```text
+packages/shadow-kernel/        稳定 Kernel Port、Envelope、Commit、Admission、CAS
+packages/shadow-application/   Conversation、Profile、Task、Action、Identity、Supervisor
+adapters/store-sqlite/         SQLite Canonical Repository 与 migration boundary
+adapters/test-deterministic/   无外部依赖的确定性 Runtime Adapter
+adapters/hermes-agent/         Hermes HTTP/OpenAI-compatible Adapter（独立隔离）
+adapters/codex-agent/          Codex CLI JSONL Adapter（独立隔离）
+apps/shadow-server/             FastAPI 组合根、OpenAPI、静态 Web UI 托管
+apps/shadow-web/                React/Vite Conversation、Profile、Management UI
+contracts/                      JSON Schema、fixtures、OpenAPI 和 manifest
+migrations/                     Alembic migration
+scripts/                        本地启动和管理脚本
+docs/                           设计闸门、ADR、架构、状态与验收证据
+tests/                          Contract、Service、Repository、API、UI 和故障路径测试
+```
 
 ## 治理与长期升级
 
