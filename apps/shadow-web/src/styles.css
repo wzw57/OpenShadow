@@ -73,6 +73,20 @@ h1 { margin: 0; color: var(--text); font-size: clamp(17px, 2vw, 22px); font-weig
 .profile-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--line); padding: 0 4px 14px; }
 .profile-toolbar p { margin: 0 0 3px; color: var(--muted-bright); font-size: 12px; font-weight: 650; }
 .profile-toolbar span { color: var(--muted); font-size: 10px; }
+.profile-actions { margin-bottom: 16px; border: 1px solid rgba(139, 224, 193, 0.16); border-radius: 11px; background: rgba(139, 224, 193, 0.035); padding: 14px 15px; }
+.profile-actions-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.profile-actions-heading > div { display: grid; gap: 4px; }
+.profile-actions-heading strong { color: var(--muted-bright); font-size: 12px; }
+.profile-actions-heading span { color: var(--muted); font-size: 10px; }
+.profile-actions select, .profile-field input, .profile-field textarea, .profile-field select { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 7px; color: var(--text); background: var(--panel); padding: 8px 9px; font-size: 11px; }
+.profile-actions-heading select { width: auto; max-width: 230px; }
+.profile-form { display: grid; gap: 9px; }
+.profile-field { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
+.profile-field textarea { resize: vertical; line-height: 1.45; }
+.profile-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.profile-form-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-height: 34px; }
+.profile-notice { margin-right: auto; color: var(--accent); font-size: 10px; }
+.profile-form-error { margin-right: auto; color: var(--danger); font-size: 10px; }
 .profile-list { display: grid; gap: 8px; }
 .profile-card { border: 1px solid var(--line); border-radius: 11px; background: rgba(17, 24, 32, 0.72); overflow: hidden; }
 .profile-card summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; list-style: none; padding: 13px 15px; }
@@ -153,6 +167,9 @@ h1 { margin: 0; color: var(--text); font-size: clamp(17px, 2vw, 22px); font-weig
   .workspace-nav button { min-width: max-content; }
   .profile-card summary { align-items: flex-start; }
   .profile-card-meta { display: grid; justify-items: end; gap: 5px; }
+  .profile-actions-heading { align-items: flex-start; flex-direction: column; }
+  .profile-actions-heading select { width: 100%; max-width: none; }
+  .profile-field-grid { grid-template-columns: 1fr; }
   .conversation-view { padding-top: 30px; }
   .message-row { margin-bottom: 25px; }
   .message-content { font-size: 13px; }

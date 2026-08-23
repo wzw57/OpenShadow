@@ -8,7 +8,7 @@
 首版 Web UI 是 Shadow API 的单用户参考客户端，不重新实现 Kernel、Conversation
 Service 或 Agent Runtime。它只通过公开 HTTP/SSE 边界读取和提交数据。
 
-首版只覆盖：
+当前单用户 Web UI 切片覆盖：
 
 - 本地单用户身份与 personal space；
 - Conversation 列表、新建、选择和消息查看；
@@ -16,11 +16,11 @@ Service 或 Agent Runtime。它只通过公开 HTTP/SSE 边界读取和提交数
 - pending / running / succeeded / failed 的 Run 状态；
 - Run 事件查看和 Retry；
 - Shadow Server ready 状态与当前 Runtime 类型提示。
+- Memory、State、Task、Action 的查询与受控写入/审批操作。
 
-首版不覆盖：
+明确不覆盖：
 
 - 多用户登录、注册、ACL 或远程暴露；
-- Memory、State、Task、Action 的写入、审批、纠正或删除页面；
 - Hermes 工具调用、Secret、Session resume；
 - token 级流式渲染；
 - 浏览器直连 Hermes 或任何 Model Provider；
@@ -44,9 +44,14 @@ Shadow FastAPI
   ├── /v1/runs/{id}
   ├── /v1/runs/{id}/events
   ├── /v1/runs/{id}/retry
+  ├── /v1/proposals
+  ├── /v1/proposals/{id}/accept
   ├── /v1/memories
+  ├── /v1/memories/{id}/corrections
   ├── /v1/states
   ├── /v1/tasks
+  ├── /v1/tasks/{id}/checkpoints
+  ├── /v1/tasks/{id}/completion
   └── /v1/actions
         │
         ▼
@@ -103,11 +108,11 @@ endpoint_ref  = endpoint-local-web
 `category` 和 `retryable` 供重试和诊断使用。网络失败、503 和 Runtime unavailable
 必须显示为可恢复错误，不得伪造成功消息。
 
-### 4.4 Profile 只读查询
+### 4.4 Profile 查询与受控操作
 
 - `GET /v1/memories`、`GET /v1/states`、`GET /v1/tasks`、`GET /v1/actions` 返回当前
   Owner/Space 边界内的 active heads；
-- UI 只读取 `{ "records": [...] }`，不调用对应写入、Proposal accept 或执行接口；
+- UI 读取 `{ "records": [...] }`，并可从受控操作面板调用已存在的写入边界；
 - 单条记录通过可折叠 payload 展示，不把 payload 字段解释为跨 Profile 的新事实。
 
 ## 5. 状态与交互不变量
@@ -122,12 +127,13 @@ endpoint_ref  = endpoint-local-web
 
 ## 6. 设计闸门验收
 
-- [x] 首版范围只包含单用户 Conversation UI；
+- [x] 首版范围只包含单用户 API 客户端；
 - [x] 同源生产部署与 Vite 开发 proxy 已冻结；
 - [x] API 状态码、错误体和 SSE 语义已冻结；
 - [x] Provider secret 不进入浏览器；
 - [x] UI 不包含任何具体 Runtime/Model Vendor 分支；
-- [x] 不提前实现 Memory、Action、Task、Tool bridge 或多用户认证；
+- [x] 首版设计阶段不提前实现 Profile 操作、Tool bridge 或多用户认证；当前 Profile
+      操作已在独立受控操作切片中实现；
 - [x] 前端构建、API 集成和真实浏览器验收在实现分支完成。
 
 ## 7. Conversation UI 可靠性切片
@@ -146,17 +152,20 @@ endpoint_ref  = endpoint-local-web
 ready/runtime 手动刷新可见；失败和网络错误可以重新加载；Vendor-neutrality 与现有
 全量 API 测试保持通过。
 
-## 8. Profile 只读视图切片
+## 8. Profile 查询与受控操作切片
 
-本切片只为已经存在的 Profile 查询 API 提供导航和只读呈现：
+本切片为已经存在的 Profile 查询和受控写入 API 提供导航与操作面板：
 
 - `GET /v1/memories`、`GET /v1/states`、`GET /v1/tasks`、`GET /v1/actions` 作为四个
   独立视图按需读取；
 - UI 可以显示稳定 ID、版本、Profile 关键摘要、生命周期/新鲜度和可展开的 typed payload；
 - 所有请求继续使用当前单用户 `X-Principal-Ref` / `X-Space-Id`，不在浏览器实现 ACL；
-- 不新增路由、写入按钮、Proposal 接受、审批、纠正、删除、执行或 Secret 读取；
+- 写入只通过现有 Memory 路由、通用 Proposal/accept 路由和 Task checkpoint/completion 路由；
+- Action 只允许提出和审批/拒绝，不从浏览器直接执行 Provider；
+- 不新增路由或 Secret 读取，表单只允许 opaque secret references；
 - Profile 视图彼此独立，不构造跨 Profile 的万能聚合或派生事实；
 - Runtime status 继续是通用 descriptor，Profile 视图不得判断任何具体 Vendor。
 
-验收：四个列表按需加载并显示空态、错误和刷新状态；详情 payload 可折叠；切换回
-Conversation 后原有对话闭环不变；构建、文档同步和 Vendor-neutrality 检查通过。
+验收：四个列表按需加载并显示空态、错误和刷新状态；受控操作要求当前 version，
+写入后列表刷新；详情 payload 可折叠；切换回 Conversation 后原有对话闭环不变；
+构建、文档同步和 Vendor-neutrality 检查通过。

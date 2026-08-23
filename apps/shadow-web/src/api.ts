@@ -61,6 +61,10 @@ function requestId(prefix: string): string {
   return `${prefix}-${id}`;
 }
 
+function idempotency(prefix: string): string {
+  return requestId(prefix);
+}
+
 export async function getReady(): Promise<{ status: string; durable: boolean }> {
   return request("/readyz");
 }
@@ -95,6 +99,100 @@ export async function listMessages(conversationId: string): Promise<Message[]> {
 export async function listProfileRecords(kind: ProfileKind): Promise<CanonicalRecord[]> {
   const body = await request<{ records: CanonicalRecord[] }>(`/v1/${kind}`);
   return body.records;
+}
+
+export async function createMemory(command: Record<string, unknown>): Promise<CanonicalRecord> {
+  const body = await request<{ record: CanonicalRecord }>("/v1/memories", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency("memory") },
+    body: JSON.stringify(command),
+  });
+  return body.record;
+}
+
+export async function correctMemory(
+  memoryId: string,
+  expectedVersion: number,
+  command: Record<string, unknown>,
+): Promise<CanonicalRecord> {
+  const body = await request<{ record: CanonicalRecord }>(
+    `/v1/memories/${encodeURIComponent(memoryId)}/corrections`,
+    {
+      method: "POST",
+      headers: {
+        "Expected-Version": String(expectedVersion),
+        "Idempotency-Key": idempotency("memory-correction"),
+      },
+      body: JSON.stringify(command),
+    },
+  );
+  return body.record;
+}
+
+export async function deleteMemory(memoryId: string, expectedVersion: number): Promise<CanonicalRecord> {
+  const body = await request<{ record: CanonicalRecord }>(
+    `/v1/memories/${encodeURIComponent(memoryId)}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Expected-Version": String(expectedVersion),
+        "Idempotency-Key": idempotency("memory-delete"),
+      },
+    },
+  );
+  return body.record;
+}
+
+export async function submitProposal(command: Record<string, unknown>): Promise<CanonicalRecord> {
+  const body = await request<{ record: CanonicalRecord }>("/v1/proposals", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency("proposal") },
+    body: JSON.stringify(command),
+  });
+  return body.record;
+}
+
+export async function acceptProposal(
+  proposalId: string,
+  expectedVersion: number,
+): Promise<Record<string, unknown>> {
+  return request(`/v1/proposals/${encodeURIComponent(proposalId)}/accept`, {
+    method: "POST",
+    headers: {
+      "Expected-Version": String(expectedVersion),
+      "Idempotency-Key": idempotency("proposal-accept"),
+    },
+  });
+}
+
+export async function createCheckpoint(
+  taskId: string,
+  expectedVersion: number,
+  command: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  return request(`/v1/tasks/${encodeURIComponent(taskId)}/checkpoints`, {
+    method: "POST",
+    headers: {
+      "Expected-Version": String(expectedVersion),
+      "Idempotency-Key": idempotency("checkpoint"),
+    },
+    body: JSON.stringify(command),
+  });
+}
+
+export async function completeTask(
+  taskId: string,
+  expectedVersion: number,
+  resultRef: Record<string, unknown> | null,
+): Promise<Record<string, unknown>> {
+  return request(`/v1/tasks/${encodeURIComponent(taskId)}/completion`, {
+    method: "POST",
+    headers: {
+      "Expected-Version": String(expectedVersion),
+      "Idempotency-Key": idempotency("task-complete"),
+    },
+    body: JSON.stringify({ result_ref: resultRef }),
+  });
 }
 
 export async function submitTurn(conversationId: string, text: string): Promise<{

@@ -45,6 +45,20 @@ function isTerminalRun(run: Run | null): boolean {
   return !run || TERMINAL_LIFECYCLES.has(run.typed_payload?.lifecycle ?? "");
 }
 
+function latestRecords<T extends { record_id: string; version: number; committed_at?: string }>(records: T[]): T[] {
+  const heads = new Map<string, T>();
+  for (const record of records) {
+    const prior = heads.get(record.record_id);
+    if (!prior || record.version > prior.version) heads.set(record.record_id, record);
+  }
+  return [...heads.values()].sort((left, right) => {
+    if (left.committed_at && right.committed_at && left.committed_at !== right.committed_at) {
+      return right.committed_at.localeCompare(left.committed_at);
+    }
+    return right.record_id.localeCompare(left.record_id);
+  });
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof Error) return error.message;
@@ -77,9 +91,10 @@ export default function App() {
 
   const refreshConversations = useCallback(async () => {
     const records = await listConversations();
-    setConversations(records);
-    setSelectedId((current) => current ?? records[0]?.record_id ?? null);
-    return records;
+    const heads = latestRecords(records);
+    setConversations(heads);
+    setSelectedId((current) => current ?? heads[0]?.record_id ?? null);
+    return heads;
   }, []);
 
   const refreshMessages = useCallback(async (conversationId: string) => {
@@ -190,7 +205,7 @@ export default function App() {
     setError(null);
     try {
       const conversation = await createConversation(newTitle);
-      setConversations((current) => [conversation, ...current]);
+      setConversations((current) => latestRecords([conversation, ...current]));
       setView("conversation");
       setSelectedId(conversation.record_id);
       setMessages([]);
@@ -361,6 +376,7 @@ export default function App() {
             loading={profileLoading}
             refreshing={refreshing}
             onRefresh={() => refreshProfiles(view).catch((profileError) => setError(errorMessage(profileError)))}
+            onChanged={() => refreshProfiles(view)}
           />
         ) : (
           <>

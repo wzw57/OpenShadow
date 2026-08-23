@@ -1,4 +1,5 @@
 import type { CanonicalRecord, ProfileKind } from "./types";
+import ProfileActions from "./ProfileActions";
 
 type ProfileViewProps = {
   kind: ProfileKind;
@@ -6,6 +7,7 @@ type ProfileViewProps = {
   loading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
+  onChanged: () => Promise<void>;
 };
 
 const PROFILE_LABELS: Record<ProfileKind, string> = {
@@ -91,18 +93,21 @@ export default function ProfileView({
   loading,
   refreshing,
   onRefresh,
+  onChanged,
 }: ProfileViewProps) {
   return (
     <section className="profile-view" aria-live="polite">
       <div className="profile-toolbar">
         <div>
           <p>{records.length} active record{records.length === 1 ? "" : "s"}</p>
-          <span>Read-only view · canonical heads</span>
+          <span>Canonical heads · controlled operations</span>
         </div>
         <button className="text-button" onClick={onRefresh} disabled={loading || refreshing}>
           {refreshing || loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
+
+      <ProfileActions kind={kind} records={records} onChanged={onChanged} />
 
       {loading && <div className="profile-empty">Loading {PROFILE_LABELS[kind].toLowerCase()}…</div>}
       {!loading && records.length === 0 && (
