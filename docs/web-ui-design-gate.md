@@ -43,7 +43,11 @@ Shadow FastAPI
   ├── /v1/conversations/{id}/turns
   ├── /v1/runs/{id}
   ├── /v1/runs/{id}/events
-  └── /v1/runs/{id}/retry
+  ├── /v1/runs/{id}/retry
+  ├── /v1/memories
+  ├── /v1/states
+  ├── /v1/tasks
+  └── /v1/actions
         │
         ▼
   ConversationService → Hermes Adapter or Deterministic Adapter
@@ -98,6 +102,13 @@ endpoint_ref  = endpoint-local-web
 领域错误使用 `application/problem+json`，UI 至少显示 `message`，并保留 `code`、
 `category` 和 `retryable` 供重试和诊断使用。网络失败、503 和 Runtime unavailable
 必须显示为可恢复错误，不得伪造成功消息。
+
+### 4.4 Profile 只读查询
+
+- `GET /v1/memories`、`GET /v1/states`、`GET /v1/tasks`、`GET /v1/actions` 返回当前
+  Owner/Space 边界内的 active heads；
+- UI 只读取 `{ "records": [...] }`，不调用对应写入、Proposal accept 或执行接口；
+- 单条记录通过可折叠 payload 展示，不把 payload 字段解释为跨 Profile 的新事实。
 
 ## 5. 状态与交互不变量
 
