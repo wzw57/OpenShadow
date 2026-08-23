@@ -194,6 +194,8 @@ Store/Backup/Portable Sync 已按 ADR-0028 完成设计闸门接受，下一步�
 Store profile 选择、显式 PostgreSQL Adapter boundary 和 readiness unavailable 语义已实现；
 真实 PostgreSQL 连接、云备份和跨设备同步仍保持 Contract-only，详见
 [Production Store 状态](production-store-status.md)。
+Voice/Device/Integration 已按 ADR-0029 完成 Adapter 设计闸门接受，下一步只实现通用
+capability/consent/unknown Contract Adapter，不连接真实硬件或 Provider。
 
 ## 延后实现与重新评估
 

@@ -283,6 +283,14 @@ ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 
 冻结 SQLite local-dev、PostgreSQL production profile、Portable restore all-or-nothing 和
 Backup Metadata 边界；后台同步与真实云备份仍需后续 Adapter 闸门。
 
+## ADR-0029：Production Voice、Device 与 Integration
+
+- [ADR-0029](0029-production-device-voice-integration.md)
+- [Production Voice / Device / Integration 设计闸门](../production-device-integration-design-gate.md)
+
+冻结 Vendor-neutral Adapter、Consent/Capability/Scope/Expiry 和 unknown 语义；真实硬件、
+语音 Provider、OAuth 与 webhook 仍不在首片连接。
+
 ## 核心原则
 
 > **External intelligence proposes; Shadow authority commits.**
