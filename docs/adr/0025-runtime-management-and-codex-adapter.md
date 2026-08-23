@@ -1,6 +1,6 @@
 # ADR-0025：Runtime Management 与 Codex CLI Adapter
 
-- Status: Proposed
+- Status: Accepted
 - Scope: Runtime control plane、Hermes launcher、Codex CLI adapter、Project Management UI
 - Date: 2026-08-23
 

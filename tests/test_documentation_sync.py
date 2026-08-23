@@ -627,3 +627,35 @@ def test_phase2_http_contract_matches_app_and_static_openapi() -> None:
     assert "/v1/memories/merges" not in app_source
     assert "/v1/memories/merges" not in openapi_source
     assert "merge 保持 Application / Contract" in status
+
+
+def test_runtime_management_gate_contract_and_implementation_are_synchronized() -> None:
+    gate = _read("docs/runtime-management-design-gate.md")
+    adr = _read("docs/adr/0025-runtime-management-and-codex-adapter.md")
+    status = _read("docs/runtime-management-status.md")
+    supervisor = _read("packages/shadow-application/src/shadow_application/runtime_management.py")
+    codex = _read("adapters/codex-agent/src/shadow_codex/adapter.py")
+    openapi = create_app("sqlite://").openapi()
+    static_openapi = _read("contracts/openapi/openapi.yaml")
+    config = _read("config/runtime-profiles.json")
+
+    assert "Accepted / 已获准实现" in gate
+    assert "- Status: Accepted" in adr
+    assert "本地控制切片完成" in status
+    assert "class RuntimeSupervisor" in supervisor
+    assert "class CodexAgentRuntimeAdapter" in codex
+    assert "codex exec" in gate
+    assert '"runtime_id": "hermes"' in config
+    for path, method in (
+        ("/v1/management/overview", "get"),
+        ("/v1/runtime/instances", "get"),
+        ("/v1/runtime/instances/{runtime_id}/start", "post"),
+        ("/v1/runtime/instances/{runtime_id}/stop", "post"),
+        ("/v1/runtime/instances/{runtime_id}/restart", "post"),
+        ("/v1/runtime/instances/{runtime_id}/select", "post"),
+        ("/v1/runtime/instances/{runtime_id}/health", "get"),
+        ("/v1/runtime/instances/{runtime_id}/probe", "post"),
+    ):
+        assert path in openapi["paths"]
+        assert method in openapi["paths"][path]
+        assert path in static_openapi

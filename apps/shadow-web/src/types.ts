@@ -32,6 +32,45 @@ export type RuntimeStatus = {
   health?: JsonObject | null;
 };
 
+export type RuntimeState = {
+  lifecycle: string;
+  health: string;
+  pid?: number | null;
+  external_ref?: string | null;
+  last_error?: JsonObject | null;
+  updated_at?: string;
+};
+
+export type RuntimeProfile = {
+  runtime_id: string;
+  display_name: string;
+  adapter_factory: string;
+  target_kind: string;
+  enabled: boolean;
+  auto_start: boolean;
+  launch?: JsonObject;
+  health?: JsonObject;
+  workspace_configured?: boolean;
+};
+
+export type RuntimeInstance = {
+  runtime_id: string;
+  active: boolean;
+  profile: RuntimeProfile;
+  descriptor?: JsonObject | null;
+  state: RuntimeState;
+  replayed?: boolean;
+};
+
+export type ManagementOverview = {
+  api: JsonObject;
+  store: JsonObject;
+  web_ui: JsonObject;
+  active_runtime_id: string;
+  runtimes: RuntimeInstance[];
+  generated_at?: string;
+};
+
 export type SpaceRecord = CanonicalRecord & {
   typed_payload?: JsonObject & { display_name?: string; space_kind?: string; owner_ref?: string };
 };

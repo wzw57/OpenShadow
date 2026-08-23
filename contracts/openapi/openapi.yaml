@@ -61,6 +61,113 @@ paths:
                         type: object
                         nullable: true
                         additionalProperties: true
+  /v1/management/overview:
+    get:
+      operationId: managementOverview
+      description: Non-secret project and Runtime management overview.
+      responses:
+        "200":
+          description: Management overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagementOverviewResponse"
+  /v1/runtime/instances:
+    get:
+      operationId: listRuntimeInstances
+      responses:
+        "200":
+          description: Runtime instances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeInstancesResponse"
+  /v1/runtime/instances/{runtime_id}/start:
+    post:
+      operationId: startRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Runtime start accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/runtime/instances/{runtime_id}/stop:
+    post:
+      operationId: stopRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Runtime stop accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+  /v1/runtime/instances/{runtime_id}/restart:
+    post:
+      operationId: restartRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Runtime restart accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+  /v1/runtime/instances/{runtime_id}/select:
+    post:
+      operationId: selectRuntime
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Runtime selected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/runtime/instances/{runtime_id}/health:
+    get:
+      operationId: runtimeHealth
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+      responses:
+        "200":
+          description: Runtime health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/runtime/instances/{runtime_id}/probe:
+    post:
+      operationId: runtimeProbe
+      parameters:
+        - $ref: "#/components/parameters/RuntimeId"
+      responses:
+        "200":
+          description: Runtime probe result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeMutationResponse"
   /v1/conversations:
     post:
       operationId: createConversation
@@ -815,6 +922,14 @@ components:
         type: string
         minLength: 1
         maxLength: 255
+    RuntimeId:
+      name: runtime_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        pattern: '^[A-Za-z0-9._:-]+$'
     SpaceId:
       name: X-Space-Id
       in: header
@@ -945,6 +1060,78 @@ components:
           enum: [healthy, degraded, unavailable]
         durable:
           type: boolean
+      unevaluatedProperties: false
+    RuntimeProfile:
+      type: object
+      required: [runtime_id, display_name, adapter_factory, target_kind, enabled, auto_start, launch, health, workspace_configured]
+      properties:
+        runtime_id: { type: string }
+        display_name: { type: string }
+        adapter_factory: { type: string }
+        target_kind: { type: string }
+        enabled: { type: boolean }
+        auto_start: { type: boolean }
+        launch:
+          type: object
+          required: [configured, cwd_configured]
+          properties:
+            configured: { type: boolean }
+            cwd_configured: { type: boolean }
+        health:
+          type: object
+          required: [url_configured]
+          properties:
+            url_configured: { type: boolean }
+        workspace_configured: { type: boolean }
+      unevaluatedProperties: false
+    RuntimeState:
+      type: object
+      required: [lifecycle, health, updated_at]
+      properties:
+        lifecycle: { enum: [stopped, starting, healthy, stopping, failed, unknown] }
+        health: { enum: [unknown, healthy, unavailable] }
+        pid: { type: integer, nullable: true }
+        external_ref: { type: string, nullable: true }
+        last_error: { type: object, nullable: true, additionalProperties: true }
+        updated_at: { type: string, format: date-time }
+      unevaluatedProperties: false
+    RuntimeInstance:
+      type: object
+      required: [runtime_id, active, profile, state, replayed]
+      properties:
+        runtime_id: { type: string }
+        active: { type: boolean }
+        profile: { $ref: "#/components/schemas/RuntimeProfile" }
+        descriptor: { type: object, nullable: true, additionalProperties: true }
+        state: { $ref: "#/components/schemas/RuntimeState" }
+        replayed: { type: boolean }
+      unevaluatedProperties: false
+    RuntimeInstancesResponse:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/RuntimeInstance" }
+      unevaluatedProperties: false
+    RuntimeMutationResponse:
+      type: object
+      required: [runtime]
+      properties:
+        runtime: { $ref: "#/components/schemas/RuntimeInstance" }
+      unevaluatedProperties: false
+    ManagementOverviewResponse:
+      type: object
+      required: [api, store, web_ui, active_runtime_id, runtimes, generated_at]
+      properties:
+        api: { type: object, additionalProperties: true }
+        store: { type: object, additionalProperties: true }
+        web_ui: { type: object, additionalProperties: true }
+        active_runtime_id: { type: string }
+        runtimes:
+          type: array
+          items: { $ref: "#/components/schemas/RuntimeInstance" }
+        generated_at: { type: string, format: date-time }
       unevaluatedProperties: false
     CreateConversationCommand:
       type: object

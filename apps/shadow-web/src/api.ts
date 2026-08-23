@@ -9,6 +9,8 @@ import type {
   EndpointRecord,
   MembershipRecord,
   SpaceRecord,
+  ManagementOverview,
+  RuntimeInstance,
 } from "./types";
 
 const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/$/, "");
@@ -84,6 +86,54 @@ export async function getReady(): Promise<{ status: string; durable: boolean }> 
 
 export async function getRuntime(): Promise<RuntimeStatus> {
   const body = await request<{ runtime: RuntimeStatus }>("/v1/runtime");
+  return body.runtime;
+}
+
+export async function getManagementOverview(): Promise<ManagementOverview> {
+  return request<ManagementOverview>("/v1/management/overview");
+}
+
+export async function listRuntimeInstances(): Promise<RuntimeInstance[]> {
+  const body = await request<{ records: RuntimeInstance[] }>("/v1/runtime/instances");
+  return body.records;
+}
+
+export async function startRuntime(runtimeId: string): Promise<RuntimeInstance> {
+  const body = await request<{ runtime: RuntimeInstance }>(`/v1/runtime/instances/${encodeURIComponent(runtimeId)}/start`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency(`runtime-start-${runtimeId}`) },
+  });
+  return body.runtime;
+}
+
+export async function stopRuntime(runtimeId: string): Promise<RuntimeInstance> {
+  const body = await request<{ runtime: RuntimeInstance }>(`/v1/runtime/instances/${encodeURIComponent(runtimeId)}/stop`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency(`runtime-stop-${runtimeId}`) },
+  });
+  return body.runtime;
+}
+
+export async function restartRuntime(runtimeId: string): Promise<RuntimeInstance> {
+  const body = await request<{ runtime: RuntimeInstance }>(`/v1/runtime/instances/${encodeURIComponent(runtimeId)}/restart`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency(`runtime-restart-${runtimeId}`) },
+  });
+  return body.runtime;
+}
+
+export async function selectRuntime(runtimeId: string): Promise<RuntimeInstance> {
+  const body = await request<{ runtime: RuntimeInstance }>(`/v1/runtime/instances/${encodeURIComponent(runtimeId)}/select`, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotency(`runtime-select-${runtimeId}`) },
+  });
+  return body.runtime;
+}
+
+export async function probeRuntime(runtimeId: string): Promise<RuntimeInstance> {
+  const body = await request<{ runtime: RuntimeInstance }>(`/v1/runtime/instances/${encodeURIComponent(runtimeId)}/probe`, {
+    method: "POST",
+  });
   return body.runtime;
 }
 

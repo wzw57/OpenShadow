@@ -79,6 +79,12 @@ class HermesAgentRuntimeAdapter:
         }
         return body
 
+    def configure_profile(self, profile: dict[str, Any]) -> None:
+        """Apply a profile's non-secret health endpoint to the adapter."""
+        health_url = profile.get("health_url")
+        if isinstance(health_url, str) and health_url:
+            self.base_url = health_url.rstrip("/")
+
     def execute(self, text: str) -> HermesExecutionResult:
         if not text:
             raise ShadowDomainError(

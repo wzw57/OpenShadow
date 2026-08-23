@@ -15,7 +15,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | Web UI 参考客户端范围 | `docs/web-ui-design-gate.md`、ADR-0022 | `apps/shadow-web`、`/ui` 静态托管、Web UI 状态文档和浏览器验收 |
 | Runtime Reliability / durable dispatch | `docs/runtime-reliability-design-gate.md`、ADR-0023 | Run/Attempt Service、Hermes Adapter、OpenAPI/错误体、恢复测试和 runtime 状态文档 |
 | Phase 5 identity / endpoint / Space ACL | `docs/phase5-design-gate.md`、ADR-0024 | Identity Schema、fixtures、FastAPI routes、ACL tests、Web context 和 `phase5-status.md` |
-| Runtime Management / Hermes launcher / Codex Adapter | `docs/runtime-management-design-gate.md`、ADR-0025（Proposed） | Runtime profile schema、Supervisor/API、Adapter tests、Management UI、启动脚本和 runtime 状态文档 |
+| Runtime Management / Hermes launcher / Codex Adapter | `docs/runtime-management-design-gate.md`、ADR-0025、`docs/runtime-management-status.md` | Runtime profile schema、Supervisor/API、Adapter tests、Management UI、启动脚本和 runtime 状态文档 |
 
 ## Vendor isolation rule
 

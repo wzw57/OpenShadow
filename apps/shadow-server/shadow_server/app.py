@@ -16,6 +16,7 @@ from shadow_application import (
     IdentityService,
     MemoryService,
     OutboxService,
+    RuntimeSupervisor,
     StateService,
     TaskService,
 )
@@ -234,6 +235,12 @@ def create_app(
     authority = CommitAuthority(repository, registry)
     admission = AdmissionService(repository, authority)
     selected_runtime = runtime_adapter if runtime_adapter is not None else _runtime_from_environment()
+    profile_path = Path(os.getenv("SHADOW_RUNTIME_PROFILE_PATH", str(root / "config" / "runtime-profiles.json")))
+    supervisor = RuntimeSupervisor.from_file(profile_path) if profile_path.is_file() else RuntimeSupervisor.default()
+    if selected_runtime is not None:
+        supervisor.register_adapter("environment", selected_runtime, display_name="Environment Runtime")
+    else:
+        selected_runtime = supervisor.adapter_for()
     conversations = ConversationService(repository, authority, runtime_adapter=selected_runtime)
     memories = MemoryService(repository, authority, registry)
     states = StateService(repository, authority, registry)
@@ -252,6 +259,16 @@ def create_app(
     app.state.identity = identity
     app.state.outbox = outbox
     app.state.runtime_adapter = conversations.runtime_adapter
+    app.state.runtime_supervisor = supervisor
+
+    def _runtime_selection_guard() -> bool:
+        try:
+            runs = repository.query(record_types={"shadow.kernel.run"}, record_states={"active"}, limit=1_000)
+        except Exception:
+            return True
+        return any(row.get("typed_payload", {}).get("lifecycle") in {"created", "queued", "running", "waiting", "paused", "cancelling"} for row in runs)
+
+    supervisor.set_selection_guard(_runtime_selection_guard)
 
     def _context(principal_ref: str, space_id: str, *, endpoint_ref: str | None = None, write: bool = False):
         return identity.require(principal_ref, space_id, endpoint_ref=endpoint_ref, write=write)
@@ -280,26 +297,65 @@ def create_app(
 
     @app.get("/v1/runtime")
     async def runtime_status() -> dict[str, Any]:
-        """Expose a non-secret runtime descriptor for local clients."""
-        descriptor = conversations.runtime_descriptor.model_dump(mode="json", exclude_none=True)
-        health_fn = getattr(conversations.runtime_adapter, "health", None)
-        status = "configured"
-        health: dict[str, Any] | None = None
-        if callable(health_fn):
-            try:
-                health = health_fn()
-                status = "healthy"
-            except ShadowDomainError as exc:
-                status = "unavailable"
-                health = {"error": exc.error.as_dict()}
+        """Expose the active non-secret Runtime descriptor for local clients."""
+        active = supervisor.instances()
+        active_instance = next(item for item in active if item["active"])
         return {
             "runtime": {
-                "status": status,
+                "status": active_instance["state"]["health"] if active_instance["state"]["health"] != "unknown" else "configured",
                 "target_kind": conversations.runtime_target_kind,
-                "descriptor": descriptor,
-                "health": health,
+                "descriptor": active_instance["descriptor"] or conversations.runtime_descriptor.model_dump(mode="json", exclude_none=True),
+                "health": active_instance["state"],
             }
         }
+
+    @app.get("/v1/management/overview")
+    async def management_overview() -> dict[str, Any]:
+        return supervisor.overview(store_available=repository.available, web_ui_available=(root / "apps" / "shadow-web" / "dist").is_dir())
+
+    @app.get("/v1/runtime/instances")
+    async def runtime_instances() -> dict[str, Any]:
+        return {"records": supervisor.instances()}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/start", status_code=status.HTTP_202_ACCEPTED)
+    async def start_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"runtime": supervisor.start(runtime_id, idempotency_key)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/stop", status_code=status.HTTP_202_ACCEPTED)
+    async def stop_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"runtime": supervisor.stop(runtime_id, idempotency_key)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/restart", status_code=status.HTTP_202_ACCEPTED)
+    async def restart_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        return {"runtime": supervisor.restart(runtime_id, idempotency_key)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/select", status_code=status.HTTP_200_OK)
+    async def select_runtime(
+        runtime_id: str,
+        idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1)],
+    ) -> dict[str, Any]:
+        selected = supervisor.select(runtime_id, idempotency_key)
+        descriptor = conversations.install_runtime_adapter(supervisor.adapter_for(runtime_id))
+        app.state.runtime_adapter = conversations.runtime_adapter
+        selected["descriptor"] = descriptor.model_dump(mode="json", exclude_none=True)
+        return {"runtime": selected}
+
+    @app.get("/v1/runtime/instances/{runtime_id}/health")
+    async def runtime_health(runtime_id: str) -> dict[str, Any]:
+        return {"runtime": supervisor.health(runtime_id)}
+
+    @app.post("/v1/runtime/instances/{runtime_id}/probe")
+    async def runtime_probe(runtime_id: str) -> dict[str, Any]:
+        return {"runtime": supervisor.probe(runtime_id)}
 
     @app.post("/v1/endpoints/pair", status_code=status.HTTP_201_CREATED)
     async def pair_endpoint(

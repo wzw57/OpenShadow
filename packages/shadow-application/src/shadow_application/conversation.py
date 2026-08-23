@@ -119,6 +119,13 @@ class ConversationService:
             )
         return record
 
+    def install_runtime_adapter(self, runtime_adapter: RuntimeAdapter) -> AdapterDescriptor:
+        """Select a healthy Runtime through the generic Adapter boundary."""
+        self.runtime_adapter = runtime_adapter
+        self.runtime_descriptor = self._ensure_runtime_descriptor()
+        self.runtime_target_kind = self.runtime_descriptor.supported_target_kinds[0]
+        return self.runtime_descriptor
+
     def get_conversation(self, conversation_id: str) -> dict[str, Any] | None:
         return self.repository.get(conversation_id)
 

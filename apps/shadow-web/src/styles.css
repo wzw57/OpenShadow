@@ -80,6 +80,31 @@ input::placeholder, textarea::placeholder { color: #647381; }
 .eyebrow { color: var(--accent); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; margin-bottom: 7px; }
 h1 { margin: 0; color: var(--text); font-size: clamp(17px, 2vw, 22px); font-weight: 650; letter-spacing: -0.02em; }
 .runtime-pill { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted-bright); background: rgba(255, 255, 255, 0.025); padding: 8px 11px; font-size: 11px; white-space: nowrap; }
+.management-view { padding: 30px 34px 52px; max-width: 1180px; margin: 0 auto; }
+.management-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 24px; }
+.management-heading h2 { margin: 5px 0 8px; font-size: 28px; letter-spacing: -0.03em; }
+.management-heading p { margin: 0; color: var(--muted); max-width: 680px; }
+.management-health-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.management-status-card { border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); padding: 14px; display: grid; gap: 7px; }
+.management-status-card span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.management-status-card strong { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runtime-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.runtime-management-card { border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.02); padding: 18px; }
+.runtime-management-card.active { border-color: rgba(129, 173, 255, .55); box-shadow: 0 0 0 1px rgba(129,173,255,.08); }
+.runtime-card-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 15px; }
+.runtime-card-header > div { display: flex; align-items: center; gap: 9px; }
+.runtime-badge { color: var(--accent); font-size: 10px; letter-spacing: .08em; }
+.runtime-details { margin: 0; display: grid; gap: 8px; }
+.runtime-details div { display: grid; grid-template-columns: 105px minmax(0, 1fr); gap: 10px; }
+.runtime-details dt { color: var(--muted); font-size: 11px; }
+.runtime-details dd { margin: 0; color: var(--muted-bright); font: 11px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+.runtime-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.runtime-card-actions button { border: 1px solid var(--line); border-radius: 8px; color: var(--muted-bright); background: rgba(255,255,255,.03); padding: 7px 10px; cursor: pointer; }
+.runtime-card-actions button:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+.runtime-card-actions button:disabled { cursor: not-allowed; opacity: .4; }
+.runtime-disabled, .runtime-error { margin-top: 14px; border-radius: 8px; padding: 9px 10px; font-size: 11px; }
+.runtime-disabled { background: rgba(255,255,255,.035); color: var(--muted); }
+.runtime-error { background: rgba(211, 93, 93, .12); color: #f3aaaa; }
 .error-banner { margin: 18px clamp(24px, 5vw, 80px) 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid rgba(245, 155, 155, 0.25); border-radius: 10px; color: #f6c5c5; background: rgba(245, 155, 155, 0.08); padding: 11px 13px; font-size: 12px; }
 .error-banner button, .text-button { border: 0; background: transparent; color: var(--accent); font-size: 11px; font-weight: 700; }
 .error-actions { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
@@ -176,6 +201,9 @@ h1 { margin: 0; color: var(--text); font-size: clamp(17px, 2vw, 22px); font-weig
   .topbar-actions { gap: 8px; }
   .refresh-button { display: none; }
   .runtime-pill { padding: 7px 9px; font-size: 10px; }
+  .management-view { padding: 22px 18px 36px; }
+  .management-health-grid, .runtime-card-grid { grid-template-columns: 1fr; }
+  .management-heading { flex-direction: column; }
   .conversation-view, .composer-section { width: calc(100% - 34px); }
   .profile-view { width: calc(100% - 34px); padding-top: 25px; }
   .workspace-nav { display: flex; overflow-x: auto; padding-bottom: 12px; }

@@ -1,6 +1,6 @@
 # Runtime Management 设计闸门
 
-状态：**Draft / 等待维护者接受**  
+状态：**Accepted / 已获准实现**
 范围：Runtime 组件目录、受控启动/停止、运行时切换、项目管理 Web UI 与本地启动脚本
 
 ## 1. 目标与边界

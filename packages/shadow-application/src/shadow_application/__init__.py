@@ -64,6 +64,7 @@ from .recall import (
     MemorySnapshot,
 )
 from .routing import BindingProposalResult, PolicyDecisionResult, RoutingPolicyService
+from .runtime_management import RuntimeProfile, RuntimeState, RuntimeSupervisor, load_factory
 from .skillasset import (
     SkillAssetRegistrationRequest,
     SkillAssetRegistrationResult,
@@ -91,6 +92,10 @@ __all__ = [
     "IntegrationService",
     "AccessContext",
     "IdentityService",
+    "RuntimeProfile",
+    "RuntimeState",
+    "RuntimeSupervisor",
+    "load_factory",
     "integration_result_digest",
     "MemoryCandidate",
     "MemoryIndexAdapter",

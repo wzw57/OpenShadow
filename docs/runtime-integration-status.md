@@ -15,6 +15,8 @@
 | Shadow 内部 Agent Loop | 明确不实现 |
 | Hermes Tool/Capability 映射 | 尚未实现；联调配置全部关闭工具 |
 | 单用户 Web UI Conversation Client | 已实现；通过 `/ui/` 使用 Shadow API |
+| Runtime Supervisor / Management UI | 已实现；本地 profile、受控 lifecycle 和切换 |
+| Codex CLI Runtime Adapter | 已实现；`codex exec --json` 进程边界，默认 profile 禁用 |
 
 ## 当前边界
 
@@ -24,6 +26,11 @@
 OpenAI-compatible API 使用 `deepseek-v4-flash`。Shadow 不直接调用 DeepSeek，也不把
 Hermes 私有 Session 或 Memory 写入 Canonical Repository。Server 只解析通用工厂引用，
 不导入或判断 Hermes。
+
+Runtime Management 现在也可从 `config/runtime-profiles.json` 读取多个本地 Adapter profile，
+通过 `/v1/runtime/instances/*` 受控启动、健康检查和选择。管理控制面不会执行任意 prompt；
+后续工作仍经过 Conversation/Admission。Codex profile 只调用已安装的 `codex` CLI，解析
+`codex exec --json` JSONL，不导入 Codex 内部对象。
 
 已完成的真实联调：
 

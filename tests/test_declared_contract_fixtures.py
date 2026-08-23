@@ -73,6 +73,8 @@ FIXTURE_SCHEMA_REFS = {
     "identity/valid-endpoint.json": "identity#/$defs/EndpointPayload",
     "identity/valid-invitation.json": "identity#/$defs/InvitationPayload",
     "identity/valid-membership.json": "identity#/$defs/MembershipPayload",
+    "runtime-management/valid-profile.json": "runtime-management#/$defs/RuntimeProfile",
+    "runtime-management/invalid-profile-shell.json": "runtime-management#/$defs/RuntimeProfile",
 }
 
 
@@ -101,6 +103,7 @@ def test_declared_fixture_is_checked_against_offline_contract(relative_path: str
             "pulse/invalid",
             "erasure/invalid",
             "identity/invalid",
+            "runtime-management/invalid",
             "repository/invalid",
         )
     )

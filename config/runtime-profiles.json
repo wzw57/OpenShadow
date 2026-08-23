@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "active_runtime_id": "deterministic",
+  "profiles": [
+    {
+      "runtime_id": "deterministic",
+      "display_name": "Deterministic Runtime",
+      "adapter_factory": "shadow_adapters:create_runtime_adapter",
+      "target_kind": "shadow.deterministic-runner",
+      "enabled": true,
+      "auto_start": true
+    },
+    {
+      "runtime_id": "hermes",
+      "display_name": "Hermes Agent Runtime",
+      "adapter_factory": "shadow_hermes:create_runtime_adapter",
+      "target_kind": "shadow.agent-runtime",
+      "enabled": false,
+      "auto_start": false,
+      "launch": {
+        "command": [],
+        "cwd": null
+      },
+      "health": {
+        "url": "http://127.0.0.1:8642/v1"
+      }
+    },
+    {
+      "runtime_id": "codex",
+      "display_name": "Codex CLI Runtime",
+      "adapter_factory": "shadow_codex:create_runtime_adapter",
+      "target_kind": "shadow.agent-runtime",
+      "enabled": true,
+      "auto_start": false,
+      "workspace_dir": null,
+      "launch": {
+        "command": [],
+        "cwd": null
+      }
+    }
+  ]
+}

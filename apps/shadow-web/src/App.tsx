@@ -18,11 +18,12 @@ import {
   submitTurn,
 } from "./api";
 import ContextPanel from "./ContextPanel";
+import ManagementView from "./ManagementView";
 import ProfileView, { PROFILE_LABELS } from "./ProfileView";
 import type { CanonicalRecord, Conversation, Message, ProfileKind, Run, RunEvent, RuntimeStatus, SpaceRecord } from "./types";
 
 const TERMINAL_LIFECYCLES = new Set(["completed", "failed", "unknown", "cancelled", "canceled"]);
-type WorkspaceView = "conversation" | ProfileKind;
+type WorkspaceView = "conversation" | ProfileKind | "management";
 const PROFILE_NAV: ProfileKind[] = ["memories", "states", "tasks", "actions"];
 
 function formatTime(value?: string): string {
@@ -124,6 +125,10 @@ export default function App() {
     setRuntime(runtimeBody);
   }, []);
 
+  const refreshRuntimeContext = useCallback(async () => {
+    await refreshStatus();
+  }, [refreshStatus]);
+
   const refreshProfiles = useCallback(async (profileKind: ProfileKind) => {
     setProfileLoading(true);
     try {
@@ -155,7 +160,7 @@ export default function App() {
     try {
       const records = await refreshConversations();
       await refreshStatus();
-      if (view !== "conversation") await refreshProfiles(view);
+      if (view !== "conversation" && view !== "management") await refreshProfiles(view);
       const conversationId = selectedId ?? records[0]?.record_id;
       if (conversationId) await refreshMessages(conversationId);
       if (run?.record_id) await refreshRun(run.record_id);
@@ -193,7 +198,7 @@ export default function App() {
   }, [refreshMessages, selectedId]);
 
   useEffect(() => {
-    if (view === "conversation") {
+    if (view === "conversation" || view === "management") {
       setProfileRecords([]);
       return;
     }
@@ -327,8 +332,15 @@ export default function App() {
             >
               <span className="workspace-nav-icon">◇</span>
               <span>{PROFILE_LABELS[profileKind]}</span>
-            </button>
-          ))}
+              </button>
+            ))}
+          <button
+            className={view === "management" ? "selected" : ""}
+            onClick={() => setView("management")}
+          >
+            <span className="workspace-nav-icon">⚙</span>
+            <span>Project management</span>
+          </button>
         </nav>
 
         <div className="sidebar-section-label">Conversations</div>
@@ -364,13 +376,13 @@ export default function App() {
       <main className="main-panel">
         <header className="topbar">
           <div>
-            <div className="eyebrow">{view === "conversation" ? "Conversation" : "Profile"}</div>
+            <div className="eyebrow">{view === "conversation" ? "Conversation" : view === "management" ? "Project management" : "Profile"}</div>
             <h1>
               {view === "conversation"
                 ? selectedConversation
                   ? recordTitle(selectedConversation)
                   : "Your workspace"
-                : PROFILE_LABELS[view]}
+                : view === "management" ? "Runtime control plane" : PROFILE_LABELS[view]}
             </h1>
           </div>
           <div className="topbar-actions">
@@ -394,7 +406,9 @@ export default function App() {
           </div>
         )}
 
-        {view !== "conversation" ? (
+        {view === "management" ? (
+          <ManagementView onRuntimeChanged={refreshRuntimeContext} />
+        ) : view !== "conversation" ? (
           <ProfileView
             kind={view}
             records={profileRecords}

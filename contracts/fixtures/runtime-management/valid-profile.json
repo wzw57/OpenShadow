@@ -1,0 +1,8 @@
+{
+  "runtime_id": "deterministic",
+  "display_name": "Deterministic Runtime",
+  "adapter_factory": "shadow_adapters:create_runtime_adapter",
+  "target_kind": "shadow.deterministic-runner",
+  "enabled": true,
+  "auto_start": true
+}

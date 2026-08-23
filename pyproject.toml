@@ -32,8 +32,9 @@ where = [
   "adapters/store-sqlite/src",
   "apps/shadow-server",
   "adapters/hermes-agent/src",
+  "adapters/codex-agent/src",
 ]
-include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_store*", "shadow_server*", "shadow_hermes*"]
+include = ["shadow_kernel*", "shadow_application*", "shadow_adapters*", "shadow_store*", "shadow_server*", "shadow_hermes*", "shadow_codex*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -44,6 +45,7 @@ pythonpath = [
   "adapters/store-sqlite/src",
   "apps/shadow-server",
   "adapters/hermes-agent/src",
+  "adapters/codex-agent/src",
 ]
 addopts = "-ra"
 
