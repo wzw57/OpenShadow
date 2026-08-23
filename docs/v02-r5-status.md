@@ -18,7 +18,7 @@
   保留作为 facade。
 
 验收证据：R0/R4/R5、Phase 1 API、Phase 3 State/Completion、Phase 4 Action、Runtime
-Management 定向回归通过；全量 `pytest -q` 为 `290 passed`，Ruff、Alembic upgrade/downgrade
+Management 定向回归通过；全量 `pytest -q` 为 `292 passed`，Ruff、Alembic upgrade/downgrade
 和 `git diff --check` 通过。`tests/test_v02_r5_generic_api.py` 覆盖 extension discovery、
 generic input/record 查询、owner/space 隔离、store factory 注入以及 runtime/static OpenAPI
 路径同步。

@@ -668,7 +668,7 @@ def test_v02_r5_generic_surface_is_synchronized() -> None:
     runtime_schema = create_app("sqlite://").openapi()
 
     assert "Generic Records API" in status
-    assert "290 passed" in status
+    assert "292 passed" in status
     assert "v0.2 R5 Generic surface" in sync
     for path, method in (
         ("/v1/extensions", "get"),
@@ -679,3 +679,19 @@ def test_v02_r5_generic_surface_is_synchronized() -> None:
         assert path in runtime_schema["paths"]
         assert method in runtime_schema["paths"][path]
         assert path in openapi
+
+
+def test_v02_r6_release_status_matches_cleaned_runtime_boundary() -> None:
+    status = _read("docs/v02-r6-status.md")
+    audit = _read("docs/v02-refactor-audit-and-plan.md")
+    r3 = _read("docs/v02-r3-status.md")
+    conversation = _read("packages/shadow-application/src/shadow_application/conversation.py")
+    dispatch = _read("packages/shadow-kernel/src/shadow_kernel/dispatch.py")
+    runtime = _read("packages/shadow-kernel/src/shadow_kernel/runtime.py")
+
+    assert "Completed locally / ready for integration" in status
+    assert "R0–R6 complete" in audit
+    assert "legacy path removed" in r3
+    assert "Legacy retry path" not in conversation
+    assert "request_text" not in dispatch
+    assert "request_text" not in runtime

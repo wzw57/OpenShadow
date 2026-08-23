@@ -1,7 +1,7 @@
 # v0.2 R1 状态：ExtensionRegistry 与多 Contract Pack
 
-状态：**Implemented locally / contract regression passed**
-分支：`v02/r0-architecture-tests`
+状态：**Completed / merged into the v0.2 refactor line**
+分支：`v02/r1-extension-registry`
 
 R1 已实现 Kernel 内的最小注册边界：
 
@@ -17,15 +17,13 @@ R1 已实现 Kernel 内的最小注册边界：
 - `shadow_kernel` 只提供注册原语，不导入 Application、Server 或任何 vendor adapter。
 
 测试：`tests/test_v02_r1_registry.py` 覆盖 core/extension pack、离线校验、digest mismatch、
-path traversal、schema conflict、Extension namespace ownership 和缺失 pack。R0 的 strict
-xfail 仍记录尚未进入 R2–R5 的执行、generic API 和 Store capability 迁移。
+path traversal、schema conflict、Extension namespace ownership 和缺失 pack。后续 R2–R5
+已分别完成执行、generic API 和 Store capability 迁移。
 
-验收证据：R0/R1/Phase 0 相关测试 `11 passed, 7 xfailed`；Contract、Repository 和
-peripheral 回归 `74 passed`；新增 Kernel 代码 Ruff 通过。整套 `pytest -q` 的一次运行
-出现既有 `test_deterministic_adapter_enforces_capability_and_replay` 时间窗口 flake，单文件
-复跑通过，未修改该无关业务路径。
+验收证据：R0/R1/Phase 0 相关测试、Contract、Repository 和 peripheral 回归均通过；R6
+全量 `pytest -q` 为 `292 passed`，新增 Kernel 代码 Ruff 通过。
 
 ## 当前边界
 
-R1 不实现 `ExecutionRequest`、Proposal/Input handler dispatch、generic records API、
-Conversation extraction 或 Store capability split；这些仍按 v0.2 计划进入后续阶段。
+R1 本身不承担 Execution、Proposal/Input、generic records 或 Store capability 实现；这些边界
+已在 R2–R5 独立切片完成，R6 的全量回归确认组合后仍保持离线 Contract 与 namespace 约束。

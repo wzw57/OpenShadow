@@ -7,7 +7,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 
 | 事实 | 权威来源 | 必须同步的证据 |
 | --- | --- | --- |
-| v0.2 extensibility refactor boundary | `docs/v02-refactor-audit-and-plan.md`、`docs/v02-r0-status.md`、`docs/v02-r1-status.md`、`docs/v02-r2-status.md`、`docs/v02-r3-status.md`、`docs/v02-r4-status.md`、`docs/v02-r5-status.md` | R0/R1/R2/R3/R4/R5 architecture tests、Extension fixtures、每阶段状态文档和迁移 PR evidence |
+| v0.2 extensibility refactor boundary | `docs/v02-refactor-audit-and-plan.md`、`docs/v02-r0-status.md`、`docs/v02-r1-status.md`、`docs/v02-r2-status.md`、`docs/v02-r3-status.md`、`docs/v02-r4-status.md`、`docs/v02-r5-status.md`、`docs/v02-r6-status.md` | R0–R6 architecture tests、Extension fixtures、每阶段状态文档和发布验收 evidence |
 | Public route、method、status、headers | `contracts/openapi/openapi.yaml` | FastAPI route、API tests、对应状态文档 |
 | Canonical version / lifecycle semantics | Accepted ADR、design gate、JSON Schema | Service implementation、contract fixtures、lifecycle tests |
 | 当前交付状态 | `docs/phase*-status.md`、`docs/roadmap.md` | PR description、CI evidence；不得保留已合并分支作为当前状态 |
@@ -97,6 +97,9 @@ Store capability protocols、`/v1/extensions`、`/v1/records`、`/v1/records/{re
 `/v1/inputs` 的 runtime/static OpenAPI 和 owner/space 隔离测试。Generic API 只能通过注册表
 解析 namespaced input，不得在 Server dispatch 中重新引入 Profile/Runtime 分支；Store 的
 Event、Erasure、Portable Transfer 能力必须保持为可选 capability，不得扩大基础 Repository port。
+
+v0.2 R6 发布收口必须同步 `docs/v02-r6-status.md`、R0–R5 状态文档、audit plan 和 ADR index；
+任何“implemented locally”“xfail”“legacy shim”描述都必须与当前代码和全量验收证据一致。
 
 Production Readiness 必须先同步 `production-readiness-design-gate.md`、ADR-0026 和对应 Slice
 状态文档；认证、Secret、远程 Store、Runtime reliability、Voice/Device 和发布运维不得在

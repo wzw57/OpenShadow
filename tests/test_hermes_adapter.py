@@ -9,6 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 from shadow_hermes import HermesAgentRuntimeAdapter
 from shadow_kernel.errors import ShadowDomainError
+from shadow_kernel.models import (
+    CapabilityEnvelopeSnapshot,
+    ExecutionRequest,
+    RecordVersionRef,
+    StableRecordRef,
+)
 from shadow_server.app import create_app
 
 
@@ -66,6 +72,26 @@ def hermes_server() -> Any:
         thread.join(timeout=2)
 
 
+def _request(text: str) -> ExecutionRequest:
+    return ExecutionRequest(
+        execution_request_id="execution-request-hermes-test",
+        run_ref=RecordVersionRef(record_id="run-hermes-test", version=1),
+        attempt_ref=RecordVersionRef(record_id="attempt-hermes-test", version=1),
+        binding_ref=RecordVersionRef(record_id="binding-hermes-test", version=1),
+        idempotency_key="hermes-test",
+        capability_envelope_snapshot=CapabilityEnvelopeSnapshot(
+            envelope_ref=StableRecordRef(record_id="envelope-hermes-test"),
+            version=1,
+            digest="sha256:" + "0" * 64,
+            effective_constraints={},
+        ),
+        input_schema_ref="https://schemas.openshadow.dev/contracts/profiles/1.0.0#/$defs/MessagePayload",
+        typed_input={"text": text},
+        correlation_id="correlation-hermes-test",
+        submitted_at="2026-08-23T00:00:00Z",
+    )
+
+
 def test_hermes_adapter_round_trip_and_descriptor(hermes_server: Any) -> None:
     port = hermes_server.server_address[1]
     adapter = HermesAgentRuntimeAdapter(
@@ -78,7 +104,7 @@ def test_hermes_adapter_round_trip_and_descriptor(hermes_server: Any) -> None:
     assert descriptor["supported_target_kinds"] == ["shadow.agent-runtime"]
     assert descriptor["capabilities"] == []
 
-    result = adapter.execute("hello")
+    result = adapter.execute(_request("hello"))
 
     assert result.text == "Hello from Hermes"
     assert result.usage == {"prompt_tokens": 4, "completion_tokens": 3, "total_tokens": 7}
@@ -100,7 +126,7 @@ def test_hermes_adapter_maps_unavailable(hermes_server: Any) -> None:
     adapter = HermesAgentRuntimeAdapter(base_url=f"http://127.0.0.1:{port}/v1")
 
     with pytest.raises(ShadowDomainError) as exc_info:
-        adapter.execute("hello")
+        adapter.execute(_request("hello"))
 
     assert exc_info.value.error.code == "shadow.runtime.http-error"
     assert exc_info.value.error.category == "unavailable"
@@ -113,7 +139,7 @@ def test_hermes_adapter_rejects_protocol_mismatch(hermes_server: Any) -> None:
     adapter = HermesAgentRuntimeAdapter(base_url=f"http://127.0.0.1:{port}/v1")
 
     with pytest.raises(ShadowDomainError) as exc_info:
-        adapter.execute("hello")
+        adapter.execute(_request("hello"))
 
     assert exc_info.value.error.code == "shadow.runtime.protocol-incompatible"
     assert exc_info.value.error.category == "incompatible"

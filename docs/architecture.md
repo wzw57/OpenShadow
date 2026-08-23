@@ -154,6 +154,12 @@ Runtime profile。实际工作仍必须经过 Conversation、Admission、Run/Att
 管理控制面没有任意 prompt 执行入口。Hermes 联调 profile 的工具集全部关闭，细粒度 SSE、
 Session resume 和经过 Shadow Capability/Action 治理的工具桥接属于后续切片。
 
+v0.2 R0–R6 已将扩展边界落到代码：`ExtensionRegistry` 负责 Profile/Runtime descriptor，
+`InputHandlerRegistry` 负责 namespaced proposal/input，generic records API 负责 owner/space
+隔离查询；这些 registry 位于 composition/application 边界，Kernel 不导入具体 Profile 或
+Vendor。Store 基础 Port 只要求 Canonical 读写，Event、Erasure、Portable Transfer 作为可选
+capability 协议协商。
+
 ## 4. Canonical Record 与 Profile
 
 统一 Envelope：

@@ -1,6 +1,6 @@
 # OpenShadow 完整技术架构
 
-- 状态：Stage 4 Accepted — D1–D8 已冻结并合并，进入 Phase 0–1 实现
+- 状态：Stage 4 Accepted；v0.2 R0–R6 extensibility refactor 已完成本地收口
 - 适用范围：完整 Shadow 产品，不等同于某一实现 Phase
 - 核心方法：冻结 Tiny Kernel、typed Profile 与 Extension Contract，再按阶段实现
 - 非目标：不冻结 Runtime、模型、Memory 项目、数据库、消息队列、云平台或 Target Kind 全集
@@ -12,6 +12,11 @@
 `FastAPI → ConversationService → Hermes Adapter → Hermes API Server →
 DeepSeek (deepseek-v4-flash)`。Shadow 默认仍使用 Deterministic Adapter；Hermes
 工具、Session 私有状态和模型 Provider 均不进入 Shadow Canonical Store。
+
+当前通用扩展面由 `ExtensionRegistry`、`InputHandlerRegistry`、typed
+`ExecutionDispatcher/Coordinator` 和 Store capability protocols 组成。它们保持
+`kernel ← application ← server` 依赖方向；generic API 不按 Profile/Vendor 名称分支，旧
+Profile 路由只作为 facade。R6 的发布证据集中在 [v02-r6-status](v02-r6-status.md)。
 
 ## 1. 架构目标
 

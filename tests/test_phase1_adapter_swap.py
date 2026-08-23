@@ -5,6 +5,7 @@ from pathlib import Path
 from shadow_adapters import DeterministicTestAdapter, ExecutionResult
 from shadow_application import ConversationService
 from shadow_kernel.commit import CommitAuthority
+from shadow_kernel.models import ExecutionRequest
 from shadow_kernel.registry import ContractRegistry
 from shadow_store import SqliteCanonicalRepository
 
@@ -26,7 +27,9 @@ class AlternateRuntimeAdapter(DeterministicTestAdapter):
         )
         return body
 
-    def execute(self, text: str) -> ExecutionResult:
+    def execute(self, request: ExecutionRequest) -> ExecutionResult:
+        typed_input = request.typed_input
+        text = typed_input.get("text", "") if isinstance(typed_input, dict) else str(typed_input)
         return ExecutionResult(
             text=f"Alternate: {text}",
             usage={"input_characters": len(text), "output_characters": len(text) + 10},

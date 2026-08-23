@@ -12,7 +12,6 @@ from urllib.request import Request, urlopen
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest
 from shadow_kernel.models import ExecutionRequest
-from shadow_kernel.runtime import request_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,8 +86,9 @@ class HermesAgentRuntimeAdapter:
         if isinstance(health_url, str) and health_url:
             self.base_url = health_url.rstrip("/")
 
-    def execute(self, request: ExecutionRequest | str) -> HermesExecutionResult:
-        text = request_text(request)
+    def execute(self, request: ExecutionRequest) -> HermesExecutionResult:
+        typed_input = request.typed_input
+        text = typed_input.get("text", "") if isinstance(typed_input, dict) else str(typed_input)
         if not text:
             raise ShadowDomainError(
                 ShadowError(

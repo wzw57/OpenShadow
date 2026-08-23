@@ -83,7 +83,7 @@ Admission、CommitAuthority、CAS 和版本生命周期。
     │ REST
     ▼
 FastAPI Shadow Server ───────────────► RuntimeSupervisor（本地控制面）
-    │                                      │ profile lifecycle / select / health
+    │ generic inputs / records / extensions │ profile lifecycle / select / health
     ▼                                      ▼
 Application Services ───────────────► RuntimeAdapter Port
     │                                      ├─ Deterministic Adapter
@@ -171,8 +171,10 @@ OpenShadow/
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-当前已经实现的是一套模块化单体：Runtime Adapter 可以是外部进程或 HTTP 服务，但 Kernel、
-Application 和 Web UI 不导入 Hermes/Codex 私有类型，也不直接连接 Model Provider。
+当前已经实现的是一套模块化单体：ExtensionRegistry、InputHandlerRegistry 和 generic records
+boundary 负责扩展发现、namespaced 输入和 owner/space 隔离；Runtime Adapter 可以是外部进程或
+HTTP 服务，但 Kernel、Application 和 Web UI 不导入 Hermes/Codex 私有类型，也不直接连接
+Model Provider。
 
 ## 技术栈
 
@@ -244,7 +246,8 @@ Ollama、本地模型或 GPU。
 - Web UI 只依赖 vendor-neutral API；Hermes/Codex 名称只出现在 Adapter 和部署 profile。
 - Canonical Store 保存用户长期资产，不保存 Provider Secret、Runtime 私有 Memory、缓存或
   可重建索引。
-- Phase 0–4 和 Phase 5 Core Slice 已完成当前授权范围；OAuth/OIDC、Voice、远程 Store、
+- Phase 0–4 和 Phase 5 Core Slice 已完成当前授权范围；v0.2 R0–R6 extensibility refactor
+  已完成本地收口（详见 [`docs/v02-r6-status.md`](docs/v02-r6-status.md)）。OAuth/OIDC、Voice、远程 Store、
   跨设备同步和生产级多用户发行仍保持 Contract-only 或后续闸门。
 
 ### 设计总架构的产品视图

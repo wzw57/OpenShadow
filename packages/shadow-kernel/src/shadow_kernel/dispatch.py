@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -14,7 +13,7 @@ from .adapters import (
 from .errors import ShadowDomainError, ShadowError
 from .ids import sha256_digest
 from .models import ExecutionRequest
-from .runtime import RuntimeAdapter, request_text
+from .runtime import RuntimeAdapter
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +92,7 @@ class ExecutionDispatcher:
                 adapter_id=prior[1].adapter_id,
                 replayed=True,
             )
-        output = self._invoke(self._runtimes[adapter_id], request)
+        output = self._runtimes[adapter_id].execute(request)
         result = DispatchResult(
             request=request,
             binding=binding,
@@ -102,19 +101,6 @@ class ExecutionDispatcher:
         )
         self._receipts[receipt_key] = (digest, result)
         return result
-
-    @staticmethod
-    def _invoke(adapter: RuntimeAdapter, request: ExecutionRequest) -> Any:
-        """Call typed adapters while keeping a bounded v0.1 text shim.
-
-        The shim is deliberately local to the Dispatcher.  New adapters must
-        implement the typed port; legacy test/deployment adapters whose first
-        parameter is named ``text`` continue to work during R3 migration.
-        """
-        parameters = list(inspect.signature(adapter.execute).parameters.values())
-        if parameters and parameters[0].name == "text":
-            return adapter.execute(request_text(request))  # type: ignore[arg-type]
-        return adapter.execute(request)
 
     @staticmethod
     def _requirements(

@@ -1,12 +1,12 @@
 # OpenShadow v0.2 架构重构审计与分阶段计划
 
-状态：**Audit complete / design-first；尚未进入 R0 业务实现**
+状态：**R0–R6 complete / v0.2 extensibility refactor closed locally**
 基线：当前 `main`（Phase 0–4、Phase 5 Core Slice 以及 production A–E 本地参考切片）
 目标：把 v0.1 的“可运行参考实现”收口为真正可扩展的 v0.2，而不改变 Kernel 的
 Canonical、CAS、CommitAuthority、幂等和离线 Contract digest 语义。
 
-本文件对应 v0.2 重构请求的第一步：先记录当前实现事实、差距、兼容边界和验收顺序。
-在维护者接受本计划前，不创建 ExtensionRegistry、Dispatcher 或新的通用 API。
+本文件记录 v0.2 重构请求的审计事实、目标依赖、兼容边界和 R0–R6 验收顺序。各切片已按
+设计先行、独立分支和回归闸门完成；当前工作树位于 R6 收口分支，待按项目协作流程合并。
 
 ## 1. 审计结论
 
@@ -216,9 +216,11 @@ git diff --check
 
 ## 6. 当前决策与下一步
 
-本审计没有发现必须推翻现有 Phase 0–5 业务基线的理由；正确路径是“抽 ports、迁移 composition、
-最后删除旧路径”，而不是重写所有 Service。下一步只进入 **R0：架构测试和 extension fixtures**。
+本审计没有发现必须推翻现有 Phase 0–5 业务基线的理由；采用“抽 ports、迁移 composition、
+最后删除旧路径”的路径完成了 R0–R6，而不是重写所有 Service。当前已进入 **R6：文档同步与发布
+验收**，待合并后再以 `main` 作为交付基线。
 
-R0 完成的标志是：至少一个不属于内建 Profile 的 example extension 在测试 composition 中被
-注册、发现、校验和调用，同时生产代码和 generic Server 无任何针对该 example 的分支。
-在 R0 通过前不实现 R1 registry 或任何新的业务 API。
+R0–R6 完成标志是：至少一个不属于内建 Profile 的 example extension 在测试 composition 中被
+注册、发现、校验和调用；Kernel 无反向依赖；generic Server 无 Profile/vendor 分支；typed
+Runtime、generic input/records/extensions API、可选 Store capabilities、OpenAPI static/runtime
+和 full validation 均通过，同时 Conversation 只有 Coordinator durable pipeline。

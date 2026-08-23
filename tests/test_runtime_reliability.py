@@ -7,6 +7,7 @@ from shadow_adapters import ExecutionResult
 from shadow_application import ConversationService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.ids import sha256_digest
+from shadow_kernel.models import ExecutionRequest
 from shadow_kernel.registry import ContractRegistry
 from shadow_store import SqliteCanonicalRepository
 
@@ -34,10 +35,12 @@ class InspectingAdapter:
             "config_schema_ref": "https://schemas.openshadow.dev/contracts/adapters/1.0.0#/$defs/AdapterDescriptor",
         }
 
-    def execute(self, text: str) -> ExecutionResult:
+    def execute(self, request: ExecutionRequest) -> ExecutionResult:
         self.calls += 1
         if self.fail:
             raise TimeoutError("provider did not confirm the outcome")
+        typed_input = request.typed_input
+        text = typed_input.get("text", "") if isinstance(typed_input, dict) else str(typed_input)
         return ExecutionResult(text=f"processed: {text}", usage={"calls": self.calls})
 
     def events(self, execution_ref: str, after_cursor: str | None = None) -> list[dict[str, object]]:

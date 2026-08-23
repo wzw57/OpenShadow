@@ -184,6 +184,11 @@ Phase 5 Core Slice 已按 ADR-0024 接受设计闸门并完成 Endpoint pairing�
 Invitation、读 ACL 与 Web context；真实 OAuth/OIDC、Voice、远程 Store 和设备同步仍为
 Contract-only，详见 [Phase 5 状态](phase5-status.md)。
 
+在上述业务基线之上，v0.2 extensibility refactor 已按 R0–R6 完成本地收口：Extension/Contract
+Registry、typed Execution Dispatcher/Coordinator、generic Input/Records API、Store capability
+split、旧 retry/Runtime text shim 清理和 OpenAPI/runtime 文档同步均已交付。发布验收证据见
+[v0.2 R6 状态](v02-r6-status.md)；合并前不把开发分支写成 `main` 的已交付状态。
+
 生产化路线已建立总体设计闸门 [Production Readiness](production-readiness-design-gate.md)
 和 ADR-0026。Slice A Auth/Security 已按 ADR-0027 实现并通过本地验收；Slice B Runtime
 Reliability 已完成基础 durable dispatch/unknown outcome 实现，真实 Hermes resume 和

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-
 import pytest
 from shadow_application import DeterministicPeripheralAdapter, InteractionRequest
 
@@ -15,7 +13,9 @@ def _request(**overrides: object) -> InteractionRequest:
         "capability_ref": "capability.device.observe",
         "consent_ref": "consent-device-1",
         "data_classification": "personal",
-        "expires_at": (datetime.now(UTC) + timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
+        # Keep the replay fixture byte-identical across calls; expiry semantics
+        # are covered separately by the explicit expired request below.
+        "expires_at": "2099-01-01T00:00:00Z",
         "idempotency_key": "device-1",
         "typed_input": {"device_ref": "device-local"},
     }

@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from shadow_kernel.models import ExecutionRequest
-from shadow_kernel.runtime import request_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,8 +33,9 @@ class DeterministicTestAdapter:
             ),
         }
 
-    def execute(self, request: ExecutionRequest | str) -> ExecutionResult:
-        text = request_text(request)
+    def execute(self, request: ExecutionRequest) -> ExecutionResult:
+        typed_input = request.typed_input
+        text = typed_input.get("text", "") if isinstance(typed_input, dict) else str(typed_input)
         return ExecutionResult(
             text=f"Echo: {text}",
             usage={"input_characters": len(text), "output_characters": len(text) + 6},

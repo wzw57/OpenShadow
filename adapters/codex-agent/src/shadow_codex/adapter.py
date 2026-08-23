@@ -11,7 +11,6 @@ from typing import Any
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest
 from shadow_kernel.models import ExecutionRequest
-from shadow_kernel.runtime import request_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,8 +83,9 @@ class CodexAgentRuntimeAdapter:
         executable = self._resolve_executable()
         return {"status": "healthy", "executable": executable}
 
-    def execute(self, request: ExecutionRequest | str) -> CodexExecutionResult:
-        text = request_text(request)
+    def execute(self, request: ExecutionRequest) -> CodexExecutionResult:
+        typed_input = request.typed_input
+        text = typed_input.get("text", "") if isinstance(typed_input, dict) else str(typed_input)
         if not text.strip():
             raise ShadowDomainError(
                 ShadowError(

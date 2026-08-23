@@ -1,6 +1,6 @@
 # v0.2 R4 状态：Generic Proposal/Input Handler Registry
 
-状态：**Implemented locally / built-in handlers migrated**
+状态：**Completed / built-in handlers migrated and generic boundary closed**
 
 已完成：
 
@@ -14,12 +14,11 @@
   包含 State/Task/Action 类名或分支。
 - 示例 input 可以在测试 composition 注册，不需要修改 Server dispatch。
 
-验收证据：R0/R4、Phase 3 State/Completion、Phase 4 Action 测试 `25 passed, 4 xfailed`；
-Ruff 通过。4 个 xfail 仍属于 R5 的 generic records/inputs API、Extension discovery 和
-Repository capability split 闸门。
+验收证据：R0/R4、Phase 3 State/Completion、Phase 4 Action 定向测试通过；R5 已补齐 generic
+records/inputs API、Extension discovery 和 Repository capability split，R6 全量回归为
+`292 passed`，Ruff 通过。
 
 ## 当前边界
 
-R4 不新增 `/v1/inputs` 或 `/v1/records`；`/v1/proposals` 是现有 generic proposal boundary
-的兼容升级。Memory 等复杂 Profile 仍在后续 Extension migration 计划中，不复制新的
-Server 分支。
+R4 不新增业务数据库表；`/v1/proposals` 的 generic boundary 由 R5 扩展为 `/v1/inputs`、
+`/v1/records` 和 `/v1/extensions`，friendly API 仍作为兼容 facade，不复制新的 Server 分支。
