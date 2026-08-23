@@ -18,7 +18,7 @@ Schema；它规定这些工件在实现发生变化时如何保持同步。
 | Runtime Management / Hermes launcher / Codex Adapter | `docs/runtime-management-design-gate.md`、ADR-0025、`docs/runtime-management-status.md` | Runtime profile schema、Supervisor/API、Adapter tests、Management UI、启动脚本和 runtime 状态文档 |
 | Production Readiness / Release boundary | `docs/production-readiness-design-gate.md`、ADR-0026 | Auth/Secret/Store/Runtime/Backup/Operations slices、状态文档、release/restore/security evidence |
 | Production Auth / Session / Secret boundary | `docs/production-auth-design-gate.md`、ADR-0027 | AuthContext/Verifier、SessionStore、auth OpenAPI、redaction/CSRF tests、`production-auth-status.md` |
-| Production Store / Backup / Portable Sync | `docs/production-store-backup-design-gate.md`、ADR-0028 | Repository profile/configuration、Portable Import/Export、Backup Metadata、restore/outage tests、Store status |
+| Production Store / Backup / Portable Sync | `docs/production-store-backup-design-gate.md`、ADR-0028 | Repository profile/configuration、Portable Import/Export、Backup Metadata、restore/outage tests、`production-store-status.md` |
 
 ## Vendor isolation rule
 

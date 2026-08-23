@@ -191,6 +191,9 @@ Reliability 已完成基础 durable dispatch/unknown outcome 实现，真实 Her
 [Production Auth 状态](production-auth-status.md) 和 [Runtime Reliability 状态](runtime-reliability-status.md)。
 Store/Backup/Portable Sync 已按 ADR-0028 完成设计闸门接受，下一步仅实现 Store profile
 选择与可重复 restore/outage 证据，不引入后台同步或云备份业务。
+Store profile 选择、显式 PostgreSQL Adapter boundary 和 readiness unavailable 语义已实现；
+真实 PostgreSQL 连接、云备份和跨设备同步仍保持 Contract-only，详见
+[Production Store 状态](production-store-status.md)。
 
 ## 延后实现与重新评估
 

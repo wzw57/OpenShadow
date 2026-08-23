@@ -50,3 +50,6 @@ Export/restore 与 Backup Metadata 的边界。它不改变 `CanonicalRepository
 - Portable round-trip、篡改、重复、Tombstone、冲突和 Store outage 测试通过；
 - Backup Metadata fixture 验证 encryption/digest/restore-drill/erase 状态；
 - 文档、OpenAPI/Schema、roadmap 和状态文档无 drift。
+
+实现状态：上述 profile、readiness 和已有 Portable restore Contract 已完成；真实
+PostgreSQL 连接、云备份和跨设备同步仍需部署环境与独立 Adapter 验收。

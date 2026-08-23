@@ -33,7 +33,7 @@ from shadow_kernel.ids import sha256_digest
 from shadow_kernel.registry import ContractRegistry
 from shadow_kernel.repository import CanonicalRepository
 from shadow_kernel.runtime import RuntimeAdapter
-from shadow_store import SqliteCanonicalRepository
+from shadow_store import create_canonical_repository
 
 
 class CreateConversationCommand(BaseModel):
@@ -251,10 +251,14 @@ def create_app(
     root = _repo_root()
     registry = ContractRegistry(root)
     if database_url is None:
-        database_path = root / ".shadow" / "shadow.db"
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-        database_url = f"sqlite:///{database_path.as_posix()}"
-    repository = SqliteCanonicalRepository(database_url)
+        configured_url = os.getenv("SHADOW_DATABASE_URL", "").strip()
+        if configured_url:
+            database_url = configured_url
+        else:
+            database_path = root / ".shadow" / "shadow.db"
+            database_path.parent.mkdir(parents=True, exist_ok=True)
+            database_url = f"sqlite:///{database_path.as_posix()}"
+    repository = create_canonical_repository(database_url)
     authority = CommitAuthority(repository, registry)
     admission = AdmissionService(repository, authority)
     auth_mode = os.getenv("SHADOW_AUTH_MODE", "local-dev").strip().lower()
