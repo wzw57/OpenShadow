@@ -5,7 +5,7 @@ from typing import Any
 
 from shadow_kernel.adapters import AdapterDescriptor, AdapterRegistry
 from shadow_kernel.commit import CommitAuthority
-from shadow_kernel.dispatch import ExecutionDispatcher
+from shadow_kernel.dispatch import DispatchResult, ExecutionDispatcher
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest, utc_timestamp
 from shadow_kernel.models import (
@@ -28,7 +28,7 @@ from shadow_kernel.models import (
 from shadow_kernel.repository import CanonicalRepository
 from shadow_kernel.runtime import RuntimeAdapter
 
-from .execution import ExecutionCoordinator
+from .execution import DurableFinalization, ExecutionCoordinator
 
 PROFILE_SCHEMA = "https://schemas.openshadow.dev/contracts/profiles/1.0.0"
 KERNEL_SCHEMA = "https://schemas.openshadow.dev/contracts/kernel/1.0.0"
@@ -60,7 +60,11 @@ class ConversationService:
         self.authority = authority
         self.adapters = AdapterRegistry()
         self.runtime_adapter = runtime_adapter
-        self.coordinator = ExecutionCoordinator(ExecutionDispatcher(self.adapters))
+        self.coordinator = ExecutionCoordinator(
+            repository,
+            authority,
+            ExecutionDispatcher(self.adapters),
+        )
         self.runtime_descriptor = self._ensure_runtime_descriptor()
         self.runtime_target_kind = self.runtime_descriptor.supported_target_kinds[0]
 
@@ -459,17 +463,45 @@ class ConversationService:
             prepared_at=now,
             correlation_id=f"correlation-{token}",
         )
-        result = self.authority.commit(plan)
-        if result.outcome == "failed":
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.turn.commit-failed",
-                    category="validation",
-                    message="Conversation turn commit failed.",
-                    typed_details=result.structured_error,
-                )
-            )
-        if result.outcome == "idempotent_replay":
+        execution_request = ExecutionRequest(
+            execution_request_id=f"execution-request-{token}",
+            run_ref=RecordVersionRef(record_id=ids["run"], version=1),
+            attempt_ref=RecordVersionRef(record_id=ids["attempt"], version=1),
+            binding_ref=RecordVersionRef(record_id=ids["binding"], version=1),
+            idempotency_key=idempotency_key,
+            capability_envelope_snapshot=CapabilityEnvelopeSnapshot(
+                envelope_ref=StableRecordRef(record_id=ids["capability-envelope"]),
+                version=1,
+                digest=sha256_digest(cap),
+                effective_constraints={"allowed_space_ids": [space_id], "allowed_side_effects": []},
+            ),
+            input_schema_ref=f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+            typed_input={"text": text},
+            correlation_id=f"correlation-{token}",
+            submitted_at=now,
+        )
+        durable = self.coordinator.execute_durable(
+            initial_plan=plan,
+            request=execution_request,
+            target_kind=self.runtime_target_kind,
+            run_id=ids["run"],
+            attempt_id=ids["attempt"],
+            idempotency_scope=f"turn:{conversation_id}",
+            finalize=lambda dispatch, failure: self._finalize_turn(
+                dispatch=dispatch,
+                failure=failure,
+                token=token,
+                ids=ids,
+                conversation_id=conversation_id,
+                current_payload=current_payload,
+                owner_ref=owner_ref,
+                space_id=space_id,
+                principal_ref=principal_ref,
+                request_digest=request_digest,
+                idempotency_key=idempotency_key,
+            ),
+        )
+        if durable.replayed:
             return TurnResult(
                 conversation=self.repository.get(conversation_id) or {},
                 run=self.repository.get(ids["run"]) or {},
@@ -479,43 +511,31 @@ class ConversationService:
                 ephemeral=False,
                 replayed=True,
             )
-        self.repository.append_event(ids["run"], "shadow.run.started", {"run_id": ids["run"], "attempt_id": ids["attempt"]})
-        try:
-            execution_request = ExecutionRequest(
-                execution_request_id=f"execution-request-{token}",
-                run_ref=RecordVersionRef(record_id=ids["run"], version=1),
-                attempt_ref=RecordVersionRef(record_id=ids["attempt"], version=1),
-                binding_ref=RecordVersionRef(record_id=ids["binding"], version=1),
-                idempotency_key=idempotency_key,
-                capability_envelope_snapshot=CapabilityEnvelopeSnapshot(
-                    envelope_ref=StableRecordRef(record_id=ids["capability-envelope"]),
-                    version=1,
-                    digest=sha256_digest(cap),
-                    effective_constraints={
-                        "allowed_space_ids": [space_id],
-                        "allowed_side_effects": [],
-                    },
-                ),
-                input_schema_ref=f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
-                typed_input={"text": text},
-                correlation_id=f"correlation-{token}",
-                submitted_at=now,
-            )
-            dispatch_result = self.coordinator.execute(
-                execution_request,
-                target_kind=self.runtime_target_kind,
-                idempotency_scope=f"turn:{conversation_id}",
-            )
-            output = dispatch_result.output
-            output_text = getattr(output, "text", None)
-            if not isinstance(output_text, str):
-                raise TypeError("Runtime Adapter result did not contain text.")
-            runtime_failure: dict[str, Any] | None = None
-        except Exception as exc:  # Provider failures are durable unknown outcomes, never successful turns.
-            output = None
-            output_text = None
-            runtime_failure = {"code": "shadow.runtime.outcome-unknown", "reason": str(exc)[:500]}
+        return TurnResult(
+            conversation=self.repository.get(conversation_id) or {},
+            run=self.repository.get(ids["run"]) or {},
+            user_message=self.repository.get(ids["message-user"]) or {},
+            assistant_message=self.repository.get(ids["message-assistant"]) or {},
+            admission=self.repository.get(ids["admission"]) or {},
+            ephemeral=False,
+            replayed=bool(durable.final_commit and durable.final_commit.outcome == "idempotent_replay"),
+        )
 
+    def _finalize_turn(
+        self,
+        *,
+        dispatch: DispatchResult | None,
+        failure: dict[str, Any] | None,
+        token: str,
+        ids: dict[str, str],
+        conversation_id: str,
+        current_payload: ConversationPayload,
+        owner_ref: str,
+        space_id: str,
+        principal_ref: str,
+        request_digest: str,
+        idempotency_key: str,
+    ) -> DurableFinalization:
         initial_run = self.repository.get(ids["run"])
         initial_attempt = self.repository.get(ids["attempt"])
         initial_conversation = self.repository.get(conversation_id)
@@ -527,99 +547,188 @@ class ConversationService:
                     message="Durable dispatch records could not be recovered after the initial commit.",
                 )
             )
-        final_provenance = Provenance(origin_type="shadow.origin.runtime-result", origin_ref=f"result-{token}")
+        output = dispatch.output if dispatch is not None else None
+        output_text = getattr(output, "text", None)
+        runtime_failure = failure
+        if runtime_failure is None and not isinstance(output_text, str):
+            runtime_failure = {
+                "code": "shadow.runtime.outcome-unknown",
+                "reason": "Runtime Adapter result did not contain text.",
+            }
+        final_provenance = Provenance(
+            origin_type="shadow.origin.runtime-result", origin_ref=f"result-{token}"
+        )
         if runtime_failure is not None:
             final_run = RunPayload.model_validate(initial_run["typed_payload"]).model_copy(
-                update={"lifecycle": "waiting", "failure_summary": runtime_failure, "terminal_at": None}
+                update={
+                    "lifecycle": "waiting",
+                    "failure_summary": runtime_failure,
+                    "terminal_at": None,
+                }
             )
-            final_attempt = ExecutionAttemptPayload.model_validate(initial_attempt["typed_payload"]).model_copy(
-                update={"lifecycle": "outcome_unknown", "failure_summary": runtime_failure, "finished_at": None}
+            final_attempt = ExecutionAttemptPayload.model_validate(
+                initial_attempt["typed_payload"]
+            ).model_copy(
+                update={
+                    "lifecycle": "outcome_unknown",
+                    "failure_summary": runtime_failure,
+                    "finished_at": None,
+                }
             )
             final_operations = [
                 self._operation(
-                    f"operation-result-attempt-{token}", "update", ids["attempt"], "shadow.kernel.execution-attempt",
-                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload", owner_ref, space_id, principal_ref,
-                    final_attempt.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_attempt["version"],
+                    f"operation-result-attempt-{token}",
+                    "update",
+                    ids["attempt"],
+                    "shadow.kernel.execution-attempt",
+                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_attempt.model_dump(mode="json", exclude_none=True),
+                    final_provenance,
+                    expected_version=initial_attempt["version"],
                 ),
                 self._operation(
-                    f"operation-result-run-{token}", "update", ids["run"], "shadow.kernel.run",
-                    f"{KERNEL_SCHEMA}#/$defs/RunPayload", owner_ref, space_id, principal_ref,
-                    final_run.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_run["version"],
+                    f"operation-result-run-{token}",
+                    "update",
+                    ids["run"],
+                    "shadow.kernel.run",
+                    f"{KERNEL_SCHEMA}#/$defs/RunPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_run.model_dump(mode="json", exclude_none=True),
+                    final_provenance,
+                    expected_version=initial_run["version"],
                 ),
             ]
+            result_message_id: str | None = None
+            event_type = "shadow.run.unknown"
+            usage: dict[str, Any] | None = None
         else:
             assistant_message = MessagePayload(
                 conversation_ref=StableRecordRef(record_id=conversation_id),
                 sequence=len(current_payload.message_refs) + 2,
                 message_type="shadow.message.assistant",
                 author_ref=self.runtime_descriptor.descriptor_id,
-                content_blocks=[ContentBlock(
-                    block_type="shadow.content.text",
-                    content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
-                    typed_content={"text": output_text},
-                )],
+                content_blocks=[
+                    ContentBlock(
+                        block_type="shadow.content.text",
+                        content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
+                        typed_content={"text": output_text},
+                    )
+                ],
                 finalized_at=utc_timestamp(),
                 source_request_ref=RecordVersionRef(record_id=ids["request"], version=1),
                 produced_by_run_ref=RecordVersionRef(record_id=ids["run"], version=1),
             )
-            final_run = RunPayload.model_validate(initial_run["typed_payload"]).model_copy(update={
-                "lifecycle": "completed", "result_ref": RecordVersionRef(record_id=ids["message-assistant"], version=1),
-                "usage_summary": getattr(output, "usage", None), "terminal_at": utc_timestamp(), "last_event_cursor": "2",
-            })
-            final_attempt = ExecutionAttemptPayload.model_validate(initial_attempt["typed_payload"]).model_copy(update={
-                "lifecycle": "succeeded", "execution_ref": getattr(output, "execution_ref", None) or f"deterministic:{token}",
-                "result_ref": RecordVersionRef(record_id=ids["message-assistant"], version=1), "finished_at": utc_timestamp(),
-            })
+            final_run = RunPayload.model_validate(initial_run["typed_payload"]).model_copy(
+                update={
+                    "lifecycle": "completed",
+                    "result_ref": RecordVersionRef(record_id=ids["message-assistant"], version=1),
+                    "usage_summary": getattr(output, "usage", None),
+                    "terminal_at": utc_timestamp(),
+                    "last_event_cursor": "2",
+                }
+            )
+            final_attempt = ExecutionAttemptPayload.model_validate(
+                initial_attempt["typed_payload"]
+            ).model_copy(
+                update={
+                    "lifecycle": "succeeded",
+                    "execution_ref": getattr(output, "execution_ref", None)
+                    or f"deterministic:{token}",
+                    "result_ref": RecordVersionRef(record_id=ids["message-assistant"], version=1),
+                    "finished_at": utc_timestamp(),
+                }
+            )
             final_conversation = ConversationPayload(
-                title=current_payload.title, conversation_state=current_payload.conversation_state,
-                message_refs=current_payload.message_refs + [RecordVersionRef(record_id=ids["message-user"], version=1), RecordVersionRef(record_id=ids["message-assistant"], version=1)],
-                queued_run_refs=current_payload.queued_run_refs, foreground_run_ref=StableRecordRef(record_id=ids["run"]), profile_settings=current_payload.profile_settings,
+                title=current_payload.title,
+                conversation_state=current_payload.conversation_state,
+                message_refs=current_payload.message_refs
+                + [
+                    RecordVersionRef(record_id=ids["message-user"], version=1),
+                    RecordVersionRef(record_id=ids["message-assistant"], version=1),
+                ],
+                queued_run_refs=current_payload.queued_run_refs,
+                foreground_run_ref=StableRecordRef(record_id=ids["run"]),
+                profile_settings=current_payload.profile_settings,
             )
             final_operations = [
                 self._operation(
-                    f"operation-result-message-{token}", "create", ids["message-assistant"], "shadow.profile.message",
-                    f"{PROFILE_SCHEMA}#/$defs/MessagePayload", owner_ref, space_id, self.runtime_descriptor.descriptor_id,
-                    assistant_message.model_dump(mode="json", exclude_none=True), final_provenance,
+                    f"operation-result-message-{token}",
+                    "create",
+                    ids["message-assistant"],
+                    "shadow.profile.message",
+                    f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+                    owner_ref,
+                    space_id,
+                    self.runtime_descriptor.descriptor_id,
+                    assistant_message.model_dump(mode="json", exclude_none=True),
+                    final_provenance,
                 ),
                 self._operation(
-                    f"operation-result-attempt-{token}", "update", ids["attempt"], "shadow.kernel.execution-attempt",
-                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload", owner_ref, space_id, principal_ref,
-                    final_attempt.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_attempt["version"],
+                    f"operation-result-attempt-{token}",
+                    "update",
+                    ids["attempt"],
+                    "shadow.kernel.execution-attempt",
+                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_attempt.model_dump(mode="json", exclude_none=True),
+                    final_provenance,
+                    expected_version=initial_attempt["version"],
                 ),
                 self._operation(
-                    f"operation-result-run-{token}", "update", ids["run"], "shadow.kernel.run",
-                    f"{KERNEL_SCHEMA}#/$defs/RunPayload", owner_ref, space_id, principal_ref,
-                    final_run.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_run["version"],
+                    f"operation-result-run-{token}",
+                    "update",
+                    ids["run"],
+                    "shadow.kernel.run",
+                    f"{KERNEL_SCHEMA}#/$defs/RunPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_run.model_dump(mode="json", exclude_none=True),
+                    final_provenance,
+                    expected_version=initial_run["version"],
                 ),
                 self._operation(
-                    f"operation-result-conversation-{token}", "update", conversation_id, "shadow.profile.conversation",
-                    f"{PROFILE_SCHEMA}#/$defs/ConversationPayload", owner_ref, space_id, principal_ref,
-                    final_conversation.model_dump(mode="json", exclude_none=True), final_provenance, expected_version=initial_conversation["version"],
+                    f"operation-result-conversation-{token}",
+                    "update",
+                    conversation_id,
+                    "shadow.profile.conversation",
+                    f"{PROFILE_SCHEMA}#/$defs/ConversationPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_conversation.model_dump(mode="json", exclude_none=True),
+                    final_provenance,
+                    expected_version=initial_conversation["version"],
                 ),
             ]
-        final_result = self.authority.commit(CommitPlan(
-            commit_request_id=f"commit-request-result-{token}", idempotency_scope=f"turn-result:{conversation_id}",
-            idempotency_key=idempotency_key, request_digest=request_digest, actor_ref=principal_ref,
-            operations=final_operations, prepared_at=utc_timestamp(), correlation_id=f"correlation-{token}",
-        ))
-        if final_result.outcome in {"failed", "conflict"}:
-            raise ShadowDomainError(ShadowError(
-                code="shadow.runtime.result-commit-failed", category="unavailable" if final_result.outcome == "failed" else "conflict",
-                message="Runtime result could not be durably committed; the dispatch boundary remains recoverable.",
-                typed_details=final_result.structured_error, retryable=final_result.outcome == "failed",
-            ))
-        self.repository.append_event(ids["run"], "shadow.run.unknown" if runtime_failure else "shadow.run.completed", {
-            "run_id": ids["run"], "attempt_id": ids["attempt"], "result_message_id": ids["message-assistant"] if not runtime_failure else None,
-            "usage": getattr(output, "usage", None) if not runtime_failure else None,
-        })
-        return TurnResult(
-            conversation=self.repository.get(conversation_id) or {},
-            run=self.repository.get(ids["run"]) or {},
-            user_message=self.repository.get(ids["message-user"]) or {},
-            assistant_message=self.repository.get(ids["message-assistant"]) or {},
-            admission=self.repository.get(ids["admission"]) or {},
-            ephemeral=False,
-            replayed=final_result.outcome == "idempotent_replay",
+            result_message_id = ids["message-assistant"]
+            event_type = "shadow.run.completed"
+            usage = getattr(output, "usage", None)
+        return DurableFinalization(
+            plan=CommitPlan(
+                commit_request_id=f"commit-request-result-{token}",
+                idempotency_scope=f"turn-result:{conversation_id}",
+                idempotency_key=idempotency_key,
+                request_digest=request_digest,
+                actor_ref=principal_ref,
+                operations=final_operations,
+                prepared_at=utc_timestamp(),
+                correlation_id=f"correlation-{token}",
+            ),
+            event_type=event_type,
+            event_payload={
+                "run_id": ids["run"],
+                "attempt_id": ids["attempt"],
+                "result_message_id": result_message_id,
+                "usage": usage,
+            },
         )
 
     def retry_run(
@@ -701,7 +810,40 @@ class ConversationService:
         token = sha256_digest({"run": run_id, "key": idempotency_key})[7:31]
         assistant_id = f"message-assistant-retry-{token}"
         attempt_id = f"attempt-retry-{token}"
+        prior_retry = self.repository.idempotency_result(f"retry:{run_id}", idempotency_key)
+        if prior_retry is not None:
+            return TurnResult(
+                conversation=self.repository.get(conversation_id) or {},
+                run=self.repository.get(run_id) or {},
+                user_message=user_record,
+                assistant_message=self.repository.get(assistant_id) or {},
+                admission=self.repository.get(
+                    request.admission_ref.record_id, request.admission_ref.version
+                )
+                or {},
+                ephemeral=False,
+                replayed=True,
+            )
         now = utc_timestamp()
+        return self._retry_run_coordinated(
+            run_id=run_id,
+            principal_ref=principal_ref,
+            idempotency_key=idempotency_key,
+            run_record=run_record,
+            run_payload=run_payload,
+            request=request,
+            user_record=user_record,
+            text=text,
+            conversation_id=conversation_id,
+            conversation=conversation,
+            current_payload=current_payload,
+            token=token,
+            assistant_id=assistant_id,
+            attempt_id=attempt_id,
+            now=now,
+        )
+        # Legacy retry path retained below until R6 removes the parallel v0.1
+        # implementation.  The coordinator path above is the active path.
         if not run_payload.binding_refs:
             raise ShadowDomainError(
                 ShadowError(
@@ -899,6 +1041,387 @@ class ConversationService:
             or {},
             ephemeral=False,
             replayed=result.outcome == "idempotent_replay",
+        )
+
+    def _retry_run_coordinated(
+        self,
+        *,
+        run_id: str,
+        principal_ref: str,
+        idempotency_key: str,
+        run_record: dict[str, Any],
+        run_payload: RunPayload,
+        request: RequestPayload,
+        user_record: dict[str, Any],
+        text: str,
+        conversation_id: str,
+        conversation: dict[str, Any],
+        current_payload: ConversationPayload,
+        token: str,
+        assistant_id: str,
+        attempt_id: str,
+        now: str,
+    ) -> TurnResult:
+        if not run_payload.binding_refs:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-binding-missing",
+                    category="internal",
+                    message="Retry requires the original execution binding.",
+                )
+            )
+        binding_record = self.repository.get(run_payload.binding_refs[0].record_id)
+        if not binding_record:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-binding-missing",
+                    category="internal",
+                    message="Retry binding could not be recovered.",
+                )
+            )
+        cap_ref = binding_record["typed_payload"].get("capability_envelope_ref", {})
+        cap_record = self.repository.get(cap_ref.get("record_id")) if cap_ref.get("record_id") else None
+        if not cap_record:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.run.retry-capability-envelope-missing",
+                    category="internal",
+                    message="Retry capability envelope could not be recovered.",
+                )
+            )
+        owner_ref = conversation["owner_ref"]
+        space_id = conversation["space_id"]
+        attempt = ExecutionAttemptPayload(
+            run_ref=StableRecordRef(record_id=run_id),
+            binding_ref=run_payload.binding_refs[0],
+            lifecycle="dispatching",
+            attempt_number=len(run_payload.attempt_refs) + 1,
+            execution_ref=None,
+            result_ref=None,
+            started_at=now,
+            finished_at=None,
+        )
+        prepared_run = RunPayload.model_validate(run_record["typed_payload"]).model_copy(
+            update={
+                "lifecycle": "running",
+                "attempt_refs": run_payload.attempt_refs
+                + [RecordVersionRef(record_id=attempt_id, version=1)],
+                "active_attempt_ref": StableRecordRef(record_id=attempt_id),
+                "result_ref": None,
+                "failure_summary": None,
+                "terminal_at": None,
+            }
+        )
+        provenance = Provenance(origin_type="shadow.origin.user-command", origin_ref=f"retry-{token}")
+        initial_operations = [
+            self._operation(
+                f"operation-{attempt_id}",
+                "create",
+                attempt_id,
+                "shadow.kernel.execution-attempt",
+                f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                attempt.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
+                f"operation-update-{run_id}-{token}",
+                "update",
+                run_id,
+                "shadow.kernel.run",
+                f"{KERNEL_SCHEMA}#/$defs/RunPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                prepared_run.model_dump(mode="json", exclude_none=True),
+                provenance,
+                expected_version=run_record["version"],
+            ),
+        ]
+        request_digest = sha256_digest({"run_id": run_id, "text": text})
+        initial_plan = CommitPlan(
+            commit_request_id=f"commit-request-retry-{token}",
+            idempotency_scope=f"retry:{run_id}",
+            idempotency_key=idempotency_key,
+            request_digest=request_digest,
+            actor_ref=principal_ref,
+            operations=initial_operations,
+            prepared_at=now,
+            correlation_id=f"correlation-retry-{token}",
+            causation_id=run_payload.request_ref.record_id,
+        )
+        execution_request = ExecutionRequest(
+            execution_request_id=f"execution-request-{token}",
+            run_ref=RecordVersionRef(record_id=run_id, version=run_record["version"] + 1),
+            attempt_ref=RecordVersionRef(record_id=attempt_id, version=1),
+            binding_ref=run_payload.binding_refs[0],
+            idempotency_key=idempotency_key,
+            capability_envelope_snapshot=CapabilityEnvelopeSnapshot(
+                envelope_ref=StableRecordRef(record_id=cap_record["record_id"]),
+                version=cap_record["version"],
+                digest=sha256_digest(cap_record["typed_payload"]),
+                effective_constraints={},
+            ),
+            input_schema_ref=f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+            typed_input={"text": text},
+            correlation_id=f"correlation-{token}",
+            submitted_at=now,
+        )
+        durable = self.coordinator.execute_durable(
+            initial_plan=initial_plan,
+            request=execution_request,
+            target_kind=self.runtime_target_kind,
+            run_id=run_id,
+            attempt_id=attempt_id,
+            idempotency_scope=f"retry-dispatch:{run_id}",
+            finalize=lambda dispatch, failure: self._finalize_retry(
+                dispatch=dispatch,
+                failure=failure,
+                run_id=run_id,
+                principal_ref=principal_ref,
+                idempotency_key=idempotency_key,
+                run_record=run_record,
+                run_payload=run_payload,
+                request=request,
+                user_record=user_record,
+                conversation_id=conversation_id,
+                conversation=conversation,
+                current_payload=current_payload,
+                token=token,
+                assistant_id=assistant_id,
+                attempt_id=attempt_id,
+                now=now,
+            ),
+        )
+        return TurnResult(
+            conversation=self.repository.get(conversation_id) or {},
+            run=self.repository.get(run_id) or {},
+            user_message=user_record,
+            assistant_message=self.repository.get(assistant_id) or {},
+            admission=self.repository.get(
+                request.admission_ref.record_id, request.admission_ref.version
+            )
+            or {},
+            ephemeral=False,
+            replayed=durable.replayed
+            or bool(durable.final_commit and durable.final_commit.outcome == "idempotent_replay"),
+        )
+
+    def _finalize_retry(
+        self,
+        *,
+        dispatch: DispatchResult | None,
+        failure: dict[str, Any] | None,
+        run_id: str,
+        principal_ref: str,
+        idempotency_key: str,
+        run_record: dict[str, Any],
+        run_payload: RunPayload,
+        request: RequestPayload,
+        user_record: dict[str, Any],
+        conversation_id: str,
+        conversation: dict[str, Any],
+        current_payload: ConversationPayload,
+        token: str,
+        assistant_id: str,
+        attempt_id: str,
+        now: str,
+    ) -> DurableFinalization:
+        del user_record
+        initial_run = self.repository.get(run_id)
+        initial_attempt = self.repository.get(attempt_id)
+        if initial_run is None or initial_attempt is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.runtime.dispatch-boundary-missing",
+                    category="internal",
+                    message="Retry durable records could not be recovered.",
+                )
+            )
+        output = dispatch.output if dispatch is not None else None
+        output_text = getattr(output, "text", None)
+        runtime_failure = failure
+        if runtime_failure is None and not isinstance(output_text, str):
+            runtime_failure = {
+                "code": "shadow.runtime.outcome-unknown",
+                "reason": "Runtime Adapter result did not contain text.",
+            }
+        provenance = Provenance(origin_type="shadow.origin.runtime-result", origin_ref=f"retry-result-{token}")
+        owner_ref = conversation["owner_ref"]
+        space_id = conversation["space_id"]
+        if runtime_failure is not None:
+            final_attempt = ExecutionAttemptPayload.model_validate(
+                initial_attempt["typed_payload"]
+            ).model_copy(
+                update={
+                    "lifecycle": "outcome_unknown",
+                    "failure_summary": runtime_failure,
+                    "finished_at": None,
+                }
+            )
+            final_run = RunPayload.model_validate(initial_run["typed_payload"]).model_copy(
+                update={
+                    "lifecycle": "waiting",
+                    "failure_summary": runtime_failure,
+                    "terminal_at": None,
+                }
+            )
+            operations = [
+                self._operation(
+                    f"operation-retry-result-attempt-{token}",
+                    "update",
+                    attempt_id,
+                    "shadow.kernel.execution-attempt",
+                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_attempt.model_dump(mode="json", exclude_none=True),
+                    provenance,
+                    expected_version=initial_attempt["version"],
+                ),
+                self._operation(
+                    f"operation-retry-result-run-{token}",
+                    "update",
+                    run_id,
+                    "shadow.kernel.run",
+                    f"{KERNEL_SCHEMA}#/$defs/RunPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_run.model_dump(mode="json", exclude_none=True),
+                    provenance,
+                    expected_version=initial_run["version"],
+                ),
+            ]
+            event_type = "shadow.run.unknown"
+            event_payload = {"run_id": run_id, "attempt_id": attempt_id, "result_message_id": None}
+        else:
+            final_attempt = ExecutionAttemptPayload.model_validate(
+                initial_attempt["typed_payload"]
+            ).model_copy(
+                update={
+                    "lifecycle": "succeeded",
+                    "execution_ref": getattr(output, "execution_ref", None)
+                    or f"deterministic:{token}",
+                    "result_ref": RecordVersionRef(record_id=assistant_id, version=1),
+                    "finished_at": now,
+                }
+            )
+            assistant_message = MessagePayload(
+                conversation_ref=StableRecordRef(record_id=conversation_id),
+                sequence=len(current_payload.message_refs) + 1,
+                message_type="shadow.message.assistant",
+                author_ref=self.runtime_descriptor.descriptor_id,
+                content_blocks=[
+                    ContentBlock(
+                        block_type="shadow.content.text",
+                        content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
+                        typed_content={"text": output_text},
+                    )
+                ],
+                finalized_at=now,
+                source_request_ref=RecordVersionRef(
+                    record_id=run_payload.request_ref.record_id,
+                    version=run_payload.request_ref.version,
+                ),
+                produced_by_run_ref=RecordVersionRef(
+                    record_id=run_id, version=initial_run["version"]
+                ),
+            )
+            final_run = RunPayload.model_validate(initial_run["typed_payload"]).model_copy(
+                update={
+                    "lifecycle": "completed",
+                    "result_ref": RecordVersionRef(record_id=assistant_id, version=1),
+                    "usage_summary": getattr(output, "usage", None),
+                    "terminal_at": now,
+                }
+            )
+            final_conversation = ConversationPayload(
+                title=current_payload.title,
+                conversation_state=current_payload.conversation_state,
+                message_refs=current_payload.message_refs
+                + [RecordVersionRef(record_id=assistant_id, version=1)],
+                queued_run_refs=current_payload.queued_run_refs,
+                foreground_run_ref=StableRecordRef(record_id=run_id),
+                profile_settings=current_payload.profile_settings,
+            )
+            operations = [
+                self._operation(
+                    f"operation-retry-result-message-{token}",
+                    "create",
+                    assistant_id,
+                    "shadow.profile.message",
+                    f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
+                    owner_ref,
+                    space_id,
+                    self.runtime_descriptor.descriptor_id,
+                    assistant_message.model_dump(mode="json", exclude_none=True),
+                    provenance,
+                ),
+                self._operation(
+                    f"operation-retry-result-attempt-{token}",
+                    "update",
+                    attempt_id,
+                    "shadow.kernel.execution-attempt",
+                    f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_attempt.model_dump(mode="json", exclude_none=True),
+                    provenance,
+                    expected_version=initial_attempt["version"],
+                ),
+                self._operation(
+                    f"operation-retry-result-run-{token}",
+                    "update",
+                    run_id,
+                    "shadow.kernel.run",
+                    f"{KERNEL_SCHEMA}#/$defs/RunPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_run.model_dump(mode="json", exclude_none=True),
+                    provenance,
+                    expected_version=initial_run["version"],
+                ),
+                self._operation(
+                    f"operation-retry-result-conversation-{token}",
+                    "update",
+                    conversation_id,
+                    "shadow.profile.conversation",
+                    f"{PROFILE_SCHEMA}#/$defs/ConversationPayload",
+                    owner_ref,
+                    space_id,
+                    principal_ref,
+                    final_conversation.model_dump(mode="json", exclude_none=True),
+                    provenance,
+                    expected_version=conversation["version"],
+                ),
+            ]
+            event_type = "shadow.run.completed"
+            event_payload = {
+                "run_id": run_id,
+                "attempt_id": attempt_id,
+                "result_message_id": assistant_id,
+                "usage": getattr(output, "usage", None),
+            }
+        return DurableFinalization(
+            plan=CommitPlan(
+                commit_request_id=f"commit-request-retry-result-{token}",
+                idempotency_scope=f"retry-result:{run_id}",
+                idempotency_key=idempotency_key,
+                request_digest=sha256_digest({"run_id": run_id, "text": output_text or ""}),
+                actor_ref=principal_ref,
+                operations=operations,
+                prepared_at=utc_timestamp(),
+                correlation_id=f"correlation-retry-{token}",
+                causation_id=request.admission_ref.record_id,
+            ),
+            event_type=event_type,
+            event_payload=event_payload,
         )
 
     def _ensure_runtime_descriptor(self) -> AdapterDescriptor:
