@@ -148,6 +148,10 @@ Stage 5 不是重新设计完整架构，而是按[分阶段实现计划](implem
 5. Phase 4：Action & Proactivity；
 6. Phase 5：Multi-endpoint & Multi-user。
 
+Runtime Management 是跨 Phase 的部署控制切片：当前处于设计闸门阶段，目标是提供通用
+Runtime Supervisor、Hermes 进程启动、Codex CLI Adapter、Runtime 切换、项目管理 Web UI
+和 Windows 启动脚本。设计接受前不实现启动/停止 API、Codex Adapter 或管理页面。
+
 首个开发目标是 Phase 0–1 纵向闭环，但代码结构服务完整目标架构，不把短期范围冻结为长期内核。
 
 当前交付状态：Phase 0–1 的 Python reference slice 已在

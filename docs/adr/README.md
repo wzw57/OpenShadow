@@ -233,6 +233,14 @@ ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 
 92. local-dev headers 只能兼容单用户 bootstrap；启用 session verifier 后服务端认证 context
     覆盖客户端主体声明。真实 OAuth/OIDC、Voice、远程同步另立 Adapter ADR。
 
+## ADR-0025：Runtime Management 与 Codex CLI Adapter
+
+93. Runtime Manager 只属于本地部署控制平面；它可以受控启动、停止、健康检查和选择
+    Runtime，但不能绕过 Conversation/Admission/Run/Attempt 直接执行用户 prompt。
+94. Hermes 与 Codex 必须通过独立 Adapter；Codex 使用官方 CLI 的 `codex exec --json`
+    进程/JSONL 边界，不把 Codex 内部对象或 Agent Loop 引入 Shadow Core。详见
+    [ADR-0025](0025-runtime-management-and-codex-adapter.md)。
+
 ## 何时必须新增 ADR
 
 - 把概念移入或移出 Tiny Kernel；
@@ -250,6 +258,8 @@ ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 
 - 引入 Event Sourcing、通用 Workflow、Plugin OS、Policy Language 或 Job Platform；
 - 引入不可重建的外部私有状态；
 - 改变参考实现且影响 Stable Contract。
+- 引入 Runtime Supervisor、Runtime selection、外部 Runtime process lifecycle 或 Codex
+  CLI integration。
 
 ## 核心原则
 
