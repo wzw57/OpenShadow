@@ -90,6 +90,11 @@
       "schema_id": "https://schemas.openshadow.dev/contracts/auth/1.0.0",
       "path": "schemas/auth/1.0.0/schema.json",
       "sha256": "c76b9143ff4587ac98f17aca6d983a7681ab940a78e6bfbe7d06b0a4770b9347"
+    },
+    {
+      "schema_id": "https://schemas.openshadow.dev/contracts/peripheral/1.0.0",
+      "path": "schemas/peripheral/1.0.0/schema.json",
+      "sha256": "cc334025262487becdc08d49ffefbae98bfdfc3cb9f383f3ab11c36074e75394"
     }
   ]
 }

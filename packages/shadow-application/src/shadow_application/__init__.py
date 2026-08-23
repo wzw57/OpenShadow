@@ -55,6 +55,13 @@ from .invalidation import (
 )
 from .memory import MemoryCandidate, MemoryService
 from .outbox import OutboxDeliveryAdapter, OutboxIntentCandidate, OutboxService
+from .peripherals import (
+    AdapterResult,
+    DeterministicPeripheralAdapter,
+    InteractionRequest,
+    PeripheralAdapter,
+    validate_interaction,
+)
 from .portable_import import (
     PortableImportRecordResult,
     PortableImportRequest,
@@ -176,6 +183,11 @@ __all__ = [
     "StateConditionAdmission",
     "TaskProposalCandidate",
     "TaskService",
+    "AdapterResult",
+    "DeterministicPeripheralAdapter",
+    "InteractionRequest",
+    "PeripheralAdapter",
+    "validate_interaction",
     "IntegrityService",
     "TurnResult",
 ]

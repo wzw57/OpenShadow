@@ -38,3 +38,6 @@
 - consent、capability、expiry、revocation、scope、Secret redaction 和 unknown/reconcile 测试通过；
 - 没有 Vendor 名称进入 Kernel/Application/OpenAPI/Web UI；
 - 文档、状态、ADR 和 documentation-sync 保持一致。
+
+实现状态：通用 Contract、确定性 Adapter 和边界测试已完成；真实硬件、语音 Provider、
+OAuth/webhook 与设备副作用仍保持 Contract-only。

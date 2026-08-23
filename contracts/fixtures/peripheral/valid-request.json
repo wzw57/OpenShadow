@@ -1,0 +1,13 @@
+{
+  "operation": "shadow.voice.transcribe",
+  "principal_ref": "principal-demo",
+  "space_id": "space-personal",
+  "endpoint_ref": "endpoint-local-web",
+  "capability_ref": "capability.voice.transcribe",
+  "consent_ref": "consent-demo-1",
+  "data_classification": "sensitive",
+  "expires_at": "2099-08-23T00:00:00Z",
+  "idempotency_key": "peripheral-1",
+  "secret_ref": "env:VOICE_PROVIDER_KEY",
+  "typed_input": {"audio_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+}
