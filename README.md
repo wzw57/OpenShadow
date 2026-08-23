@@ -528,6 +528,8 @@ OpenShadow 自行实现的范围收紧为：
 - [Phase 5 Core Slice 状态](docs/phase5-status.md)
 - [Production Readiness 设计闸门](docs/production-readiness-design-gate.md)
 - [ADR-0026 Production Readiness](docs/adr/0026-production-readiness-and-release-boundary.md)
+- [Production Auth 设计闸门](docs/production-auth-design-gate.md)
+- [ADR-0027 Production Auth](docs/adr/0027-production-auth-and-security.md)
 
 ## 当前状态
 

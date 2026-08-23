@@ -1,6 +1,6 @@
 # Production Readiness 总体设计闸门
 
-状态：**Draft / 等待维护者接受**  
+状态：**Accepted for Slice A / B–E 仍为 Draft**
 范围：生产化路线、认证与安全、Runtime 可靠性、远程 Store、备份同步、设备/语音、可观测性与发布
 
 本闸门把“可运行参考项目”推进到“可发布产品”的工作拆成有依赖的切片。它不把尚未
@@ -129,8 +129,8 @@ POST /v1/auth/exchange      → Adapter 验证外部 credential，不返回 Secr
 | Runtime Provider | Hermes 或 Codex 二选一作为首个生产验证对象 | 决定真实 SSE、resume、tool 和凭据验收 |
 | Voice/Device 首个目标 | 暂缓，先完成 Auth/Store/Runtime reliability | 避免在基础安全和恢复未稳定前扩展副作用面 |
 
-在维护者接受这些默认选择前，本闸门只允许补文档、Schema、fixtures、测试 harness 和
-无业务副作用的 Adapter contract，不允许提交生产认证、远程 Store 或 Voice 业务代码。
+本轮按推荐默认值获准进入 Slice A；OIDC issuer、远程 Store、Voice/Device 和真实 Provider
+仍需在各自 Slice 闸门接受前保持 Contract-only，不得提前提交业务代码。
 
 ## 5. 总体退出条件
 

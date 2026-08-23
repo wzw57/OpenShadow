@@ -268,6 +268,13 @@ ADR-0024：Phase 5 Endpoint identity、Space membership、Invitation 与读 ACL 
     写入 Kernel。详见 [ADR-0026](0026-production-readiness-and-release-boundary.md) 和
     [Production Readiness 设计闸门](../production-readiness-design-gate.md)。
 
+## ADR-0027：Production Auth & Security Boundary
+
+96. 生产请求必须由通用 AuthVerifier 产生 AuthContext；local-dev headers 只能显式 bootstrap，
+    Session/Secret/审计不得泄露 token 或 Provider 私有语义。详见
+    [ADR-0027](0027-production-auth-and-security.md) 和
+    [Production Auth 设计闸门](../production-auth-design-gate.md)。
+
 ## 核心原则
 
 > **External intelligence proposes; Shadow authority commits.**

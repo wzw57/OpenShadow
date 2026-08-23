@@ -186,7 +186,8 @@ Contract-only，详见 [Phase 5 状态](phase5-status.md)。
 
 生产化路线已建立总体设计闸门 [Production Readiness](production-readiness-design-gate.md)
 和 ADR-0026；当前等待维护者确认 OIDC issuer、生产 Store、Secret 管理、部署形态和首个
-Runtime Provider。确认前不实现生产认证、远程 Store 或 Voice 业务代码。
+Runtime Provider。Slice A Auth/Security 已按 ADR-0027 获准进入实现；B–E 仍保持
+Contract-only，详见 [Production Auth 闸门](production-auth-design-gate.md)。
 
 ## 延后实现与重新评估
 
