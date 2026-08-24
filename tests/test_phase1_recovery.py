@@ -15,7 +15,9 @@ def test_restart_recovers_canonical_conversation_and_run_events(tmp_path: Path) 
     database = tmp_path / "shadow.db"
     repository = SqliteCanonicalRepository(database)
     authority = CommitAuthority(repository, ContractRegistry(ROOT))
-    service = ConversationService(repository, authority)
+    service = ConversationService(
+        repository, authority, runtime_adapter=DeterministicTestAdapter()
+    )
     conversation = service.create_conversation(
         owner_ref="principal-test", space_id="space-test", idempotency_key="conversation-1"
     )
