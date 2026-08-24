@@ -106,14 +106,12 @@ class IdentityService:
         )
 
     def _records(self, record_type: str) -> list[dict[str, Any]]:
-        rows = self.repository.query(record_types={record_type}, record_states={"active", "logically_deleted", "erased"}, limit=1_000_000)
-        heads: dict[str, dict[str, Any]] = {}
-        for row in rows:
-            if row["record_state"] == "erased":
-                continue
-            if row["record_id"] not in heads or row["version"] > heads[row["record_id"]]["version"]:
-                heads[row["record_id"]] = row
-        return list(heads.values())
+        rows = self.repository.query_heads(
+            record_types={record_type},
+            record_states={"active", "logically_deleted", "erased"},
+            limit=None,
+        )
+        return [row for row in rows if row["record_state"] != "erased"]
 
     def _space(self, space_id: str) -> dict[str, Any] | None:
         row = self.repository.get(space_id)
