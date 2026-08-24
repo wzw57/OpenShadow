@@ -24,10 +24,10 @@ from shadow_application import (
     OutboxService,
     RuntimeSupervisor,
     SessionService,
-    load_adapter,
     StateService,
     StaticSecretResolver,
     TaskService,
+    load_adapter,
 )
 from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
