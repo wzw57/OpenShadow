@@ -63,6 +63,7 @@ class AdmissionService:
         required_capabilities = required_capabilities or []
         acceptable_target_kinds = acceptable_target_kinds or ["shadow.deterministic-runner"]
         correlation_id = correlation_id or new_id("correlation")
+        submitted_at = utc_timestamp()
         submission_id = submission_id or new_id("submission")
         provided_ids = record_ids or {}
         computed_request_digest = sha256_digest(
