@@ -264,12 +264,14 @@ class OutboxService:
         return record
 
     def list_intents(self, *, principal_ref: str, space_id: str, limit: int = 50) -> list[dict[str, Any]]:
-        records = self.repository.query(owner_refs={principal_ref}, space_ids={space_id}, record_types={INTENT_RECORD_TYPE}, record_states={"active"}, limit=1_000_000)
-        heads: dict[str, dict[str, Any]] = {}
-        for record in records:
-            if record["record_id"] not in heads or record["version"] > heads[record["record_id"]]["version"]:
-                heads[record["record_id"]] = record
-        return sorted(heads.values(), key=lambda item: item["record_id"])[:limit]
+        records = self.repository.query_heads(
+            owner_refs={principal_ref},
+            space_ids={space_id},
+            record_types={INTENT_RECORD_TYPE},
+            record_states={"active"},
+            limit=None,
+        )
+        return sorted(records, key=lambda item: item["record_id"])[:limit]
 
     def _load_intent(self, intent_id: str, principal_ref: str, space_id: str, expected_version: int) -> dict[str, Any]:
         record = self.get_intent(intent_id)
