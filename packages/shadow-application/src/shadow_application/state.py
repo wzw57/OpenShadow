@@ -292,16 +292,15 @@ class StateService:
     def list_states(
         self, *, owner_ref: str | None, space_id: str, state_key: str | None = None, limit: int = 50
     ) -> list[dict[str, Any]]:
-        records = self.repository.query(
+        records = self.repository.query_heads(
             owner_refs={owner_ref} if owner_ref else None,
             space_ids={space_id},
             record_types={STATE_RECORD_TYPE},
             record_states={"active", "logically_deleted", "erased"},
-            limit=1_000_000,
+            limit=None,
         )
-        heads = self._heads(records)
         result = []
-        for record in sorted(heads.values(), key=lambda item: item["record_id"]):
+        for record in sorted(records, key=lambda item: item["record_id"]):
             if record["record_state"] != "active":
                 continue
             if state_key and record["typed_payload"].get("state_key") != state_key:
