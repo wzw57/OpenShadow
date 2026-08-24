@@ -299,7 +299,9 @@ def create_app(
         supervisor.register_adapter("environment", selected_runtime, display_name="Environment Runtime")
     else:
         selected_runtime = supervisor.adapter_for()
-    conversations = ConversationService(repository, authority, runtime_adapter=selected_runtime)
+    conversations = ConversationService(
+        repository, authority, runtime_adapter=selected_runtime, admission=admission
+    )
     memories = MemoryService(repository, authority, registry)
     states = StateService(repository, authority, registry)
     tasks = TaskService(repository, authority, registry)
