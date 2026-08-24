@@ -153,17 +153,34 @@ class MemoryRecallService:
                     retryable=True,
                 )
             )
-        records = self.repository.query(
-            owner_refs={owner_ref},
-            space_ids={space_id},
-            record_types={"shadow.profile.memory"},
-            record_states={"active", "logically_deleted", "erased"},
+        records = (
+            self.repository.query(
+                owner_refs={owner_ref},
+                space_ids={space_id},
+                record_types={"shadow.profile.memory"},
+                record_states={"active", "logically_deleted", "erased"},
+            )
+            if include_history
+            else self.repository.query_heads(
+                owner_refs={owner_ref},
+                space_ids={space_id},
+                record_types={"shadow.profile.memory"},
+                record_states={"active", "logically_deleted", "erased"},
+                limit=None,
+            )
         )
-        heads: dict[str, dict[str, Any]] = {}
-        for record in records:
-            prior = heads.get(record["record_id"])
-            if prior is None or record["version"] > prior["version"]:
-                heads[record["record_id"]] = record
+        head_records = (
+            self.repository.query_heads(
+                owner_refs={owner_ref},
+                space_ids={space_id},
+                record_types={"shadow.profile.memory"},
+                record_states={"active", "logically_deleted", "erased"},
+                limit=None,
+            )
+            if include_history
+            else records
+        )
+        heads = {record["record_id"]: record for record in head_records}
         snapshots: list[MemorySnapshot] = []
         active_records = records if include_history else list(heads.values())
         for record in sorted(active_records, key=lambda item: (item["record_id"], item["version"])):
