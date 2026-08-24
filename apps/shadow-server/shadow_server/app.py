@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 import json
 import logging
 import os
@@ -25,6 +24,7 @@ from shadow_application import (
     OutboxService,
     RuntimeSupervisor,
     SessionService,
+    load_adapter,
     StateService,
     StaticSecretResolver,
     TaskService,
@@ -223,29 +223,10 @@ def _runtime_from_environment() -> RuntimeAdapter | None:
         raise ValueError(
             "SHADOW_RUNTIME_ADAPTER_FACTORY is required for a non-deterministic runtime"
         )
-    if ":" not in factory_ref:
-        raise ValueError(
-            "SHADOW_RUNTIME_ADAPTER_FACTORY must use '<module>:<factory>' format"
-        )
-    module_name, factory_name = factory_ref.split(":", 1)
-    if not module_name or not factory_name:
-        raise ValueError(
-            "SHADOW_RUNTIME_ADAPTER_FACTORY must use '<module>:<factory>' format"
-        )
-    factory: Any = importlib.import_module(module_name)
-    for attribute in factory_name.split("."):
-        factory = getattr(factory, attribute, None)
-        if factory is None:
-            raise ValueError(f"Runtime adapter factory not found: {factory_ref}")
-    if not callable(factory):
-        raise ValueError(f"Runtime adapter factory is not callable: {factory_ref}")
-    adapter = factory()
-    required_methods = ("describe", "execute", "events")
-    if not all(callable(getattr(adapter, method, None)) for method in required_methods):
-        raise ValueError(
-            "Runtime adapter factory must return an object implementing the RuntimeAdapter port"
-        )
-    return adapter
+    try:
+        return load_adapter(factory_ref)
+    except ShadowDomainError as exc:
+        raise ValueError(exc.error.message) from exc
 
 
 def create_app(
