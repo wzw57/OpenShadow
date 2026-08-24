@@ -89,9 +89,16 @@ class AdmissionService:
                 ),
             )
 
-        if isinstance(work_input, RecordVersionRef) and self.repository.get(
-            work_input.record_id, work_input.version
-        ) is None:
+        additional_record_ids = {
+            operation.record_id
+            for operation in additional_operations or []
+            if operation.operation == "create"
+        }
+        if (
+            isinstance(work_input, RecordVersionRef)
+            and self.repository.get(work_input.record_id, work_input.version) is None
+            and not (work_input.version == 1 and work_input.record_id in additional_record_ids)
+        ):
             raise ShadowDomainError(
                 ShadowError(
                     code="shadow.admission.work-input-not-found",
