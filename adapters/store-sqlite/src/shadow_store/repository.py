@@ -161,7 +161,7 @@ class SqliteCanonicalRepository:
         record_states: set[str] | None = None,
         limit: int | None = 100,
     ) -> list[dict[str, Any]]:
-        """Return the newest matching Canonical version for each stable record ID."""
+        """Return each stable record's true head, then apply the requested filters."""
         if not self._available:
             raise RepositoryUnavailable()
         states = record_states or {"active"}
@@ -175,9 +175,7 @@ class SqliteCanonicalRepository:
                     order_by=RecordVersionRow.version.desc(),
                 )
                 .label("head_rank"),
-            ).where(RecordVersionRow.record_state.in_(states))
-            if record_types:
-                ranked = ranked.where(RecordVersionRow.record_type.in_(record_types))
+            )
             ranked = ranked.subquery()
             query = (
                 select(RecordVersionRow)
@@ -186,9 +184,17 @@ class SqliteCanonicalRepository:
                     (RecordVersionRow.record_id == ranked.c.head_record_id)
                     & (RecordVersionRow.version == ranked.c.head_version),
                 )
-                .where(ranked.c.head_rank == 1)
+                .where(
+                    ranked.c.head_rank == 1,
+                    RecordVersionRow.record_state.in_(states),
+                )
                 .order_by(RecordVersionRow.committed_at, RecordVersionRow.record_id)
             )
+            # Record type is not enforced immutable by the repository yet, so apply it
+            # after ranking as well. Owner and Space are invariant, but are held back to
+            # the Python boundary filter so the limit is not applied before those filters.
+            if record_types:
+                query = query.where(RecordVersionRow.record_type.in_(record_types))
             records = [json.loads(row.envelope_json) for row in session.scalars(query).all()]
         if owner_refs:
             records = [record for record in records if record["owner_ref"] in owner_refs]

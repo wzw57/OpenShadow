@@ -358,7 +358,7 @@ class ConversationService:
                 expected_version=conversation["version"],
             ),
         ]
-        admitted = self.admission.admit(
+        preparation = self.admission.prepare(
             request_type="shadow.request.conversation-turn",
             input_type="shadow.input.conversation-turn",
             work_input=RecordVersionRef(record_id=ids["message-user"], version=1),
@@ -377,16 +377,34 @@ class ConversationService:
                 "requirements_id": ids["requirements"],
                 "run_id": ids["run"],
             },
-            run_overrides={
-                "lifecycle": "running",
-                "binding_refs": [RecordVersionRef(record_id=ids["binding"], version=1)],
-                "attempt_refs": [RecordVersionRef(record_id=ids["attempt"], version=1)],
-                "active_attempt_ref": StableRecordRef(record_id=ids["attempt"]),
-                "started_at": now,
-            },
-            additional_operations=operations,
+            run_lifecycle="running",
+            run_binding_refs=[RecordVersionRef(record_id=ids["binding"], version=1)],
+            run_attempt_refs=[RecordVersionRef(record_id=ids["attempt"], version=1)],
+            run_active_attempt_ref=StableRecordRef(record_id=ids["attempt"]),
+            run_started_at=now,
         )
-        if admitted.replayed:
+        initial_commit = self.authority.commit(
+            CommitPlan(
+                commit_request_id=f"commit-request-{token}",
+                idempotency_scope=preparation.idempotency_scope,
+                idempotency_key=preparation.idempotency_key,
+                request_digest=preparation.request_digest,
+                actor_ref=preparation.principal_ref,
+                operations=[*preparation.operations, *operations],
+                prepared_at=preparation.prepared_at,
+                correlation_id=preparation.correlation_id,
+            )
+        )
+        if initial_commit.outcome in {"failed", "conflict"}:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.admission.commit-failed",
+                    category="conflict" if initial_commit.outcome == "conflict" else "validation",
+                    message="Admission lifecycle could not be committed.",
+                    typed_details=initial_commit.structured_error,
+                )
+            )
+        if initial_commit.outcome == "idempotent_replay":
             return TurnResult(
                 conversation=self.repository.get(conversation_id) or {},
                 run=self.repository.get(ids["run"]) or {},
