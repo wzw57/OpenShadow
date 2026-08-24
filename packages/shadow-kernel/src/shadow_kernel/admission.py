@@ -52,13 +52,19 @@ class AdmissionService:
         acceptable_target_kinds: list[str] | None = None,
         idempotency_key: str | None = None,
         correlation_id: str | None = None,
+        submission_id: str | None = None,
+        request_digest: str | None = None,
+        idempotency_scope: str | None = None,
+        record_ids: dict[str, str] | None = None,
+        run_overrides: dict[str, Any] | None = None,
+        additional_operations: list[CommitOperation] | None = None,
     ) -> AdmissionResult:
         required_capabilities = required_capabilities or []
         acceptable_target_kinds = acceptable_target_kinds or ["shadow.deterministic-runner"]
         correlation_id = correlation_id or new_id("correlation")
-        submitted_at = utc_timestamp()
-        submission_id = new_id("submission")
-        request_digest = sha256_digest(
+        submission_id = submission_id or new_id("submission")
+        provided_ids = record_ids or {}
+        computed_request_digest = sha256_digest(
             {
                 "request_type": request_type,
                 "input_type": input_type,
@@ -70,6 +76,7 @@ class AdmissionService:
                 "space_id": space_id,
             }
         )
+        request_digest = request_digest or computed_request_digest
 
         if not self.repository.available:
             return AdmissionResult(
@@ -92,10 +99,10 @@ class AdmissionService:
                 )
             )
 
-        admission_id = new_id("admission")
-        request_id = new_id("request")
-        requirements_id = new_id("requirements")
-        run_id = new_id("run")
+        admission_id = provided_ids.get("admission_id") or new_id("admission")
+        request_id = provided_ids.get("request_id") or new_id("request")
+        requirements_id = provided_ids.get("requirements_id") or new_id("requirements")
+        run_id = provided_ids.get("run_id") or new_id("run")
         now = utc_timestamp()
         admission_payload = AdmissionRecordPayload(
             admission_id=admission_id,
@@ -134,7 +141,7 @@ class AdmissionService:
             request_ref=RecordVersionRef(record_id=request_id, version=1),
             lifecycle="queued",
             requirements_ref=RecordVersionRef(record_id=requirements_id, version=1),
-        )
+        ).model_copy(update=run_overrides or {})
         provenance = Provenance(origin_type="shadow.origin.user-command", origin_ref=submission_id)
         operations = [
             CommitOperation(
@@ -194,9 +201,10 @@ class AdmissionService:
                 typed_payload=run_payload.model_dump(mode="json", exclude_none=True),
             ),
         ]
+        operations.extend(additional_operations or [])
         plan = CommitPlan(
             commit_request_id=new_id("commit-request"),
-            idempotency_scope=f"admission:{principal_ref}:{space_id}",
+            idempotency_scope=idempotency_scope or f"admission:{principal_ref}:{space_id}",
             idempotency_key=idempotency_key or submission_id,
             request_digest=request_digest,
             actor_ref=principal_ref,
@@ -204,7 +212,16 @@ class AdmissionService:
             prepared_at=submitted_at,
             correlation_id=correlation_id,
         )
-        self.authority.commit(plan)
+        result = self.authority.commit(plan)
+        if result.outcome in {"failed", "conflict"}:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.admission.commit-failed",
+                    category="conflict" if result.outcome == "conflict" else "validation",
+                    message="Admission lifecycle could not be committed.",
+                    typed_details=result.structured_error,
+                )
+            )
         return AdmissionResult(
             decision="accepted",
             admission=self.repository.get(admission_id),
