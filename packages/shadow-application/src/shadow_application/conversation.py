@@ -3,19 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from shadow_adapters import DeterministicTestAdapter
 from shadow_kernel.adapters import AdapterDescriptor, AdapterRegistry
+from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest, utc_timestamp
 from shadow_kernel.models import (
-    AdmissionRecordPayload,
     CommitOperation,
     CommitPlan,
     ContentBlock,
     ConversationPayload,
     ExecutionAttemptPayload,
-    ExecutionRequirementsPayload,
     MessagePayload,
     Provenance,
     RecordVersionRef,
@@ -51,11 +49,21 @@ class ConversationService:
         repository: CanonicalRepository,
         authority: CommitAuthority,
         runtime_adapter: RuntimeAdapter | None = None,
+        admission: AdmissionService | None = None,
     ):
+        if runtime_adapter is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.runtime.adapter-not-injected",
+                    category="incompatible",
+                    message="ConversationService requires a RuntimeAdapter supplied by the composition root.",
+                )
+            )
         self.repository = repository
         self.authority = authority
+        self.admission = admission or AdmissionService(repository, authority)
         self.adapters = AdapterRegistry()
-        self.runtime_adapter = runtime_adapter or DeterministicTestAdapter()
+        self.runtime_adapter = runtime_adapter
         self.runtime_descriptor = self._ensure_runtime_descriptor()
         self.runtime_target_kind = self.runtime_descriptor.supported_target_kinds[0]
 
@@ -89,382 +97,7 @@ class ConversationService:
             typed_payload=payload.model_dump(mode="json", exclude_none=True),
             provenance=provenance,
         )
-        plan = CommitPlan(
-            commit_request_id=f"commit-request-{record_id}",
-            idempotency_scope=f"conversation:{owner_ref}:{space_id}",
-            idempotency_key=idempotency_key,
-            request_digest=sha256_digest(payload.model_dump(mode="json", exclude_none=True)),
-            actor_ref=owner_ref,
-            operations=[operation],
-            prepared_at=utc_timestamp(),
-        )
-        result = self.authority.commit(plan)
-        if result.outcome == "failed":
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.conversation.create-failed",
-                    category="validation",
-                    message="Conversation creation failed.",
-                    typed_details=result.structured_error,
-                )
-            )
-        record = self.repository.get(record_id)
-        if record is None:
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.repository.record-missing",
-                    category="internal",
-                    message="Committed conversation could not be read back.",
-                )
-            )
-        return record
-
-    def install_runtime_adapter(self, runtime_adapter: RuntimeAdapter) -> AdapterDescriptor:
-        """Select a healthy Runtime through the generic Adapter boundary."""
-        self.runtime_adapter = runtime_adapter
-        self.runtime_descriptor = self._ensure_runtime_descriptor()
-        self.runtime_target_kind = self.runtime_descriptor.supported_target_kinds[0]
-        return self.runtime_descriptor
-
-    def get_conversation(self, conversation_id: str) -> dict[str, Any] | None:
-        return self.repository.get(conversation_id)
-
-    def list_conversations(
-        self, owner_ref: str | None = None, space_id: str | None = None
-    ) -> list[dict[str, Any]]:
-        return self.repository.query(
-            owner_refs={owner_ref} if owner_ref else None,
-            space_ids={space_id} if space_id else None,
-            record_types={"shadow.profile.conversation"},
-            record_states={"active"},
-        )
-
-    def list_messages(self, conversation_id: str) -> list[dict[str, Any]]:
-        conversation = self.repository.get(conversation_id)
-        if not conversation:
-            return []
-        return [
-            self.repository.get(ref["record_id"], ref["version"])
-            for ref in conversation["typed_payload"]["message_refs"]
-        ]
-
-    def get_run(self, run_id: str) -> dict[str, Any] | None:
-        return self.repository.get(run_id)
-
-    def submit_turn(
-        self,
-        *,
-        conversation_id: str,
-        principal_ref: str,
-        endpoint_ref: str = "endpoint-local-web",
-        text: str,
-        idempotency_key: str,
-    ) -> TurnResult:
-        if not self.repository.available:
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.repository.unavailable",
-                    category="unavailable",
-                    message="Canonical Repository is unavailable; this request must be retried as ephemeral only.",
-                    retryable=True,
-                )
-            )
-        conversation = self.repository.get(conversation_id)
-        if not conversation:
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.conversation.not-found",
-                    category="validation",
-                    message=f"Conversation {conversation_id} was not found.",
-                )
-            )
-        token = sha256_digest({"conversation": conversation_id, "key": idempotency_key})[7:31]
-        ids = {
-            name: f"{name}-{token}"
-            for name in (
-                "message-user",
-                "message-assistant",
-                "admission",
-                "request",
-                "requirements",
-                "run",
-                "attempt",
-                "binding",
-                "capability-envelope",
-            )
-        }
-        now = utc_timestamp()
-        request_digest = sha256_digest({"conversation_id": conversation_id, "text": text})
-        prior = self.repository.idempotency_result(f"turn:{conversation_id}", idempotency_key)
-        if prior is not None and prior.get("request_digest") != request_digest:
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.repository.idempotency-mismatch",
-                    category="conflict",
-                    message="The idempotency key was already used for a different conversation turn.",
-                )
-            )
-        current_payload = ConversationPayload.model_validate(conversation["typed_payload"])
-        owner_ref = conversation["owner_ref"]
-        space_id = conversation["space_id"]
-        if prior is not None:
-            return TurnResult(
-                conversation=self.repository.get(conversation_id) or {},
-                run=self.repository.get(ids["run"]) or {},
-                user_message=self.repository.get(ids["message-user"]) or {},
-                assistant_message=self.repository.get(ids["message-assistant"]) or {},
-                admission=self.repository.get(ids["admission"]) or {},
-                ephemeral=False,
-                replayed=True,
-            )
-        user_message = MessagePayload(
-            conversation_ref=StableRecordRef(record_id=conversation_id),
-            sequence=len(current_payload.message_refs) + 1,
-            message_type="shadow.message.user",
-            author_ref=principal_ref,
-            content_blocks=[
-                ContentBlock(
-                    block_type="shadow.content.text",
-                    content_schema_ref="https://schemas.openshadow.dev/content/text/1.0.0",
-                    typed_content={"text": text},
-                )
-            ],
-            finalized_at=now,
-        )
-        admission = AdmissionRecordPayload(
-            admission_id=ids["admission"],
-            submission_id=f"submission-{token}",
-            input_type="shadow.input.conversation-turn",
-            principal_ref=principal_ref,
-            endpoint_ref=endpoint_ref,
-            space_id=space_id,
-            request_digest=sha256_digest({"conversation_id": conversation_id, "text": text}),
-            decision="accepted",
-            request_ref=StableRecordRef(record_id=ids["request"]),
-            root_run_ref=StableRecordRef(record_id=ids["run"]),
-            decided_at=now,
-            retention_policy_ref=RETENTION_REF,
-        )
-        requirements = ExecutionRequirementsPayload(
-            requirements_id=ids["requirements"],
-            required_capabilities=[],
-            acceptable_target_kinds=[self.runtime_target_kind],
-            allowed_side_effects=[],
-            streaming_required=True,
-            checkpoint_required=False,
-            created_from=RecordVersionRef(record_id=ids["admission"], version=1),
-        )
-        request = RequestPayload(
-            admission_ref=RecordVersionRef(record_id=ids["admission"], version=1),
-            request_type="shadow.request.conversation-turn",
-            work_input=RecordVersionRef(record_id=ids["message-user"], version=1),
-            requirements_ref=RecordVersionRef(record_id=ids["requirements"], version=1),
-            principal_ref=principal_ref,
-            endpoint_ref=endpoint_ref,
-            accepted_at=now,
-            correlation_id=f"correlation-{token}",
-        )
-        cap = {
-            "envelope_id": ids["capability-envelope"],
-            "principal_ref": principal_ref,
-            "grantee_ref": self.runtime_descriptor.descriptor_id,
-            "scope_ref": {"record_id": ids["run"]},
-            "allowed_capabilities": [],
-            "data_scope": {
-                "allowed_space_ids": [space_id],
-                "allowed_record_types": [],
-                "maximum_classification": "personal",
-                "external_source_refs": [],
-            },
-            "resource_scope": {"allowed_resource_refs": [], "allowed_operations": []},
-            "budget_limits": [],
-            "allowed_side_effects": [],
-            "approval_refs": [],
-            "policy_ref": {"record_id": "policy-default"},
-            "policy_version": 1,
-            "valid_from": now,
-            "valid_until": now,
-            "state": "active",
-            "issued_at": now,
-        }
-        binding = self.adapters.bind(
-            descriptor_id=self.runtime_descriptor.descriptor_id,
-            target_kind=self.runtime_target_kind,
-            required_capabilities=[],
-            binding_id=ids["binding"],
-            scope_ref={"record_id": ids["run"]},
-            capability_envelope_ref={"record_id": ids["capability-envelope"], "version": 1},
-            selection_source_ref={"record_id": ids["request"]},
-        )
-        run = RunPayload(
-            request_ref=RecordVersionRef(record_id=ids["request"], version=1),
-            lifecycle="running",
-            requirements_ref=RecordVersionRef(record_id=ids["requirements"], version=1),
-            binding_refs=[RecordVersionRef(record_id=ids["binding"], version=1)],
-            attempt_refs=[RecordVersionRef(record_id=ids["attempt"], version=1)],
-            active_attempt_ref=StableRecordRef(record_id=ids["attempt"]),
-            result_ref=None,
-            usage_summary=None,
-            started_at=now,
-            terminal_at=None,
-            last_event_cursor=None,
-        )
-        attempt = ExecutionAttemptPayload(
-            run_ref=StableRecordRef(record_id=ids["run"]),
-            binding_ref=RecordVersionRef(record_id=ids["binding"], version=1),
-            lifecycle="dispatching",
-            attempt_number=1,
-            execution_ref=None,
-            result_ref=None,
-            started_at=now,
-            finished_at=None,
-        )
-        new_refs = current_payload.message_refs + [
-            RecordVersionRef(record_id=ids["message-user"], version=1),
-        ]
-        conversation_update = ConversationPayload(
-            title=current_payload.title,
-            conversation_state=current_payload.conversation_state,
-            message_refs=new_refs,
-            queued_run_refs=current_payload.queued_run_refs,
-            foreground_run_ref=StableRecordRef(record_id=ids["run"]),
-            profile_settings=current_payload.profile_settings,
-        )
-        provenance = Provenance(
-            origin_type="shadow.origin.user-command", origin_ref=f"submission-{token}"
-        )
-        operations = [
-            self._operation(
-                f"operation-{ids['message-user']}",
-                "create",
-                ids["message-user"],
-                "shadow.profile.message",
-                f"{PROFILE_SCHEMA}#/$defs/MessagePayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                user_message.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['admission']}",
-                "create",
-                ids["admission"],
-                "shadow.kernel.admission",
-                f"{KERNEL_SCHEMA}#/$defs/AdmissionRecordPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                admission.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['requirements']}",
-                "create",
-                ids["requirements"],
-                "shadow.kernel.execution-requirements",
-                f"{KERNEL_SCHEMA}#/$defs/ExecutionRequirementsPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                requirements.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['request']}",
-                "create",
-                ids["request"],
-                "shadow.kernel.request",
-                f"{KERNEL_SCHEMA}#/$defs/RequestPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                request.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['run']}",
-                "create",
-                ids["run"],
-                "shadow.kernel.run",
-                f"{KERNEL_SCHEMA}#/$defs/RunPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                run.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['attempt']}",
-                "create",
-                ids["attempt"],
-                "shadow.kernel.execution-attempt",
-                f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                attempt.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['capability-envelope']}",
-                "create",
-                ids["capability-envelope"],
-                "shadow.adapter.capability-envelope",
-                f"{ADAPTER_SCHEMA}#/$defs/CapabilityEnvelopePayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                cap,
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['binding']}",
-                "create",
-                ids["binding"],
-                "shadow.adapter.execution-binding",
-                f"{ADAPTER_SCHEMA}#/$defs/ExecutionBindingPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                binding.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-conversation-{token}",
-                "update",
-                conversation_id,
-                "shadow.profile.conversation",
-                f"{PROFILE_SCHEMA}#/$defs/ConversationPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                conversation_update.model_dump(mode="json", exclude_none=True),
-                provenance,
-                expected_version=conversation["version"],
-            ),
-        ]
-        plan = CommitPlan(
-            commit_request_id=f"commit-request-turn-{token}",
-            idempotency_scope=f"turn:{conversation_id}",
-            idempotency_key=idempotency_key,
-            request_digest=request_digest,
-            actor_ref=principal_ref,
-            operations=operations,
-            prepared_at=now,
-            correlation_id=f"correlation-{token}",
-        )
-        result = self.authority.commit(plan)
-        if result.outcome == "failed":
-            raise ShadowDomainError(
-                ShadowError(
-                    code="shadow.turn.commit-failed",
-                    category="validation",
-                    message="Conversation turn commit failed.",
-                    typed_details=result.structured_error,
-                )
-            )
-        if result.outcome == "idempotent_replay":
+        if admitted.replayed:
             return TurnResult(
                 conversation=self.repository.get(conversation_id) or {},
                 run=self.repository.get(ids["run"]) or {},
