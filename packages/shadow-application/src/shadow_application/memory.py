@@ -403,20 +403,16 @@ class MemoryService:
     def list_memories(
         self, *, owner_ref: str | None = None, space_id: str | None = None
     ) -> list[dict[str, Any]]:
-        records = self.repository.query(
+        records = self.repository.query_heads(
             owner_refs={owner_ref} if owner_ref else None,
             space_ids={space_id} if space_id else None,
             record_types={"shadow.profile.memory"},
             record_states={"active", "logically_deleted", "erased"},
+            limit=None,
         )
-        heads: dict[str, dict[str, Any]] = {}
-        for record in records:
-            prior = heads.get(record["record_id"])
-            if prior is None or record["version"] > prior["version"]:
-                heads[record["record_id"]] = record
         return [
             record
-            for record in sorted(heads.values(), key=lambda item: item["record_id"])
+            for record in sorted(records, key=lambda item: item["record_id"])
             if record["record_state"] == "active"
             and record["typed_payload"].get("memory_state") == "active"
         ]
