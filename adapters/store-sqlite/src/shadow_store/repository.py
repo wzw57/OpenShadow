@@ -152,6 +152,50 @@ class SqliteCanonicalRepository:
             records = [record for record in records if record["space_id"] in space_ids]
         return records[:limit]
 
+    def query_heads(
+        self,
+        *,
+        owner_refs: set[str] | None = None,
+        space_ids: set[str] | None = None,
+        record_types: set[str] | None = None,
+        record_states: set[str] | None = None,
+        limit: int | None = 100,
+    ) -> list[dict[str, Any]]:
+        """Return the newest matching Canonical version for each stable record ID."""
+        if not self._available:
+            raise RepositoryUnavailable()
+        states = record_states or {"active"}
+        with self._session_factory() as session:
+            ranked = select(
+                RecordVersionRow.record_id.label("head_record_id"),
+                RecordVersionRow.version.label("head_version"),
+                func.row_number()
+                .over(
+                    partition_by=RecordVersionRow.record_id,
+                    order_by=RecordVersionRow.version.desc(),
+                )
+                .label("head_rank"),
+            ).where(RecordVersionRow.record_state.in_(states))
+            if record_types:
+                ranked = ranked.where(RecordVersionRow.record_type.in_(record_types))
+            ranked = ranked.subquery()
+            query = (
+                select(RecordVersionRow)
+                .join(
+                    ranked,
+                    (RecordVersionRow.record_id == ranked.c.head_record_id)
+                    & (RecordVersionRow.version == ranked.c.head_version),
+                )
+                .where(ranked.c.head_rank == 1)
+                .order_by(RecordVersionRow.committed_at, RecordVersionRow.record_id)
+            )
+            records = [json.loads(row.envelope_json) for row in session.scalars(query).all()]
+        if owner_refs:
+            records = [record for record in records if record["owner_ref"] in owner_refs]
+        if space_ids:
+            records = [record for record in records if record["space_id"] in space_ids]
+        return records if limit is None else records[:limit]
+
     def export_records(
         self,
         *,
