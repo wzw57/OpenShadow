@@ -238,12 +238,12 @@ class MemoryIndexRebuildService:
         if not self.repository.available:
             raise self._unavailable_error("Canonical Repository is unavailable for Index rebuild.")
         try:
-            records = self.repository.query(
+            records = self.repository.query_heads(
                 owner_refs={owner_ref},
                 space_ids={space_id},
                 record_types={"shadow.profile.memory"},
                 record_states={"active", "logically_deleted", "erased"},
-                limit=100_000,
+                limit=None,
             )
         except ShadowDomainError as exc:
             if exc.error.category == "unavailable":
