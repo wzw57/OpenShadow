@@ -32,6 +32,7 @@ class AdmissionResult:
     requirements: dict[str, Any] | None = None
     run: dict[str, Any] | None = None
     ephemeral: EphemeralExecution | None = None
+    replayed: bool = False
 
 
 class AdmissionService:
@@ -228,4 +229,5 @@ class AdmissionService:
             request=self.repository.get(request_id),
             requirements=self.repository.get(requirements_id),
             run=self.repository.get(run_id),
+            replayed=result.outcome == "idempotent_replay",
         )
