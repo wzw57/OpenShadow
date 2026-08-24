@@ -446,15 +446,14 @@ class ActionService:
         }
 
     def list_actions(self, *, owner_ref: str | None, space_id: str, limit: int = 50) -> list[dict[str, Any]]:
-        records = self.repository.query(
-            owner_refs={owner_ref} if owner_ref else None, space_ids={space_id}, record_types={ACTION_RECORD_TYPE},
-            record_states={"active", "logically_deleted", "erased"}, limit=1_000_000,
+        records = self.repository.query_heads(
+            owner_refs={owner_ref} if owner_ref else None,
+            space_ids={space_id},
+            record_types={ACTION_RECORD_TYPE},
+            record_states={"active", "logically_deleted", "erased"},
+            limit=None,
         )
-        heads: dict[str, dict[str, Any]] = {}
-        for record in records:
-            if record["record_id"] not in heads or record["version"] > heads[record["record_id"]]["version"]:
-                heads[record["record_id"]] = record
-        return sorted(heads.values(), key=lambda item: item["record_id"])[:limit]
+        return sorted(records, key=lambda item: item["record_id"])[:limit]
 
     def get_action(self, action_id: str, principal_ref: str | None = None, space_id: str | None = None, enforce_owner: bool = True) -> dict[str, Any] | None:
         record = self.repository.get(action_id)
