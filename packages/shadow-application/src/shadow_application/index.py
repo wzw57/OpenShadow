@@ -251,13 +251,8 @@ class MemoryIndexRebuildService:
                     "Canonical Repository is unavailable for Index rebuild."
                 ) from exc
             raise
-        heads: dict[str, dict[str, Any]] = {}
-        for record in records:
-            previous = heads.get(record["record_id"])
-            if previous is None or record["version"] > previous["version"]:
-                heads[record["record_id"]] = record
         snapshots: list[MemorySnapshot] = []
-        for record in sorted(heads.values(), key=lambda item: (item["record_id"], item["version"])):
+        for record in sorted(records, key=lambda item: (item["record_id"], item["version"])):
             if (
                 record["record_state"] != "active"
                 or record["typed_payload"].get("memory_state") != "active"
