@@ -95,7 +95,6 @@ def test_query_filters_owner_before_applying_limit(tmp_path: Path) -> None:
     assert [record["record_id"] for record in records] == ["conversation-target"]
 
 
-
 def test_query_heads_returns_latest_version_per_record(tmp_path: Path) -> None:
     registry = ContractRegistry(ROOT)
     repository = SqliteCanonicalRepository(tmp_path / "shadow.db")
@@ -115,6 +114,7 @@ def test_query_heads_returns_latest_version_per_record(tmp_path: Path) -> None:
     assert [(record["record_id"], record["version"]) for record in heads] == [
         ("conversation-head", 2)
     ]
+
 
 def test_owner_and_space_are_immutable_across_versions(tmp_path: Path) -> None:
     registry = ContractRegistry(ROOT)
