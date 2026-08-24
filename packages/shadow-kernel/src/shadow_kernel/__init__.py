@@ -1,6 +1,6 @@
 """Tiny Kernel primitives for the OpenShadow Phase 0 implementation."""
 
-from .admission import AdmissionResult, AdmissionService
+from .admission import AdmissionPreparation, AdmissionResult, AdmissionService
 from .commit import CommitAuthority
 from .models import CanonicalEnvelope, CommitBatchResult, CommitPlan
 from .registry import ContractRegistry
@@ -9,6 +9,7 @@ from .runtime import RuntimeAdapter
 
 __all__ = [
     "AdmissionResult",
+    "AdmissionPreparation",
     "AdmissionService",
     "CanonicalEnvelope",
     "CanonicalRepository",

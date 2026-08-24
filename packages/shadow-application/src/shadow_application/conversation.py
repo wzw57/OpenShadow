@@ -3,19 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from shadow_adapters import DeterministicTestAdapter
 from shadow_kernel.adapters import AdapterDescriptor, AdapterRegistry
+from shadow_kernel.admission import AdmissionService
 from shadow_kernel.commit import CommitAuthority
 from shadow_kernel.errors import ShadowDomainError, ShadowError
 from shadow_kernel.ids import sha256_digest, utc_timestamp
 from shadow_kernel.models import (
-    AdmissionRecordPayload,
     CommitOperation,
     CommitPlan,
     ContentBlock,
     ConversationPayload,
     ExecutionAttemptPayload,
-    ExecutionRequirementsPayload,
     MessagePayload,
     Provenance,
     RecordVersionRef,
@@ -51,11 +49,21 @@ class ConversationService:
         repository: CanonicalRepository,
         authority: CommitAuthority,
         runtime_adapter: RuntimeAdapter | None = None,
+        admission: AdmissionService | None = None,
     ):
+        if runtime_adapter is None:
+            raise ShadowDomainError(
+                ShadowError(
+                    code="shadow.runtime.adapter-not-injected",
+                    category="incompatible",
+                    message="ConversationService requires a RuntimeAdapter supplied by the composition root.",
+                )
+            )
         self.repository = repository
         self.authority = authority
+        self.admission = admission or AdmissionService(repository, authority)
         self.adapters = AdapterRegistry()
-        self.runtime_adapter = runtime_adapter or DeterministicTestAdapter()
+        self.runtime_adapter = runtime_adapter
         self.runtime_descriptor = self._ensure_runtime_descriptor()
         self.runtime_target_kind = self.runtime_descriptor.supported_target_kinds[0]
 
@@ -231,39 +239,6 @@ class ConversationService:
             ],
             finalized_at=now,
         )
-        admission = AdmissionRecordPayload(
-            admission_id=ids["admission"],
-            submission_id=f"submission-{token}",
-            input_type="shadow.input.conversation-turn",
-            principal_ref=principal_ref,
-            endpoint_ref=endpoint_ref,
-            space_id=space_id,
-            request_digest=sha256_digest({"conversation_id": conversation_id, "text": text}),
-            decision="accepted",
-            request_ref=StableRecordRef(record_id=ids["request"]),
-            root_run_ref=StableRecordRef(record_id=ids["run"]),
-            decided_at=now,
-            retention_policy_ref=RETENTION_REF,
-        )
-        requirements = ExecutionRequirementsPayload(
-            requirements_id=ids["requirements"],
-            required_capabilities=[],
-            acceptable_target_kinds=[self.runtime_target_kind],
-            allowed_side_effects=[],
-            streaming_required=True,
-            checkpoint_required=False,
-            created_from=RecordVersionRef(record_id=ids["admission"], version=1),
-        )
-        request = RequestPayload(
-            admission_ref=RecordVersionRef(record_id=ids["admission"], version=1),
-            request_type="shadow.request.conversation-turn",
-            work_input=RecordVersionRef(record_id=ids["message-user"], version=1),
-            requirements_ref=RecordVersionRef(record_id=ids["requirements"], version=1),
-            principal_ref=principal_ref,
-            endpoint_ref=endpoint_ref,
-            accepted_at=now,
-            correlation_id=f"correlation-{token}",
-        )
         cap = {
             "envelope_id": ids["capability-envelope"],
             "principal_ref": principal_ref,
@@ -295,19 +270,6 @@ class ConversationService:
             scope_ref={"record_id": ids["run"]},
             capability_envelope_ref={"record_id": ids["capability-envelope"], "version": 1},
             selection_source_ref={"record_id": ids["request"]},
-        )
-        run = RunPayload(
-            request_ref=RecordVersionRef(record_id=ids["request"], version=1),
-            lifecycle="running",
-            requirements_ref=RecordVersionRef(record_id=ids["requirements"], version=1),
-            binding_refs=[RecordVersionRef(record_id=ids["binding"], version=1)],
-            attempt_refs=[RecordVersionRef(record_id=ids["attempt"], version=1)],
-            active_attempt_ref=StableRecordRef(record_id=ids["attempt"]),
-            result_ref=None,
-            usage_summary=None,
-            started_at=now,
-            terminal_at=None,
-            last_event_cursor=None,
         )
         attempt = ExecutionAttemptPayload(
             run_ref=StableRecordRef(record_id=ids["run"]),
@@ -347,66 +309,6 @@ class ConversationService:
                 provenance,
             ),
             self._operation(
-                f"operation-{ids['admission']}",
-                "create",
-                ids["admission"],
-                "shadow.kernel.admission",
-                f"{KERNEL_SCHEMA}#/$defs/AdmissionRecordPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                admission.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['requirements']}",
-                "create",
-                ids["requirements"],
-                "shadow.kernel.execution-requirements",
-                f"{KERNEL_SCHEMA}#/$defs/ExecutionRequirementsPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                requirements.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['request']}",
-                "create",
-                ids["request"],
-                "shadow.kernel.request",
-                f"{KERNEL_SCHEMA}#/$defs/RequestPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                request.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['run']}",
-                "create",
-                ids["run"],
-                "shadow.kernel.run",
-                f"{KERNEL_SCHEMA}#/$defs/RunPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                run.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
-                f"operation-{ids['attempt']}",
-                "create",
-                ids["attempt"],
-                "shadow.kernel.execution-attempt",
-                f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
-                owner_ref,
-                space_id,
-                principal_ref,
-                attempt.model_dump(mode="json", exclude_none=True),
-                provenance,
-            ),
-            self._operation(
                 f"operation-{ids['capability-envelope']}",
                 "create",
                 ids["capability-envelope"],
@@ -431,6 +333,18 @@ class ConversationService:
                 provenance,
             ),
             self._operation(
+                f"operation-{ids['attempt']}",
+                "create",
+                ids["attempt"],
+                "shadow.kernel.execution-attempt",
+                f"{KERNEL_SCHEMA}#/$defs/ExecutionAttemptPayload",
+                owner_ref,
+                space_id,
+                principal_ref,
+                attempt.model_dump(mode="json", exclude_none=True),
+                provenance,
+            ),
+            self._operation(
                 f"operation-conversation-{token}",
                 "update",
                 conversation_id,
@@ -444,27 +358,53 @@ class ConversationService:
                 expected_version=conversation["version"],
             ),
         ]
-        plan = CommitPlan(
-            commit_request_id=f"commit-request-turn-{token}",
-            idempotency_scope=f"turn:{conversation_id}",
+        preparation = self.admission.prepare(
+            request_type="shadow.request.conversation-turn",
+            input_type="shadow.input.conversation-turn",
+            work_input=RecordVersionRef(record_id=ids["message-user"], version=1),
+            principal_ref=principal_ref,
+            endpoint_ref=endpoint_ref,
+            space_id=space_id,
+            acceptable_target_kinds=[self.runtime_target_kind],
             idempotency_key=idempotency_key,
-            request_digest=request_digest,
-            actor_ref=principal_ref,
-            operations=operations,
-            prepared_at=now,
             correlation_id=f"correlation-{token}",
+            submission_id=f"submission-{token}",
+            request_digest=request_digest,
+            idempotency_scope=f"turn:{conversation_id}",
+            record_ids={
+                "admission_id": ids["admission"],
+                "request_id": ids["request"],
+                "requirements_id": ids["requirements"],
+                "run_id": ids["run"],
+            },
+            run_lifecycle="running",
+            run_binding_refs=[RecordVersionRef(record_id=ids["binding"], version=1)],
+            run_attempt_refs=[RecordVersionRef(record_id=ids["attempt"], version=1)],
+            run_active_attempt_ref=StableRecordRef(record_id=ids["attempt"]),
+            run_started_at=now,
         )
-        result = self.authority.commit(plan)
-        if result.outcome == "failed":
+        initial_commit = self.authority.commit(
+            CommitPlan(
+                commit_request_id=f"commit-request-{token}",
+                idempotency_scope=preparation.idempotency_scope,
+                idempotency_key=preparation.idempotency_key,
+                request_digest=preparation.request_digest,
+                actor_ref=preparation.principal_ref,
+                operations=[*preparation.operations, *operations],
+                prepared_at=preparation.prepared_at,
+                correlation_id=preparation.correlation_id,
+            )
+        )
+        if initial_commit.outcome in {"failed", "conflict"}:
             raise ShadowDomainError(
                 ShadowError(
-                    code="shadow.turn.commit-failed",
-                    category="validation",
-                    message="Conversation turn commit failed.",
-                    typed_details=result.structured_error,
+                    code="shadow.admission.commit-failed",
+                    category="conflict" if initial_commit.outcome == "conflict" else "validation",
+                    message="Admission lifecycle could not be committed.",
+                    typed_details=initial_commit.structured_error,
                 )
             )
-        if result.outcome == "idempotent_replay":
+        if initial_commit.outcome == "idempotent_replay":
             return TurnResult(
                 conversation=self.repository.get(conversation_id) or {},
                 run=self.repository.get(ids["run"]) or {},

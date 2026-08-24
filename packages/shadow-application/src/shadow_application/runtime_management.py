@@ -43,6 +43,20 @@ def load_factory(reference: str) -> Callable[[], RuntimeAdapter]:
     return factory
 
 
+def load_adapter(reference: str) -> RuntimeAdapter:
+    """Instantiate and validate a configured RuntimeAdapter through one loader."""
+    adapter = load_factory(reference)()
+    required_methods = ("describe", "execute", "events")
+    if not all(callable(getattr(adapter, method, None)) for method in required_methods):
+        raise _error(
+            "shadow.runtime.invalid-adapter",
+            "Runtime Adapter does not implement the required Port.",
+            category="incompatible",
+            details={"adapter_factory": reference},
+        )
+    return adapter
+
+
 @dataclass(frozen=True, slots=True)
 class RuntimeProfile:
     runtime_id: str
@@ -202,7 +216,7 @@ class RuntimeSupervisor:
             if adapter is None:
                 if not profile.enabled:
                     raise _error("shadow.runtime.disabled", "The Runtime profile is disabled.", details={"runtime_id": runtime_id})
-                adapter = load_factory(profile.adapter_factory)()
+                adapter = load_adapter(profile.adapter_factory)
                 configure = getattr(adapter, "configure_profile", None)
                 if callable(configure):
                     configure({"workspace_dir": profile.workspace_dir, "health_url": profile.health_url})
@@ -383,8 +397,6 @@ class RuntimeSupervisor:
         }
 
     def _validate_adapter(self, adapter: RuntimeAdapter, profile: RuntimeProfile) -> None:
-        if not all(callable(getattr(adapter, method, None)) for method in ("describe", "execute", "events")):
-            raise _error("shadow.runtime.invalid-adapter", "Runtime Adapter does not implement the required Port.", category="incompatible")
         descriptor = adapter.describe()
         target_kinds = descriptor.get("supported_target_kinds", [])
         if profile.target_kind not in target_kinds:
@@ -443,4 +455,4 @@ class RuntimeSupervisor:
         self._idempotency[(operation, key)] = (digest, dict(result))
 
 
-__all__ = ["RuntimeProfile", "RuntimeState", "RuntimeSupervisor", "load_factory"]
+__all__ = ["RuntimeProfile", "RuntimeState", "RuntimeSupervisor", "load_adapter", "load_factory"]

@@ -71,7 +71,11 @@ class DeterministicPeripheralAdapter:
             raise PermissionError("capability is not supported")
         if not self.consent_valid:
             raise PermissionError("consent is revoked or invalid")
-        digest = sha256_digest(request.as_dict())
+        # Expiry is validated at execution time, but a renewed validity window is
+        # not a different interaction when the caller reuses its idempotency key.
+        digest_input = request.as_dict()
+        digest_input.pop("expires_at", None)
+        digest = sha256_digest(digest_input)
         prior = self._receipts.get(request.idempotency_key)
         if prior is not None:
             if prior[0] != digest:
