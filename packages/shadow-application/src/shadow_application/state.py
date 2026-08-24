@@ -376,15 +376,6 @@ class StateService:
         return record
 
     @staticmethod
-    def _heads(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        heads: dict[str, dict[str, Any]] = {}
-        for record in records:
-            prior = heads.get(record["record_id"])
-            if prior is None or record["version"] > prior["version"]:
-                heads[record["record_id"]] = record
-        return heads
-
-    @staticmethod
     def _assert_boundary(record: dict[str, Any], principal_ref: str, space_id: str) -> None:
         if record["owner_ref"] != principal_ref or record["space_id"] != space_id:
             raise _error(
